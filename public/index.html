@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenGlance - 多模态内容平台</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f9f9f9;
+            color: #0f0f0f;
+        }
+
+        /* Header */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            z-index: 1000;
+            box-shadow: 0 1px 8px rgba(0,0,0,0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .menu-icon {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        .menu-icon:hover {
+            background: #f0f0f0;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 20px;
+            font-weight: 700;
+            color: #ff0000;
+            text-decoration: none;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: #ff0000;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 18px;
+        }
+
+        .header-center {
+            flex: 1;
+            max-width: 600px;
+            margin: 0 40px;
+            display: flex;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            display: flex;
+            border: 1px solid #ccc;
+            border-radius: 40px;
+            overflow: hidden;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 8px 16px;
+            border: none;
+            outline: none;
+            font-size: 16px;
+        }
+
+        .search-btn {
+            padding: 8px 20px;
+            background: #f8f8f8;
+            border: none;
+            border-left: 1px solid #ccc;
+            cursor: pointer;
+        }
+
+        .search-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+        }
+
+        .icon-btn:hover {
+            background: #f0f0f0;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #5c6bc0;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            width: 240px;
+            height: calc(100vh - 56px);
+            background: white;
+            padding: 12px 0;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+            z-index: 999;
+            overflow-y: auto;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 10px 24px;
+            cursor: pointer;
+            color: #0f0f0f;
+            text-decoration: none;
+        }
+
+        .sidebar-item:hover {
+            background: #f2f2f2;
+        }
+
+        .sidebar-item.active {
+            background: #e5e5e5;
+            font-weight: 500;
+        }
+
+        .sidebar-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-top: 56px;
+            margin-left: 0;
+            padding: 24px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .main-content.sidebar-open {
+            margin-left: 240px;
+        }
+
+        /* Category Pills */
+        .category-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            overflow-x: auto;
+            padding-bottom: 8px;
+        }
+
+        .category-pill {
+            padding: 8px 16px;
+            background: #f2f2f2;
+            border: none;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background 0.2s;
+        }
+
+        .category-pill:hover {
+            background: #e5e5e5;
+        }
+
+        .category-pill.active {
+            background: #0f0f0f;
+            color: white;
+        }
+
+        /* Video Grid */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .video-card {
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .thumbnail-container {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%;
+            background: #ddd;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .thumbnail {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .duration-badge {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .premium-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: #ffd700;
+            color: #0f0f0f;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .encrypted-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.8);
+            color: #ffd700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .video-info {
+            display: flex;
+            gap: 12px;
+        }
+
+        .channel-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #5c6bc0;
+            flex-shrink: 0;
+        }
+
+        .video-details {
+            flex: 1;
+        }
+
+        .video-title {
+            font-size: 14px;
+            font-weight: 500;
+            line-height: 1.4;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .channel-name {
+            font-size: 12px;
+            color: #606060;
+            margin-bottom: 2px;
+        }
+
+        .video-meta {
+            font-size: 12px;
+            color: #606060;
+        }
+
+        /* Upload Button */
+        .upload-btn {
+            background: #065fd4;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-btn:hover {
+            background: #054db0;
+        }
+
+        .upload-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .close-btn {
+            background: transparent;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #606060;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #0f0f0f;
+        }
+
+        .form-input,
+        .form-select,
+        .form-textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .form-input:focus,
+        .form-select:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: #065fd4;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: #065fd4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .submit-btn:hover {
+            background: #054db0;
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .file-drop-zone {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            padding: 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .file-drop-zone:hover {
+            border-color: #065fd4;
+        }
+
+        .file-drop-zone.dragover {
+            border-color: #065fd4;
+            background: #f0f7ff;
+        }
+
+        .file-info {
+            margin-top: 12px;
+            padding: 8px;
+            background: #f2f2f2;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e5e5e5;
+            border-radius: 2px;
+            margin-top: 12px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #065fd4;
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .status-message {
+            margin-top: 12px;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .status-message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-message.error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        /* Login Button */
+        .login-btn {
+            background: transparent;
+            color: #065fd4;
+            border: 1px solid #065fd4;
+            padding: 8px 16px;
+            border-radius: 18px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+
+        .login-btn:hover {
+            background: #065fd4;
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-center {
+                display: none;
+            }
+
+            .sidebar {
+                width: 100%;
+            }
+
+            .main-content.sidebar-open {
+                margin-left: 0;
+            }
+
+            .video-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-left">
+            <div class="menu-icon" id="menuToggle">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="#0f0f0f" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/>
+                </svg>
+            </div>
+            <a href="/" class="logo">
+                <div class="logo-icon">▶</div>
+                ZenGlance
+            </a>
+        </div>
+
+        <div class="header-center">
+            <div class="search-box">
+                <input type="text" class="search-input" placeholder="搜索内容...">
+                <button class="search-btn">
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="#0f0f0f" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="header-right">
+            <button class="upload-btn" id="uploadBtn">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="currentColor" d="M14 13h-3v3H9v-3H6v-2h3V8h2v3h3v2zm3-7H3v12h14v-6.39l4 1.83V8.56l-4 1.83V6m1-1v3.83L22 7v8l-4-1.83V19H2V5h16z"/>
+                </svg>
+                上传
+            </button>
+            <button class="icon-btn">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="#0f0f0f" d="M10 20h4c0 1.1-.9 2-2 2s-2-.9-2-2zm10-2.65V19H4v-1.65l2-1.88v-5.15C6 6.4 8.66 3.5 12 3.5s6 2.9 6 6.82v5.15l2 1.88zM16 10.32c0-2.97-1.8-5.12-4-5.12s-4 2.15-4 5.12v4.32l-1.33 1.25L8 17h8l1.33-1.11-1.33-1.25v-4.32z"/>
+                </svg>
+            </button>
+            <div class="avatar" id="userAvatar">U</div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <a href="/" class="sidebar-item active">
+            <div class="sidebar-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="#0f0f0f" d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+                </svg>
+            </div>
+            <span>首页</span>
+        </a>
+        <a href="#" class="sidebar-item">
+            <div class="sidebar-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="#0f0f0f" d="M18.7 8.7H5.3V7h13.4v1.7zm-1.5-2.5l-5.2-5.2-5.2 5.2H1.5v11.5h21V6.2h-5.3zm-1.7 9.3h-7V9h7v6.5z"/>
+                </svg>
+            </div>
+            <span>短片短剧</span>
+        </a>
+        <a href="#" class="sidebar-item">
+            <div class="sidebar-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="#0f0f0f" d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/>
+                </svg>
+            </div>
+            <span>剧集</span>
+        </a>
+        <a href="#" class="sidebar-item">
+            <div class="sidebar-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="#0f0f0f" d="M18 3v2h-2V3H8v2H6V3H4v18h2v-2h2v2h8v-2h2v2h2V3h-4zM8 17H6v-2h2v2zm0-4H6v-2h2v2zm0-4H6V7h2v2zm10 8h-2v-2h2v2zm0-4h-2v-2h2v2zm0-4h-2V7h2v2z"/>
+                </svg>
+            </div>
+            <span>电影</span>
+        </a>
+        <a href="#" class="sidebar-item">
+            <div class="sidebar-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="#0f0f0f" d="M12 3v9.28c-.47-.17-.97-.28-1.5-.28C8.01 12 6 14.01 6 16.5S8.01 21 10.5 21c2.31 0 4.2-1.75 4.45-4H15V6h4V3h-7z"/>
+                </svg>
+            </div>
+            <span>音乐</span>
+        </a>
+        <a href="#" class="sidebar-item">
+            <div class="sidebar-icon">
+                <svg viewBox="0 0 24 24" width="24" height="24">
+                    <path fill="#0f0f0f" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                </svg>
+            </div>
+            <span>小说</span>
+        </a>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <!-- Category Bar -->
+        <div class="category-bar">
+            <button class="category-pill active">全部</button>
+            <button class="category-pill">短片短剧</button>
+            <button class="category-pill">剧集</button>
+            <button class="category-pill">电影</button>
+            <button class="category-pill">UGC 视频</button>
+            <button class="category-pill">短视频</button>
+            <button class="category-pill">音乐</button>
+            <button class="category-pill">播客</button>
+            <button class="category-pill">小说</button>
+        </div>
+
+        <!-- Video Grid -->
+        <div class="video-grid" id="videoGrid">
+            <!-- Videos will be loaded here -->
+        </div>
+    </main>
+
+    <!-- Upload Modal -->
+    <div class="modal-overlay" id="uploadModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 class="modal-title">上传内容</h2>
+                <button class="close-btn" id="closeUploadModal">&times;</button>
+            </div>
+            <form id="uploadForm">
+                <div class="form-group">
+                    <label class="form-label">内容类型</label>
+                    <select class="form-select" id="contentType" required>
+                        <option value="">选择类型...</option>
+                        <option value="short_drama">短片短剧</option>
+                        <option value="tv_series">剧集</option>
+                        <option value="movie">电影</option>
+                        <option value="ugc_long_video">UGC 长视频</option>
+                        <option value="short_video">短视频</option>
+                        <option value="music">音乐</option>
+                        <option value="podcast">播客</option>
+                        <option value="novel">小说</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">标题</label>
+                    <input type="text" class="form-input" id="contentTitle" required placeholder="输入标题...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">描述</label>
+                    <textarea class="form-textarea" id="contentDescription" placeholder="输入描述..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">是否 Premium 内容</label>
+                    <select class="form-select" id="isPremium" required>
+                        <option value="false">否</option>
+                        <option value="true">是</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">选择文件</label>
+                    <div class="file-drop-zone" id="dropZone">
+                        <svg viewBox="0 0 24 24" width="48" height="48" style="margin: 0 auto 16px;">
+                            <path fill="#606060" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM14 13v4h-4v-4H7l5-5 5 5h-3z"/>
+                        </svg>
+                        <p>拖拽文件到此处，或点击选择文件</p>
+                        <p style="font-size: 12px; color: #606060; margin-top: 8px;">支持的视频/音频/文档格式</p>
+                    </div>
+                    <input type="file" id="fileInput" style="display: none;" required>
+                    <div class="file-info" id="fileInfo" style="display: none;"></div>
+                    <div class="progress-bar" id="progressBar" style="display: none;">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                </div>
+
+                <div id="statusMessage"></div>
+
+                <button type="submit" class="submit-btn" id="submitBtn">开始上传</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+</html>
