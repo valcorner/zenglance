@@ -1,0 +1,111 @@
+import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+
+// User roles enum
+export const roles = ['free', 'premium', 'official'];
+export type Role = typeof roles[number];
+
+// Content types enum
+export const contentTypes = [
+  'short_drama',
+  'tv_series', 
+  'movie',
+  'ugc_long_video',
+  'short_video',
+  'music',
+  'podcast',
+  'novel'
+];
+export type ContentType = typeof contentTypes[number];
+
+// Users table - stores OAuth user info
+export const users = sqliteTable('users', {
+  id: text('id').primaryKey(), // Valcorner OAuth user ID
+  email: text('email').notNull().unique(),
+  name: text('name'),
+  avatar: text('avatar'),
+  role: text('role', { enum: roles }).notNull().default('free'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+}, (table) => [
+  index('users_email_idx').on(table.email),
+  index('users_role_idx').on(table.role)
+]);
+
+// Contents table - metadata for all media
+export const contents = sqliteTable('contents', {
+  id: text('id').primaryKey(), // D1 generated content_id (UUID)
+  slug: text('slug').notNull().unique(), // Human-readable URL slug
+  title: text('title').notNull(),
+  description: text('description'),
+  contentType: text('content_type', { enum: contentTypes }).notNull(),
+  isPremium: integer('is_premium', { mode: 'boolean' }).notNull().default(false),
+  isEncrypted: integer('is_encrypted', { mode: 'boolean' }).notNull().default(false),
+  
+  // Upload info
+  uploaderId: text('uploader_id').notNull().references(() => users.id),
+  b2Bucket: text('b2_bucket').notNull(),
+  b2Key: text('b2_key').notNull(), // S3 object key
+  
+  // CDN routing info
+  cdnType: text('cdn_type').notNull(), // drama/series/movie/video/short/music/podcast/novel
+  
+  // File info
+  fileSize: integer('file_size'),
+  duration: integer('duration'), // seconds, for video/audio
+  mimeType: text('mime_type'),
+  
+  // Manifest files (for HLS/DASH)
+  manifestIndex: text('manifest_index'), // e.g., "1.m3u8" or "1.mpd"
+  
+  // Status
+  status: text('status').notNull().default('pending'), // pending, ready, error
+  errorCode: text('error_code'),
+  errorMessage: text('error_message'),
+  
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+}, (table) => [
+  index('contents_slug_idx').on(table.slug),
+  index('contents_uploader_idx').on(table.uploaderId),
+  index('contents_type_idx').on(table.contentType),
+  index('contents_premium_idx').on(table.isPremium),
+  index('contents_status_idx').on(table.status)
+]);
+
+// Encryption keys table - stores AES-256-GCM key info (NOT the actual key)
+// The actual encrypted content key is stored client-side or in a secure vault
+export const encryptionKeys = sqliteTable('encryption_keys', {
+  id: text('id').primaryKey(),
+  contentId: text('content_id').notNull().unique().references(() => contents.id),
+  // We only store metadata here - actual keys are managed client-side
+  keyId: text('key_id').notNull(), // Identifier for key retrieval
+  iv: text('iv').notNull(), // Base64 encoded initialization vector
+  authTag: text('auth_tag'), // Base64 encoded auth tag (GCM)
+  keyDerivationInfo: text('key_derivation_info'), // HKDF salt/info for derivation
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+}, (table) => [
+  index('encryption_keys_content_idx').on(table.contentId)
+]);
+
+// Upload sessions table - tracks presigned URL sessions
+export const uploadSessions = sqliteTable('upload_sessions', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  contentType: text('content_type', { enum: contentTypes }).notNull(),
+  b2UploadUrl: text('b2_upload_url').notNull(), // Presigned PUT URL
+  b2Key: text('b2_key').notNull(), // Target S3 key
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  status: text('status').notNull().default('pending'), // pending, completed, expired
+  contentId: text('content_id'), // Linked content after upload
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+}, (table) => [
+  index('upload_sessions_user_idx').on(table.userId),
+  index('upload_sessions_expires_idx').on(table.expiresAt)
+]);
+
+// View counts cache (synced to KV periodically)
+export const viewCounts = sqliteTable('view_counts', {
+  contentId: text('content_id').primaryKey().references(() => contents.id),
+  count: integer('count').notNull().default(0),
+  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' })
+});

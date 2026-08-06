@@ -1,0 +1,351 @@
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { secureHeaders } from 'hono/secure-headers';
+import { createDb } from '../db/index.js';
+import { B2Service } from '../services/b2.js';
+import { ValcornerCDNService } from '../services/valcorner.js';
+import { 
+  roleSchema, 
+  uploadPermissions, 
+  requiresEncryption, 
+  getCdnType,
+  createContentSchema,
+  uploadSessionResponseSchema 
+} from '../utils/validators.js';
+import { eq, and } from 'drizzle-orm';
+import { users, contents, uploadSessions, encryptionKeys } from '../db/schema.js';
+
+export function createAuthMiddleware() {
+  return async (c, next) => {
+    const authHeader = c.req.header('Authorization');
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ error: 'Unauthorized', code: 'MISSING_AUTH' }, 401);
+    }
+
+    const token = authHeader.substring(7);
+    
+    // In production, validate JWT with Valcorner OAuth
+    // For now, extract user info from token (simplified)
+    try {
+      // TODO: Implement proper JWT validation with Valcorner OAuth
+      const user = await getUserFromToken(c.env, token);
+      
+      if (!user) {
+        return c.json({ error: 'Invalid token', code: 'INVALID_TOKEN' }, 401);
+      }
+
+      c.set('user', user);
+      await next();
+    } catch (error) {
+      return c.json({ error: 'Authentication failed', code: 'AUTH_ERROR' }, 401);
+    }
+  };
+}
+
+async function getUserFromToken(env, token) {
+  // TODO: Implement proper OAuth token validation
+  // This is a placeholder - in production, verify with Valcorner OAuth server
+  const db = createDb(env);
+  
+  // For demo purposes, extract user ID from token
+  // In production, decode JWT and validate signature
+  const userId = token; // Simplified for demo
+  
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, userId)
+  });
+  
+  return user;
+}
+
+export function checkUploadPermission() {
+  return async (c, next) => {
+    const user = c.get('user');
+    const body = await c.req.json().catch(() => ({}));
+    const contentType = body.contentType;
+    
+    if (!contentType) {
+      return c.json({ error: 'Content type required', code: 'MISSING_CONTENT_TYPE' }, 400);
+    }
+    
+    const allowedTypes = uploadPermissions[user.role];
+    
+    if (!allowedTypes.includes(contentType)) {
+      return c.json({ 
+        error: 'Insufficient permissions for this content type', 
+        code: 'PERMISSION_DENIED',
+        details: { role: user.role, contentType }
+      }, 403);
+    }
+    
+    // Check if encryption is required
+    const needsEncryption = requiresEncryption(user.role, contentType);
+    c.set('requiresEncryption', needsEncryption);
+    
+    await next();
+  };
+}
+
+export function createUploadRoutes() {
+  const upload = new Hono();
+  
+  upload.use('/*', cors());
+  upload.use('/*', secureHeaders());
+  
+  const auth = createAuthMiddleware();
+  
+  /**
+   * POST /upload/request
+   * Request a presigned URL for direct B2 upload
+   */
+  upload.post('/request', auth, checkUploadPermission(), async (c) => {
+    const user = c.get('user');
+    const requiresEnc = c.get('requiresEncryption');
+    
+    try {
+      const body = await c.req.json();
+      const parsed = createContentSchema.safeParse(body);
+      
+      if (!parsed.success) {
+        return c.json({ 
+          error: 'Validation failed', 
+          code: 'VALIDATION_ERROR',
+          details: parsed.error.flatten()
+        }, 400);
+      }
+      
+      const { title, description, contentType, slug, fileSize, duration, mimeType } = parsed.data;
+      
+      const db = createDb(c.env);
+      const b2 = new B2Service(
+        c.env.B2_ACCESS_KEY_ID,
+        c.env.B2_SECRET_ACCESS_KEY,
+        c.env.B2_ENDPOINT,
+        c.env.B2_BUCKET_NAME
+      );
+      
+      // Generate content ID (UUID)
+      const contentId = crypto.randomUUID();
+      const filename = mimeType?.split('/')[1] || 'file';
+      const b2Key = B2Service.generateObjectKey(contentType, contentId, filename);
+      
+      // Check if encryption is needed
+      const isEncrypted = requiresEnc;
+      
+      // Create content record
+      const cdnType = getCdnType(contentType);
+      const now = Date.now();
+      
+      await db.insert(contents).values({
+        id: contentId,
+        slug,
+        title,
+        description,
+        contentType,
+        isPremium: requiresEnc,
+        isEncrypted,
+        uploaderId: user.id,
+        b2Bucket: c.env.B2_BUCKET_NAME,
+        b2Key,
+        cdnType,
+        fileSize,
+        duration,
+        mimeType,
+        status: 'pending',
+        createdAt: now,
+        updatedAt: now
+      });
+      
+      // Generate presigned upload URL (valid for 1 hour)
+      const uploadUrl = await b2.generateUploadUrl(b2Key, mimeType || 'application/octet-stream', 3600);
+      
+      // Create upload session
+      const sessionId = crypto.randomUUID();
+      const expiresAt = now + 3600 * 1000;
+      
+      await db.insert(uploadSessions).values({
+        id: sessionId,
+        userId: user.id,
+        contentType,
+        b2UploadUrl: uploadUrl,
+        b2Key,
+        expiresAt,
+        contentId,
+        status: 'pending',
+        createdAt: now
+      });
+      
+      const response = uploadSessionResponseSchema.parse({
+        sessionId,
+        uploadUrl,
+        b2Key,
+        expiresAt,
+        contentId
+      });
+      
+      return c.json(response);
+    } catch (error) {
+      console.error('Upload request failed:', error);
+      return c.json({ 
+        error: 'Failed to create upload session', 
+        code: 'UPLOAD_SESSION_ERROR',
+        details: error.message 
+      }, 500);
+    }
+  });
+  
+  /**
+   * POST /upload/complete/:sessionId
+   * Mark upload as complete after client finishes direct upload
+   */
+  upload.post('/complete/:sessionId', auth, async (c) => {
+    const { sessionId } = c.req.param();
+    const user = c.get('user');
+    
+    try {
+      const db = createDb(c.env);
+      
+      // Find upload session
+      const session = await db.query.uploadSessions.findFirst({
+        where: and(
+          eq(uploadSessions.id, sessionId),
+          eq(uploadSessions.userId, user.id)
+        )
+      });
+      
+      if (!session) {
+        return c.json({ error: 'Session not found', code: 'SESSION_NOT_FOUND' }, 404);
+      }
+      
+      if (session.status !== 'pending') {
+        return c.json({ error: 'Invalid session status', code: 'INVALID_STATUS' }, 400);
+      }
+      
+      if (Date.now() > session.expiresAt) {
+        await db.update(uploadSessions)
+          .set({ status: 'expired' })
+          .where(eq(uploadSessions.id, sessionId));
+        return c.json({ error: 'Session expired', code: 'SESSION_EXPIRED' }, 400);
+      }
+      
+      // Update content status to ready
+      if (session.contentId) {
+        await db.update(contents)
+          .set({ 
+            status: 'ready',
+            updatedAt: Date.now()
+          })
+          .where(eq(contents.id, session.contentId));
+      }
+      
+      // Mark session as completed
+      await db.update(uploadSessions)
+        .set({ status: 'completed' })
+        .where(eq(uploadSessions.id, sessionId));
+      
+      return c.json({ success: true, contentId: session.contentId });
+    } catch (error) {
+      console.error('Upload completion failed:', error);
+      return c.json({ 
+        error: 'Failed to complete upload', 
+        code: 'UPLOAD_COMPLETE_ERROR',
+        details: error.message 
+      }, 500);
+    }
+  });
+  
+  return upload;
+}
+
+export function createContentRoutes() {
+  const content = new Hono();
+  
+  content.use('/*', cors());
+  content.use('/*', secureHeaders());
+  
+  const auth = createAuthMiddleware();
+  
+  /**
+   * GET /content/:id
+   * Get content metadata and CDN access info
+   */
+  content.get('/:id', async (c) => {
+    const { id } = c.req.param();
+    
+    try {
+      const db = createDb(c.env);
+      const valcorner = new ValcornerCDNService();
+      
+      const contentItem = await db.query.contents.findFirst({
+        where: eq(contents.id, id),
+        with: {
+          uploader: true
+        }
+      });
+      
+      if (!contentItem) {
+        return c.json({ error: 'Content not found', code: 'NOT_FOUND' }, 404);
+      }
+      
+      if (contentItem.status !== 'ready') {
+        return c.json({ error: 'Content not ready', code: 'NOT_READY' }, 400);
+      }
+      
+      // Generate CDN access info
+      const cdnAccess = valcorner.generateCdnAccessInfo(
+        contentItem.contentType,
+        contentItem.id,
+        contentItem.manifestIndex,
+        contentItem.manifestIndex ? null : 'file'
+      );
+      
+      // Increment view count (async, don't wait)
+      c.executionCtx.waitUntil(
+        incrementViewCount(db, id)
+      );
+      
+      return c.json({
+        id: contentItem.id,
+        slug: contentItem.slug,
+        title: contentItem.title,
+        description: contentItem.description,
+        contentType: contentItem.contentType,
+        isPremium: contentItem.isPremium,
+        isEncrypted: contentItem.isEncrypted,
+        duration: contentItem.duration,
+        mimeType: contentItem.mimeType,
+        uploader: {
+          id: contentItem.uploader.id,
+          name: contentItem.uploader.name,
+          avatar: contentItem.uploader.avatar
+        },
+        cdn: cdnAccess
+      });
+    } catch (error) {
+      console.error('Content fetch failed:', error);
+      return c.json({ 
+        error: 'Failed to fetch content', 
+        code: 'FETCH_ERROR',
+        details: error.message 
+      }, 500);
+    }
+  });
+  
+  return content;
+}
+
+async function incrementViewCount(db, contentId) {
+  try {
+    // Upsert view count
+    await db.run(`
+      INSERT INTO view_counts (content_id, count, last_synced_at)
+      VALUES (?, 1, ?)
+      ON CONFLICT(content_id) DO UPDATE SET 
+        count = count + 1,
+        last_synced_at = ?
+    `, [contentId, Date.now(), Date.now()]);
+  } catch (error) {
+    console.error('Failed to increment view count:', error);
+  }
+}
