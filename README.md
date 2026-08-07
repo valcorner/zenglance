@@ -48,7 +48,7 @@ A self-hosted multi-modal content platform built on Cloudflare Workers with Back
 - **Database**: Cloudflare D1 (SQLite — metadata, sessions, OAuth state)
 - **Storage**: Backblaze B2 (S3-compatible, private bucket)
 - **CDN**: Valcorner CDN
-- **Auth**: Valcorner OAuth 2.0 PKCE + HS256 JWT session tokens
+- **Auth**: Valcorner OAuth 2.0 PKCE + D1-backed server sessions
 - **Validation**: Zod
 
 ## Project Structure
@@ -60,18 +60,17 @@ src/
 │   ├── index.js      # Database connection
 │   └── schema.js     # Drizzle ORM schema (D1 tables) + relations
 ├── routes/
-│   ├── auth.js       # OAuth login/callback, /me, logout, JWT issuance
+│   ├── auth.js       # OAuth login/callback, /me, logout, D1 session creation
 │   └── upload.js     # Upload request/complete, content list & detail
 ├── services/
 │   ├── b2.js         # Backblaze B2 S3 client, presigned URLs
 │   └── valcorner.js  # Valcorner CDN URL builder
 ├── middleware/
-│   └── auth.js       # JWT auth middleware + role guard
+│   └── auth.js       # Session auth middleware + role guard + session helpers
 └── utils/
-    ├── jwt.js        # HS256 JWT sign/verify (Web Crypto API)
     └── validators.js # Zod schemas, permission logic
 migrations/
-└── 0001_initial.sql  # D1 database schema
+└── 0001_initial.sql  # D1 database schema (incl. sessions table)
 ```
 
 ## Setup
@@ -85,11 +84,10 @@ migrations/
 ### Environment Variables (Secrets)
 
 ```bash
-wrangler secret put B2_ACCESS_KEY_ID
-wrangler secret put B2_SECRET_ACCESS_KEY
+wrangler secret put B2_APPLICATION_KEY_ID
+wrangler secret put B2_APPLICATION_KEY
 wrangler secret put VALCORNER_CLIENT_ID
 wrangler secret put VALCORNER_CLIENT_SECRET
-wrangler secret put JWT_SECRET
 ```
 
 ### Configuration Vars (in `wrangler.jsonc`)
@@ -98,10 +96,14 @@ Non-secret runtime configuration, already set with local-dev defaults:
 
 | Var | Purpose |
 |-----|---------|
-| `B2_ENDPOINT` | B2 S3 API endpoint |
+| `B2_API_URL` | B2 native API endpoint (default: `https://api.backblazeb2.com`) |
 | `B2_BUCKET_NAME` | B2 bucket name |
 | `VALCORNER_REDIRECT_URI` | OAuth callback URL (`/auth/callback`) |
-| `FRONTEND_URL` | Frontend origin for post-OAuth redirect with `?token=` |
+| `VALCORNER_SCOPE` | OAuth scopes (default: `openid email profile`) |
+| `VALCORNER_AUTHORIZE_URL` | OAuth authorize endpoint |
+| `VALCORNER_TOKEN_URL` | OAuth token exchange endpoint |
+| `VALCORNER_USERINFO_URL` | OAuth user info endpoint |
+| `FRONTEND_URL` | Frontend origin for post-OAuth redirect with `?session_id=` |
 
 ### D1 Database Setup
 
@@ -125,23 +127,84 @@ npm run dev
 
 ## Deployment
 
+### Manual
+
 ```bash
 npm run deploy
 ```
+
+### GitHub Actions (CI/CD)
+
+A deploy workflow is provided at [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). It runs on every push to `main`/`master` and via manual `workflow_dispatch`.
+
+**Pipeline steps:**
+
+1. `npm ci` → install dependencies
+2. Inject `D1_DATABASE_ID` secret into `wrangler.jsonc` (replacing the `YOUR_D1_DATABASE_ID` placeholder; falls back to a dummy UUID when the secret is absent so tests still pass on PR branches)
+3. Verify all required secrets are configured (only on `main`/`master` or manual dispatch)
+4. `npm test -- --run` → run vitest
+5. `wrangler d1 execute --remote --file=migrations/0001_initial.sql` → apply migrations (idempotent via `IF NOT EXISTS`)
+6. `wrangler deploy` → deploy the Worker and upload all runtime secrets
+
+#### Required GitHub Secrets
+
+Configure these under **Settings → Secrets and variables → Actions → New repository secret**:
+
+| Secret | Purpose | How to obtain |
+|--------|---------|---------------|
+| `CLOUDFLARE_API_TOKEN` | Cloudflare API token with Workers/D1 edit perms | [Cloudflare dashboard](https://developers.cloudflare.com/workers/wrangler/ci-cd/#api-token) |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare account ID | Dashboard right sidebar |
+| `D1_DATABASE_ID` | D1 数据库 ID（替换 `wrangler.jsonc` 中的占位符） | `wrangler d1 create zenglance-db` 输出 |
+| `B2_APPLICATION_KEY_ID` | B2 application key ID（原生 API，非 S3） | B2 console → Account Keys |
+| `B2_APPLICATION_KEY` | B2 application key（原生 API） | B2 console → Account Keys |
+| `VALCORNER_CLIENT_ID` | Valcorner OAuth client ID | Valcorner admin |
+| `VALCORNER_CLIENT_SECRET` | Valcorner OAuth client secret | Valcorner admin |
+
+#### Optional GitHub Variables
+
+Configure these under **Settings → Secrets and variables → Actions → New repository variable** to override the defaults in `wrangler.jsonc` for your production environment:
+
+| Variable | Default | When to override |
+|----------|---------|-----------------|
+| `D1_DATABASE_NAME` | `zenglance-db` | 数据库名称与 `wrangler.jsonc` 的 `database_name` 保持一致时可不配置 |
+| `FRONTEND_URL` | `https://zenglance.example.com` | 换成你的实际前端域名 |
+| `B2_API_URL` | `https://api.backblazeb2.com` | 通常不需要改 |
+| `VALCORNER_REDIRECT_URI` | `https://zenglance.example.com/auth/callback` | 换成生产环境回调地址 |
+
+> `wrangler.jsonc` 中的默认值仅用于本地开发（`http://localhost:8787`），CI 部署时会用上述 variables 覆盖。
+
+#### First-time setup
+
+```bash
+# 1. 本地创建 D1 数据库，记下 database_id
+npx wrangler d1 create zenglance-db
+# Output: database_id = "<UUID>"
+
+# 2. 推送仓库到 GitHub，然后在仓库 Settings → Secrets and variables → Actions 配置：
+#    - Secrets：CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / D1_DATABASE_ID
+#    - Secrets：B2_APPLICATION_KEY_ID / B2_APPLICATION_KEY
+#    - Secrets：VALCORNER_CLIENT_ID / VALCORNER_CLIENT_SECRET
+#    - Variables（可选）：D1_DATABASE_NAME / FRONTEND_URL / VALCORNER_REDIRECT_URI
+
+# 3. 触发 workflow
+#    GitHub → Actions → Deploy → Run workflow
+```
+
+> The `wrangler.jsonc` `database_id` is intentionally left as `YOUR_D1_DATABASE_ID` in the repo — the CI step **Inject D1 database_id** replaces it at build time using the `D1_DATABASE_ID` secret, so never commit a real ID.
 
 ## API Endpoints
 
 ### Authentication
 
 - `GET /auth/login` - Redirect to Valcorner OAuth
-- `GET /auth/callback` - OAuth callback handler, issues JWT and redirects to `${FRONTEND_URL}?token=...`
-- `GET /auth/me` - Get current authenticated user (Bearer JWT)
-- `POST /auth/logout` - Logout (client discards local JWT)
+- `GET /auth/callback` - OAuth callback handler, creates a D1 session and redirects to `${FRONTEND_URL}?session_id=...`
+- `GET /auth/me` - Get current authenticated user (Bearer session_id)
+- `POST /auth/logout` - Delete server-side session (client also clears local session_id)
 
 ### Upload
 
-- `POST /api/upload/request` - Request presigned URL for B2 upload (Bearer JWT)
-- `POST /api/upload/complete/:sessionId` - Mark upload as complete (Bearer JWT)
+- `POST /api/upload/request` - Request presigned URL for B2 upload (Bearer session_id)
+- `POST /api/upload/complete/:sessionId` - Mark upload as complete (Bearer session_id)
 
 ### Content
 

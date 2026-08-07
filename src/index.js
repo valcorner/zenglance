@@ -2,7 +2,7 @@
  * ZenGlance - Self-hosted Multi-modal Content Platform
  * 
  * Architecture:
- * - Write: Client → Backblaze B2 (S3 Presigned URL direct upload)
+ * - Write: Client → Backblaze B2 (native REST API presigned upload URL)
  * - Read: Client → Valcorner CDN (direct with Token API)
  * - Workers: Metadata management, auth, presigned URL generation
  */

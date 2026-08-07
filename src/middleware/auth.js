@@ -1,15 +1,16 @@
 import { createDb } from '../db/index.js';
-import { users } from '../db/schema.js';
-import { verifyJwt } from '../utils/jwt.js';
-import { eq } from 'drizzle-orm';
+import { sessions } from '../db/schema.js';
+import { eq, and, gt } from 'drizzle-orm';
+
+const SESSION_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 天
 
 /**
- * JWT 鉴权中间件
+ * 会话鉴权中间件（基于 D1 sessions 表，替代 JWT）
  *
- * 从 Authorization: Bearer <token> 头解析并校验 JWT，
- * 将解码后的用户对象挂到 c.var.user 上。
+ * 从 Authorization: Bearer <session_id> 头解析 session_id，
+ * 查 D1 sessions 表（关联 users），将用户对象挂到 c.var.user。
  *
- * 携带的字段：id / email / role / name / avatar
+ * 过期/不存在的 session 返回 401，由客户端重新走 OAuth 登录。
  */
 export function createAuthMiddleware() {
   return async (c, next) => {
@@ -19,30 +20,36 @@ export function createAuthMiddleware() {
       return c.json({ error: 'Unauthorized', code: 'MISSING_AUTH' }, 401);
     }
 
-    const token = authHeader.substring(7).trim();
-    if (!token) {
+    const sessionId = authHeader.substring(7).trim();
+    if (!sessionId) {
       return c.json({ error: 'Unauthorized', code: 'MISSING_AUTH' }, 401);
     }
 
     try {
-      const payload = await verifyJwt(token, c.env.JWT_SECRET);
-
-      // 从 D1 拉取最新用户信息，确保角色变更后立即生效
       const db = createDb(c.env);
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, payload.sub)
+      const now = Date.now();
+
+      // 关联查询 session + user，且 session 未过期
+      const session = await db.query.sessions.findFirst({
+        where: and(
+          eq(sessions.id, sessionId),
+          gt(sessions.expiresAt, now)
+        ),
+        with: {
+          user: true
+        }
       });
 
-      if (!user) {
-        return c.json({ error: 'Invalid token', code: 'INVALID_TOKEN' }, 401);
+      if (!session || !session.user) {
+        return c.json({ error: 'Invalid or expired session', code: 'INVALID_SESSION' }, 401);
       }
 
-      c.set('user', user);
-      c.set('token', token);
+      c.set('user', session.user);
+      c.set('sessionId', sessionId);
       await next();
     } catch (error) {
-      const code = error.message === 'Token expired' ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN';
-      return c.json({ error: 'Authentication failed', code, details: error.message }, 401);
+      console.error('Auth middleware error:', error);
+      return c.json({ error: 'Authentication failed', code: 'AUTH_ERROR' }, 401);
     }
   };
 }
@@ -73,4 +80,32 @@ export function requireRole(...allowedRoles) {
 
     await next();
   };
+}
+
+/**
+ * 创建新会话并写入 D1
+ * @returns {Promise<{id: string, expiresAt: number}>}
+ */
+export async function createSession(db, userId) {
+  const sessionId = crypto.randomUUID();
+  const now = Date.now();
+  const expiresAt = now + SESSION_TTL_MS;
+
+  await db.insert(sessions).values({
+    id: sessionId,
+    userId,
+    expiresAt,
+    createdAt: now
+  });
+
+  return { id: sessionId, expiresAt };
+}
+
+/**
+ * 删除指定会话（登出）
+ * @returns {Promise<boolean>} 是否删除了记录
+ */
+export async function deleteSession(db, sessionId) {
+  const result = await db.delete(sessions).where(eq(sessions.id, sessionId)).returning();
+  return result.length > 0;
 }

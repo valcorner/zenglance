@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS upload_sessions (
   user_id TEXT NOT NULL REFERENCES users(id),
   content_type TEXT NOT NULL,
   b2_upload_url TEXT NOT NULL,
+  b2_upload_auth TEXT NOT NULL,
   b2_key TEXT NOT NULL,
   expires_at INTEGER NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'completed', 'expired')),
@@ -85,3 +86,13 @@ CREATE TABLE IF NOT EXISTS oauth_states (
   created_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS oauth_states_expires_idx ON oauth_states(expires_at);
+
+-- Sessions table - 服务端会话（替代 JWT）
+CREATE TABLE IF NOT EXISTS sessions (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS sessions_expires_idx ON sessions(expires_at);

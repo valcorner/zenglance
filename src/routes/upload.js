@@ -75,12 +75,12 @@ export function createUploadRoutes() {
       
       const db = createDb(c.env);
       const b2 = new B2Service(
-        c.env.B2_ACCESS_KEY_ID,
-        c.env.B2_SECRET_ACCESS_KEY,
-        c.env.B2_ENDPOINT,
+        c.env.B2_APPLICATION_KEY_ID,
+        c.env.B2_APPLICATION_KEY,
+        c.env.B2_API_URL,
         c.env.B2_BUCKET_NAME
       );
-      
+
       // Generate content ID (UUID)
       const contentId = crypto.randomUUID();
       const filename = mimeType?.split('/')[1] || 'file';
@@ -113,28 +113,30 @@ export function createUploadRoutes() {
         updatedAt: now
       });
       
-      // Generate presigned upload URL (valid for 1 hour)
-      const uploadUrl = await b2.generateUploadUrl(b2Key, mimeType || 'application/octet-stream', 3600);
-      
+      // Get native B2 upload URL and auth token
+      const { uploadUrl, uploadAuth } = await b2.getUploadUrl(mimeType || 'application/octet-stream');
+
       // Create upload session
       const sessionId = crypto.randomUUID();
       const expiresAt = now + 3600 * 1000;
-      
+
       await db.insert(uploadSessions).values({
         id: sessionId,
         userId: user.id,
         contentType,
         b2UploadUrl: uploadUrl,
+        b2UploadAuth: uploadAuth,
         b2Key,
         expiresAt,
         contentId,
         status: 'pending',
         createdAt: now
       });
-      
+
       const response = uploadSessionResponseSchema.parse({
         sessionId,
         uploadUrl,
+        uploadAuth,
         b2Key,
         expiresAt,
         contentId

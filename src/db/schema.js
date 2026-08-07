@@ -45,7 +45,7 @@ export const contents = sqliteTable('contents', {
   // Upload info
   uploaderId: text('uploader_id').notNull().references(() => users.id),
   b2Bucket: text('b2_bucket').notNull(),
-  b2Key: text('b2_key').notNull(), // S3 object key
+  b2Key: text('b2_key').notNull(), // B2 对象路径
   
   // CDN routing info
   cdnType: text('cdn_type').notNull(), // drama/series/movie/video/short/music/podcast/novel
@@ -93,8 +93,9 @@ export const uploadSessions = sqliteTable('upload_sessions', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id),
   contentType: text('content_type', { enum: contentTypes }).notNull(),
-  b2UploadUrl: text('b2_upload_url').notNull(), // Presigned PUT URL
-  b2Key: text('b2_key').notNull(), // Target S3 key
+  b2UploadUrl: text('b2_upload_url').notNull(), // B2 upload URL (from b2_get_upload_url)
+  b2UploadAuth: text('b2_upload_auth').notNull(), // B2 upload Authorization token (Bearer header)
+  b2Key: text('b2_key').notNull(), // Target object key
   expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
   status: text('status').notNull().default('pending'), // pending, completed, expired
   contentId: text('content_id'), // Linked content after upload
@@ -121,13 +122,26 @@ export const oauthStates = sqliteTable('oauth_states', {
   index('oauth_states_expires_idx').on(table.expiresAt)
 ]);
 
+// Sessions table - 服务端会话（替代 JWT）
+// 前端把 session.id 作为 Bearer token，Workers 每次请求查表校验
+export const sessions = sqliteTable('sessions', {
+  id: text('id').primaryKey(), // UUID session token
+  userId: text('user_id').notNull().references(() => users.id),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => Date.now())
+}, (table) => [
+  index('sessions_user_idx').on(table.userId),
+  index('sessions_expires_idx').on(table.expiresAt)
+]);
+
 // ---------------------------------------------------------------------------
 // Relations - 必需，否则 db.query.*.findMany({ with: {...} }) 会抛错
 // ---------------------------------------------------------------------------
 
 export const usersRelations = relations(users, ({ many }) => ({
   uploadedContents: many(contents),
-  uploadSessions: many(uploadSessions)
+  uploadSessions: many(uploadSessions),
+  sessions: many(sessions)
 }));
 
 export const contentsRelations = relations(contents, ({ one, many }) => ({
@@ -162,5 +176,12 @@ export const viewCountsRelations = relations(viewCounts, ({ one }) => ({
   content: one(contents, {
     fields: [viewCounts.contentId],
     references: [contents.id]
+  })
+}));
+
+export const sessionsRelations = relations(sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [sessions.userId],
+    references: [users.id]
   })
 }));

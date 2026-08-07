@@ -1,13 +1,11 @@
 import { Hono } from 'hono';
 import { createDb } from '../db/index.js';
-import { users, oauthStates } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
-import { signJwt, verifyJwt } from '../utils/jwt.js';
-
-const TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 天，与 jwt.js 默认值保持一致
+import { users, oauthStates, sessions } from '../db/schema.js';
+import { eq, and, gt } from 'drizzle-orm';
+import { createSession, deleteSession } from '../middleware/auth.js';
 
 /**
- * Auth routes for Valcorner OAuth 2.0 PKCE flow + JWT session
+ * Auth routes for Valcorner OAuth 2.0 PKCE flow + D1-backed sessions
  */
 export function createAuthRoutes() {
   const auth = new Hono();
@@ -44,22 +42,22 @@ export function createAuthRoutes() {
       return c.json({ error: 'Failed to initialize authentication' }, 500);
     }
 
-    const authUrl = new URL('https://auth.valcorner.qzz.io/oauth/authorize');
-    authUrl.searchParams.set('client_id', clientId);
-    authUrl.searchParams.set('redirect_uri', redirectUri);
-    authUrl.searchParams.set('response_type', 'code');
-    authUrl.searchParams.set('scope', 'openid email profile');
-    authUrl.searchParams.set('state', state);
-    authUrl.searchParams.set('code_challenge', codeChallenge);
-    authUrl.searchParams.set('code_challenge_method', 'S256');
+    const authorizeUrl = new URL(c.env.VALCORNER_AUTHORIZE_URL || 'https://auth.valcorner.qzz.io/oauth/authorize');
+    authorizeUrl.searchParams.set('client_id', clientId);
+    authorizeUrl.searchParams.set('redirect_uri', redirectUri);
+    authorizeUrl.searchParams.set('response_type', 'code');
+    authorizeUrl.searchParams.set('scope', c.env.VALCORNER_SCOPE || 'openid email profile');
+    authorizeUrl.searchParams.set('state', state);
+    authorizeUrl.searchParams.set('code_challenge', codeChallenge);
+    authorizeUrl.searchParams.set('code_challenge_method', 'S256');
 
-    return c.redirect(authUrl.toString());
+    return c.redirect(authorizeUrl.toString());
   });
 
   /**
    * GET /auth/callback
    * Handle OAuth callback from Valcorner, exchange code for tokens,
-   * upsert user, and issue local JWT session token.
+   * upsert user, and create a server-side session in D1.
    */
   auth.get('/callback', async (c) => {
     const code = c.req.query('code');
@@ -97,7 +95,7 @@ export function createAuthRoutes() {
       const codeVerifier = stateData.codeVerifier;
 
       // Exchange code for tokens
-      const tokenResponse = await fetch('https://auth.valcorner.qzz.io/oauth/token', {
+      const tokenResponse = await fetch(c.env.VALCORNER_TOKEN_URL || 'https://auth.valcorner.qzz.io/oauth/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -118,7 +116,7 @@ export function createAuthRoutes() {
       const tokens = await tokenResponse.json();
 
       // Get user info from Valcorner
-      const userInfoResponse = await fetch('https://auth.valcorner.qzz.io/oauth/userinfo', {
+      const userInfoResponse = await fetch(c.env.VALCORNER_USERINFO_URL || 'https://auth.valcorner.qzz.io/oauth/userinfo', {
         headers: {
           'Authorization': `Bearer ${tokens.access_token}`
         }
@@ -150,21 +148,13 @@ export function createAuthRoutes() {
         }
       }).returning();
 
-      // Issue local JWT session token
-      const jwt = await signJwt(
-        {
-          sub: saved.id,
-          email: saved.email,
-          role: saved.role
-        },
-        c.env.JWT_SECRET,
-        TOKEN_TTL_SECONDS
-      );
+      // Create server-side session in D1
+      const session = await createSession(db, saved.id);
 
-      // Redirect to frontend with token (cookie-free, OAuth-friendly pattern).
-      // Frontend extracts ?token=, stores in localStorage, and cleans the URL.
+      // Redirect to frontend with session_id (cookie-free, OAuth-friendly pattern).
+      // Frontend extracts ?session_id=, stores in localStorage, and cleans the URL.
       const frontendUrl = new URL(c.env.FRONTEND_URL || 'http://localhost:8787');
-      frontendUrl.searchParams.set('token', jwt);
+      frontendUrl.searchParams.set('session_id', session.id);
       frontendUrl.searchParams.set('userId', saved.id);
       return c.redirect(frontendUrl.toString());
     } catch (error) {
@@ -176,7 +166,7 @@ export function createAuthRoutes() {
   /**
    * GET /auth/me
    * Return the current authenticated user's profile.
-   * Requires Authorization: Bearer <jwt>
+   * Requires Authorization: Bearer <session_id>
    */
   auth.get('/me', async (c) => {
     const authHeader = c.req.header('Authorization');
@@ -185,18 +175,26 @@ export function createAuthRoutes() {
       return c.json({ error: 'Unauthorized', code: 'MISSING_AUTH' }, 401);
     }
 
-    const token = authHeader.substring(7).trim();
+    const sessionId = authHeader.substring(7).trim();
     try {
-      const payload = await verifyJwt(token, c.env.JWT_SECRET);
       const db = createDb(c.env);
-      const user = await db.query.users.findFirst({
-        where: eq(users.id, payload.sub)
+      const now = Date.now();
+
+      const session = await db.query.sessions.findFirst({
+        where: and(
+          eq(sessions.id, sessionId),
+          gt(sessions.expiresAt, now)
+        ),
+        with: {
+          user: true
+        }
       });
 
-      if (!user) {
-        return c.json({ error: 'User not found', code: 'USER_NOT_FOUND' }, 404);
+      if (!session || !session.user) {
+        return c.json({ error: 'Invalid or expired session', code: 'INVALID_SESSION' }, 401);
       }
 
+      const user = session.user;
       return c.json({
         id: user.id,
         email: user.email,
@@ -207,21 +205,32 @@ export function createAuthRoutes() {
         createdAt: user.createdAt
       });
     } catch (error) {
-      const code = error.message === 'Token expired' ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN';
-      return c.json({ error: 'Authentication failed', code, details: error.message }, 401);
+      console.error('Auth /me failed:', error);
+      return c.json({ error: 'Authentication failed', code: 'AUTH_ERROR' }, 500);
     }
   });
 
   /**
    * POST /auth/logout
-   * Stateless JWT：服务端不维护会话，登出由客户端清除本地 token 完成。
-   * 返回 200 让客户端进入清流程。
+   * Delete the server-side session in D1. Client should also clear local session_id.
    */
-  auth.post('/logout', (c) => {
-    return c.json({
-      success: true,
-      message: 'Logged out. Please discard the local JWT.'
-    });
+  auth.post('/logout', async (c) => {
+    const authHeader = c.req.header('Authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      // 无 token 也视为已登出，幂等返回 success
+      return c.json({ success: true });
+    }
+
+    const sessionId = authHeader.substring(7).trim();
+    try {
+      const db = createDb(c.env);
+      await deleteSession(db, sessionId);
+      return c.json({ success: true });
+    } catch (error) {
+      console.error('Logout failed:', error);
+      return c.json({ error: 'Logout failed', code: 'LOGOUT_ERROR' }, 500);
+    }
   });
 
   return auth;

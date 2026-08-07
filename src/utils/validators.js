@@ -67,8 +67,9 @@ export const createContentSchema = z.object({
 
 // Upload session response schema
 export const uploadSessionResponseSchema = z.object({
-  sessionId: z.string(),
+  sessionId: z.string().uuid(),
   uploadUrl: z.string().url(),
+  uploadAuth: z.string(),
   b2Key: z.string(),
   expiresAt: z.number(),
   contentId: z.string().optional()
