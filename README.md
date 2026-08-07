@@ -198,7 +198,10 @@ npx wrangler d1 create zenglance-db
 #    应用配置：
 #      FRONTEND_URL
 
-# 3. 触发 workflow
+# 3. 手动执行 D1 数据库迁移（只需执行一次）
+npx wrangler d1 execute zenglance-db --remote --file=migrations/0001_initial.sql
+
+# 4. 触发 workflow
 #    GitHub → Actions → Deploy → Run workflow
 ```
 
