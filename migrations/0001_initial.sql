@@ -73,3 +73,12 @@ CREATE TABLE IF NOT EXISTS view_counts (
   count INTEGER NOT NULL DEFAULT 0,
   last_synced_at INTEGER
 );
+
+-- OAuth states table - stores PKCE code verifiers temporarily
+CREATE TABLE IF NOT EXISTS oauth_states (
+  id TEXT PRIMARY KEY,
+  code_verifier TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS oauth_states_expires_idx ON oauth_states(expires_at);

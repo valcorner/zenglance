@@ -4,85 +4,41 @@ import { secureHeaders } from 'hono/secure-headers';
 import { createDb } from '../db/index.js';
 import { B2Service } from '../services/b2.js';
 import { ValcornerCDNService } from '../services/valcorner.js';
-import { 
-  roleSchema, 
-  uploadPermissions, 
-  requiresEncryption, 
+import {
+  uploadPermissions,
+  requiresEncryption,
   getCdnType,
   createContentSchema,
-  uploadSessionResponseSchema 
+  uploadSessionResponseSchema
 } from '../utils/validators.js';
-import { eq, and } from 'drizzle-orm';
-import { users, contents, uploadSessions, encryptionKeys } from '../db/schema.js';
-
-export function createAuthMiddleware() {
-  return async (c, next) => {
-    const authHeader = c.req.header('Authorization');
-    
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return c.json({ error: 'Unauthorized', code: 'MISSING_AUTH' }, 401);
-    }
-
-    const token = authHeader.substring(7);
-    
-    // In production, validate JWT with Valcorner OAuth
-    // For now, extract user info from token (simplified)
-    try {
-      // TODO: Implement proper JWT validation with Valcorner OAuth
-      const user = await getUserFromToken(c.env, token);
-      
-      if (!user) {
-        return c.json({ error: 'Invalid token', code: 'INVALID_TOKEN' }, 401);
-      }
-
-      c.set('user', user);
-      await next();
-    } catch (error) {
-      return c.json({ error: 'Authentication failed', code: 'AUTH_ERROR' }, 401);
-    }
-  };
-}
-
-async function getUserFromToken(env, token) {
-  // TODO: Implement proper OAuth token validation
-  // This is a placeholder - in production, verify with Valcorner OAuth server
-  const db = createDb(env);
-  
-  // For demo purposes, extract user ID from token
-  // In production, decode JWT and validate signature
-  const userId = token; // Simplified for demo
-  
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId)
-  });
-  
-  return user;
-}
+import { createAuthMiddleware } from '../middleware/auth.js';
+import { eq, and, desc } from 'drizzle-orm';
+import { contents, uploadSessions } from '../db/schema.js';
 
 export function checkUploadPermission() {
   return async (c, next) => {
     const user = c.get('user');
     const body = await c.req.json().catch(() => ({}));
     const contentType = body.contentType;
-    
+
     if (!contentType) {
       return c.json({ error: 'Content type required', code: 'MISSING_CONTENT_TYPE' }, 400);
     }
-    
+
     const allowedTypes = uploadPermissions[user.role];
-    
+
     if (!allowedTypes.includes(contentType)) {
-      return c.json({ 
-        error: 'Insufficient permissions for this content type', 
+      return c.json({
+        error: 'Insufficient permissions for this content type',
         code: 'PERMISSION_DENIED',
         details: { role: user.role, contentType }
       }, 403);
     }
-    
+
     // Check if encryption is required
     const needsEncryption = requiresEncryption(user.role, contentType);
     c.set('requiresEncryption', needsEncryption);
-    
+
     await next();
   };
 }
@@ -260,38 +216,92 @@ export function createUploadRoutes() {
 
 export function createContentRoutes() {
   const content = new Hono();
-  
+
   content.use('/*', cors());
   content.use('/*', secureHeaders());
-  
-  const auth = createAuthMiddleware();
-  
+
+  /**
+   * GET /content
+   * List ready contents, optionally filtered by ?type=
+   */
+  content.get('/', async (c) => {
+    const type = c.req.query('type');
+    const limit = Math.min(Math.max(parseInt(c.req.query('limit') || '20', 10) || 20, 1), 50);
+
+    try {
+      const db = createDb(c.env);
+
+      const conditions = [eq(contents.status, 'ready')];
+      if (type) {
+        conditions.push(eq(contents.contentType, type));
+      }
+
+      const items = await db.query.contents.findMany({
+        where: and(...conditions),
+        with: {
+          uploader: true,
+          viewCount: true
+        },
+        orderBy: desc(contents.createdAt),
+        limit
+      });
+
+      const result = items.map((item) => ({
+        id: item.id,
+        slug: item.slug,
+        title: item.title,
+        contentType: item.contentType,
+        isPremium: item.isPremium,
+        isEncrypted: item.isEncrypted,
+        duration: item.duration,
+        mimeType: item.mimeType,
+        createdAt: item.createdAt,
+        views: item.viewCount?.count || 0,
+        uploader: {
+          id: item.uploader?.id,
+          name: item.uploader?.name,
+          avatar: item.uploader?.avatar
+        }
+      }));
+
+      return c.json(result);
+    } catch (error) {
+      console.error('Content list failed:', error);
+      return c.json({
+        error: 'Failed to list content',
+        code: 'LIST_ERROR',
+        details: error.message
+      }, 500);
+    }
+  });
+
   /**
    * GET /content/:id
    * Get content metadata and CDN access info
    */
   content.get('/:id', async (c) => {
     const { id } = c.req.param();
-    
+
     try {
       const db = createDb(c.env);
       const valcorner = new ValcornerCDNService();
-      
+
       const contentItem = await db.query.contents.findFirst({
         where: eq(contents.id, id),
         with: {
-          uploader: true
+          uploader: true,
+          viewCount: true
         }
       });
-      
+
       if (!contentItem) {
         return c.json({ error: 'Content not found', code: 'NOT_FOUND' }, 404);
       }
-      
+
       if (contentItem.status !== 'ready') {
         return c.json({ error: 'Content not ready', code: 'NOT_READY' }, 400);
       }
-      
+
       // Generate CDN access info
       const cdnAccess = valcorner.generateCdnAccessInfo(
         contentItem.contentType,
@@ -299,12 +309,12 @@ export function createContentRoutes() {
         contentItem.manifestIndex,
         contentItem.manifestIndex ? null : 'file'
       );
-      
+
       // Increment view count (async, don't wait)
       c.executionCtx.waitUntil(
         incrementViewCount(db, id)
       );
-      
+
       return c.json({
         id: contentItem.id,
         slug: contentItem.slug,
@@ -315,23 +325,25 @@ export function createContentRoutes() {
         isEncrypted: contentItem.isEncrypted,
         duration: contentItem.duration,
         mimeType: contentItem.mimeType,
+        createdAt: contentItem.createdAt,
+        views: contentItem.viewCount?.count || 0,
         uploader: {
-          id: contentItem.uploader.id,
-          name: contentItem.uploader.name,
-          avatar: contentItem.uploader.avatar
+          id: contentItem.uploader?.id,
+          name: contentItem.uploader?.name,
+          avatar: contentItem.uploader?.avatar
         },
         cdn: cdnAccess
       });
     } catch (error) {
       console.error('Content fetch failed:', error);
-      return c.json({ 
-        error: 'Failed to fetch content', 
+      return c.json({
+        error: 'Failed to fetch content',
         code: 'FETCH_ERROR',
-        details: error.message 
+        details: error.message
       }, 500);
     }
   });
-  
+
   return content;
 }
 

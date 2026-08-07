@@ -23,6 +23,8 @@
   ],
   "vars": {
     "B2_ENDPOINT": "https://s3.us-west-004.backblazeb2.com",
-    "B2_BUCKET_NAME": "zenglance-media"
+    "B2_BUCKET_NAME": "zenglance-media",
+    "VALCORNER_REDIRECT_URI": "http://localhost:8787/auth/callback",
+    "FRONTEND_URL": "http://localhost:8787"
   }
 }

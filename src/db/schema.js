@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { relations } from 'drizzle-orm';
 
 // User roles enum
 export const roles = ['free', 'premium', 'official'];
@@ -103,7 +104,7 @@ export const uploadSessions = sqliteTable('upload_sessions', {
   index('upload_sessions_expires_idx').on(table.expiresAt)
 ]);
 
-// View counts cache (stored in D1, removed KV dependency)
+// View counts cache (stored in D1)
 export const viewCounts = sqliteTable('view_counts', {
   contentId: text('content_id').primaryKey().references(() => contents.id),
   count: integer('count').notNull().default(0),
@@ -119,3 +120,47 @@ export const oauthStates = sqliteTable('oauth_states', {
 }, (table) => [
   index('oauth_states_expires_idx').on(table.expiresAt)
 ]);
+
+// ---------------------------------------------------------------------------
+// Relations - 必需，否则 db.query.*.findMany({ with: {...} }) 会抛错
+// ---------------------------------------------------------------------------
+
+export const usersRelations = relations(users, ({ many }) => ({
+  uploadedContents: many(contents),
+  uploadSessions: many(uploadSessions)
+}));
+
+export const contentsRelations = relations(contents, ({ one, many }) => ({
+  uploader: one(users, {
+    fields: [contents.uploaderId],
+    references: [users.id]
+  }),
+  encryptionKeys: many(encryptionKeys),
+  uploadSessions: many(uploadSessions),
+  viewCount: one(viewCounts)
+}));
+
+export const encryptionKeysRelations = relations(encryptionKeys, ({ one }) => ({
+  content: one(contents, {
+    fields: [encryptionKeys.contentId],
+    references: [contents.id]
+  })
+}));
+
+export const uploadSessionsRelations = relations(uploadSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [uploadSessions.userId],
+    references: [users.id]
+  }),
+  content: one(contents, {
+    fields: [uploadSessions.contentId],
+    references: [contents.id]
+  })
+}));
+
+export const viewCountsRelations = relations(viewCounts, ({ one }) => ({
+  content: one(contents, {
+    fields: [viewCounts.contentId],
+    references: [contents.id]
+  })
+}));

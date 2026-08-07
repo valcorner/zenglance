@@ -1,10 +1,13 @@
 import { Hono } from 'hono';
 import { createDb } from '../db/index.js';
 import { users, oauthStates } from '../db/schema.js';
-import { eq, and, gt } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
+import { signJwt, verifyJwt } from '../utils/jwt.js';
+
+const TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 天，与 jwt.js 默认值保持一致
 
 /**
- * Auth routes for Valcorner OAuth 2.0 PKCE flow
+ * Auth routes for Valcorner OAuth 2.0 PKCE flow + JWT session
  */
 export function createAuthRoutes() {
   const auth = new Hono();
@@ -16,6 +19,10 @@ export function createAuthRoutes() {
   auth.get('/login', async (c) => {
     const clientId = c.env.VALCORNER_CLIENT_ID;
     const redirectUri = c.env.VALCORNER_REDIRECT_URI;
+
+    if (!clientId || !redirectUri) {
+      return c.json({ error: 'OAuth not configured', code: 'OAUTH_CONFIG_MISSING' }, 500);
+    }
 
     // Generate PKCE code verifier and challenge
     const codeVerifier = generateCodeVerifier();
@@ -51,7 +58,8 @@ export function createAuthRoutes() {
 
   /**
    * GET /auth/callback
-   * Handle OAuth callback from Valcorner
+   * Handle OAuth callback from Valcorner, exchange code for tokens,
+   * upsert user, and issue local JWT session token.
    */
   auth.get('/callback', async (c) => {
     const code = c.req.query('code');
@@ -104,7 +112,7 @@ export function createAuthRoutes() {
       });
 
       if (!tokenResponse.ok) {
-        throw new Error('Token exchange failed');
+        throw new Error(`Token exchange failed: ${tokenResponse.status}`);
       }
 
       const tokens = await tokenResponse.json();
@@ -117,19 +125,19 @@ export function createAuthRoutes() {
       });
 
       if (!userInfoResponse.ok) {
-        throw new Error('Failed to get user info');
+        throw new Error(`Failed to get user info: ${userInfoResponse.status}`);
       }
 
       const userInfo = await userInfoResponse.json();
 
       // Upsert user in database
       const now = Date.now();
-      await db.insert(users).values({
+      const [saved] = await db.insert(users).values({
         id: userInfo.sub,
         email: userInfo.email,
         name: userInfo.name,
         avatar: userInfo.picture,
-        role: 'free', // Default role, can be upgraded
+        role: 'free', // Default role, can be upgraded later
         createdAt: now,
         updatedAt: now
       }).onConflictDoUpdate({
@@ -140,17 +148,25 @@ export function createAuthRoutes() {
           avatar: userInfo.picture,
           updatedAt: now
         }
-      });
+      }).returning();
 
-      // In production, issue JWT session token
-      // For now, return user ID directly (simplified)
-      return c.json({
-        success: true,
-        userId: userInfo.sub,
-        // accessToken: tokens.access_token,
-        // refreshToken: tokens.refresh_token
-      });
+      // Issue local JWT session token
+      const jwt = await signJwt(
+        {
+          sub: saved.id,
+          email: saved.email,
+          role: saved.role
+        },
+        c.env.JWT_SECRET,
+        TOKEN_TTL_SECONDS
+      );
 
+      // Redirect to frontend with token (cookie-free, OAuth-friendly pattern).
+      // Frontend extracts ?token=, stores in localStorage, and cleans the URL.
+      const frontendUrl = new URL(c.env.FRONTEND_URL || 'http://localhost:8787');
+      frontendUrl.searchParams.set('token', jwt);
+      frontendUrl.searchParams.set('userId', saved.id);
+      return c.redirect(frontendUrl.toString());
     } catch (error) {
       console.error('OAuth callback failed:', error);
       return c.json({ error: 'Authentication failed', details: error.message }, 500);
@@ -158,12 +174,54 @@ export function createAuthRoutes() {
   });
 
   /**
-   * POST /auth/logout
-   * Invalidate session
+   * GET /auth/me
+   * Return the current authenticated user's profile.
+   * Requires Authorization: Bearer <jwt>
    */
-  auth.post('/logout', async (c) => {
-    // TODO: Implement session invalidation
-    return c.json({ success: true });
+  auth.get('/me', async (c) => {
+    const authHeader = c.req.header('Authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ error: 'Unauthorized', code: 'MISSING_AUTH' }, 401);
+    }
+
+    const token = authHeader.substring(7).trim();
+    try {
+      const payload = await verifyJwt(token, c.env.JWT_SECRET);
+      const db = createDb(c.env);
+      const user = await db.query.users.findFirst({
+        where: eq(users.id, payload.sub)
+      });
+
+      if (!user) {
+        return c.json({ error: 'User not found', code: 'USER_NOT_FOUND' }, 404);
+      }
+
+      return c.json({
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        username: user.name,
+        avatar: user.avatar,
+        role: user.role,
+        createdAt: user.createdAt
+      });
+    } catch (error) {
+      const code = error.message === 'Token expired' ? 'TOKEN_EXPIRED' : 'INVALID_TOKEN';
+      return c.json({ error: 'Authentication failed', code, details: error.message }, 401);
+    }
+  });
+
+  /**
+   * POST /auth/logout
+   * Stateless JWT：服务端不维护会话，登出由客户端清除本地 token 完成。
+   * 返回 200 让客户端进入清流程。
+   */
+  auth.post('/logout', (c) => {
+    return c.json({
+      success: true,
+      message: 'Logged out. Please discard the local JWT.'
+    });
   });
 
   return auth;

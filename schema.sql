@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS view_counts (
   last_synced_at INTEGER
 );
 
--- OAuth states table - stores PKCE code verifiers temporarily (replaces KV/Map)
+-- OAuth states table - stores PKCE code verifiers temporarily
 CREATE TABLE IF NOT EXISTS oauth_states (
   id TEXT PRIMARY KEY,
   code_verifier TEXT NOT NULL,

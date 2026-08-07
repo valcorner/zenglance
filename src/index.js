@@ -13,8 +13,10 @@ import { prettyJSON } from 'hono/pretty-json';
 import { createDb } from './db/index.js';
 import { createAuthRoutes } from './routes/auth.js';
 import { createUploadRoutes, createContentRoutes } from './routes/upload.js';
-import { users } from './db/schema.js';
+import { createAuthMiddleware, requireRole } from './middleware/auth.js';
+import { users, roles } from './db/schema.js';
 import { eq } from 'drizzle-orm';
+import { roleSchema } from './utils/validators.js';
 
 const app = new Hono();
 
@@ -43,42 +45,51 @@ app.route('/api/content', createContentRoutes());
 // User management routes
 app.get('/api/users/:id', async (c) => {
   const { id } = c.req.param();
-  
+
   try {
     const db = createDb(c.env);
     const user = await db.query.users.findFirst({
       where: eq(users.id, id)
     });
-    
+
     if (!user) {
       return c.json({ error: 'User not found' }, 404);
     }
-    
-    // Remove sensitive data
-    const { ...publicUser } = user;
-    
-    return c.json(publicUser);
+
+    // Public profile fields only
+    return c.json({
+      id: user.id,
+      name: user.name,
+      avatar: user.avatar,
+      role: user.role,
+      createdAt: user.createdAt
+    });
   } catch (error) {
     return c.json({ error: error.message }, 500);
   }
 });
 
-// Admin: Upgrade user role
-app.post('/api/admin/users/:id/role', async (c) => {
-  // TODO: Add admin auth check
+// Admin: Upgrade user role (requires official role)
+const auth = createAuthMiddleware();
+app.post('/api/admin/users/:id/role', auth, requireRole('official'), async (c) => {
   const { id } = c.req.param();
-  const { role } = await c.req.json();
-  
-  if (!['free', 'premium', 'official'].includes(role)) {
-    return c.json({ error: 'Invalid role' }, 400);
+  const body = await c.req.json().catch(() => ({}));
+  const role = body.role;
+
+  if (!roleSchema.safeParse(role).success) {
+    return c.json({
+      error: 'Invalid role',
+      code: 'VALIDATION_ERROR',
+      details: { allowed: roles }
+    }, 400);
   }
-  
+
   try {
     const db = createDb(c.env);
     await db.update(users)
       .set({ role, updatedAt: Date.now() })
       .where(eq(users.id, id));
-    
+
     return c.json({ success: true });
   } catch (error) {
     return c.json({ error: error.message }, 500);

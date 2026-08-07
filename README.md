@@ -45,11 +45,10 @@ A self-hosted multi-modal content platform built on Cloudflare Workers with Back
 ## Tech Stack
 
 - **Runtime**: Cloudflare Workers (Hono Framework)
-- **Database**: Cloudflare D1 (SQLite)
-- **Cache**: Cloudflare KV (Sessions / OAuth state)
+- **Database**: Cloudflare D1 (SQLite — metadata, sessions, OAuth state)
 - **Storage**: Backblaze B2 (S3-compatible, private bucket)
 - **CDN**: Valcorner CDN
-- **Auth**: Valcorner OAuth 2.0 PKCE
+- **Auth**: Valcorner OAuth 2.0 PKCE + HS256 JWT session tokens
 - **Validation**: Zod
 
 ## Project Structure
@@ -59,15 +58,17 @@ src/
 ├── index.js          # Main entry point, Hono app setup
 ├── db/
 │   ├── index.js      # Database connection
-│   └── schema.js     # Drizzle ORM schema (D1 tables)
+│   └── schema.js     # Drizzle ORM schema (D1 tables) + relations
 ├── routes/
-│   ├── auth.js       # OAuth login/callback routes
-│   └── upload.js     # Upload request/complete, content fetch
+│   ├── auth.js       # OAuth login/callback, /me, logout, JWT issuance
+│   └── upload.js     # Upload request/complete, content list & detail
 ├── services/
 │   ├── b2.js         # Backblaze B2 S3 client, presigned URLs
 │   └── valcorner.js  # Valcorner CDN URL builder
-├── middleware/       # Custom middleware (auth, permissions)
+├── middleware/
+│   └── auth.js       # JWT auth middleware + role guard
 └── utils/
+    ├── jwt.js        # HS256 JWT sign/verify (Web Crypto API)
     └── validators.js # Zod schemas, permission logic
 migrations/
 └── 0001_initial.sql  # D1 database schema
@@ -77,7 +78,7 @@ migrations/
 
 ### Prerequisites
 
-1. Cloudflare account with Workers, D1, KV enabled
+1. Cloudflare account with Workers and D1 enabled
 2. Backblaze B2 account with S3-compatible API credentials
 3. Valcorner CDN account
 
@@ -91,6 +92,17 @@ wrangler secret put VALCORNER_CLIENT_SECRET
 wrangler secret put JWT_SECRET
 ```
 
+### Configuration Vars (in `wrangler.jsonc`)
+
+Non-secret runtime configuration, already set with local-dev defaults:
+
+| Var | Purpose |
+|-----|---------|
+| `B2_ENDPOINT` | B2 S3 API endpoint |
+| `B2_BUCKET_NAME` | B2 bucket name |
+| `VALCORNER_REDIRECT_URI` | OAuth callback URL (`/auth/callback`) |
+| `FRONTEND_URL` | Frontend origin for post-OAuth redirect with `?token=` |
+
 ### D1 Database Setup
 
 ```bash
@@ -102,15 +114,6 @@ wrangler d1 create zenglance-db
 # Run migrations
 wrangler d1 execute zenglance-db --local --file=migrations/0001_initial.sql
 wrangler d1 execute zenglance-db --remote --file=migrations/0001_initial.sql
-```
-
-### KV Namespace Setup
-
-```bash
-# Create KV namespace
-wrangler kv:namespace create KV
-
-# Update wrangler.jsonc with the namespace id
 ```
 
 ## Development
@@ -131,22 +134,24 @@ npm run deploy
 ### Authentication
 
 - `GET /auth/login` - Redirect to Valcorner OAuth
-- `GET /auth/callback` - OAuth callback handler
-- `POST /auth/logout` - Logout
+- `GET /auth/callback` - OAuth callback handler, issues JWT and redirects to `${FRONTEND_URL}?token=...`
+- `GET /auth/me` - Get current authenticated user (Bearer JWT)
+- `POST /auth/logout` - Logout (client discards local JWT)
 
 ### Upload
 
-- `POST /api/upload/request` - Request presigned URL for B2 upload
-- `POST /api/upload/complete/:sessionId` - Mark upload as complete
+- `POST /api/upload/request` - Request presigned URL for B2 upload (Bearer JWT)
+- `POST /api/upload/complete/:sessionId` - Mark upload as complete (Bearer JWT)
 
 ### Content
 
+- `GET /api/content` - List ready contents, optional `?type=` filter
 - `GET /api/content/:id` - Get content metadata + CDN access info
 
 ### Users
 
-- `GET /api/users/:id` - Get user profile
-- `POST /api/admin/users/:id/role` - Upgrade user role (admin)
+- `GET /api/users/:id` - Get public user profile
+- `POST /api/admin/users/:id/role` - Upgrade user role (requires `official` role)
 
 ## Upload Flow
 
