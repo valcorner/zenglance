@@ -16,7 +16,7 @@ concurrency:
 
 # 共享的环境变量，所有步骤均可访问
 env:
-  NODE_VERSION: '20'
+  NODE_VERSION: '22'
   # 从 GitHub Secrets 读取，全部配置后必须设置；未配置时保留 wrangler.jsonc 默认值
   D1_DATABASE_NAME: ${{ secrets.D1_DATABASE_NAME || 'zenglance-db' }}
   FRONTEND_URL:       ${{ secrets.FRONTEND_URL || 'http://localhost:8787' }}
@@ -120,9 +120,9 @@ jobs:
       # ── 注入所有 wrangler.jsonc vars（从 GitHub secrets 覆盖默认值）──
       - name: Inject wrangler.jsonc vars
         env:
-          FRONTEND_URL:       ${{ secrets.FRONTEND_URL }}
-          B2_API_URL:         ${{ secrets.B2_API_URL }}
-          B2_BUCKET_NAME:     ${{ secrets.B2_BUCKET_NAME }}
+          FRONTEND_URL:         ${{ secrets.FRONTEND_URL }}
+          B2_API_URL:           ${{ secrets.B2_API_URL }}
+          B2_BUCKET_NAME:       ${{ secrets.B2_BUCKET_NAME }}
           VALCORNER_REDIRECT_URI: ${{ secrets.VALCORNER_REDIRECT_URI }}
           VALCORNER_SCOPE:        ${{ secrets.VALCORNER_SCOPE }}
           VALCORNER_AUTHORIZE_URL: ${{ secrets.VALCORNER_AUTHORIZE_URL }}
