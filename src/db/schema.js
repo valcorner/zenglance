@@ -103,9 +103,19 @@ export const uploadSessions = sqliteTable('upload_sessions', {
   index('upload_sessions_expires_idx').on(table.expiresAt)
 ]);
 
-// View counts cache (synced to KV periodically)
+// View counts cache (stored in D1, removed KV dependency)
 export const viewCounts = sqliteTable('view_counts', {
   contentId: text('content_id').primaryKey().references(() => contents.id),
   count: integer('count').notNull().default(0),
   lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' })
 });
+
+// OAuth states table - stores PKCE code verifiers temporarily
+export const oauthStates = sqliteTable('oauth_states', {
+  id: text('id').primaryKey(), // UUID state parameter
+  codeVerifier: text('code_verifier').notNull(),
+  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => Date.now())
+}, (table) => [
+  index('oauth_states_expires_idx').on(table.expiresAt)
+]);

@@ -70,9 +70,18 @@ CREATE TABLE IF NOT EXISTS upload_sessions (
 CREATE INDEX IF NOT EXISTS upload_sessions_user_idx ON upload_sessions(user_id);
 CREATE INDEX IF NOT EXISTS upload_sessions_expires_idx ON upload_sessions(expires_at);
 
--- View counts cache
+-- View counts cache (stored in D1)
 CREATE TABLE IF NOT EXISTS view_counts (
   content_id TEXT PRIMARY KEY REFERENCES contents(id),
   count INTEGER NOT NULL DEFAULT 0,
   last_synced_at INTEGER
 );
+
+-- OAuth states table - stores PKCE code verifiers temporarily (replaces KV/Map)
+CREATE TABLE IF NOT EXISTS oauth_states (
+  id TEXT PRIMARY KEY,
+  code_verifier TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS oauth_states_expires_idx ON oauth_states(expires_at);

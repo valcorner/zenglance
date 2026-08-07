@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { createDb } from '../db/index.js';
-import { users } from '../db/schema.js';
-import { eq } from 'drizzle-orm';
+import { users, oauthStates } from '../db/schema.js';
+import { eq, and, gt } from 'drizzle-orm';
 
 /**
  * Auth routes for Valcorner OAuth 2.0 PKCE flow
@@ -16,15 +16,27 @@ export function createAuthRoutes() {
   auth.get('/login', async (c) => {
     const clientId = c.env.VALCORNER_CLIENT_ID;
     const redirectUri = c.env.VALCORNER_REDIRECT_URI;
-    
+
     // Generate PKCE code verifier and challenge
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
-    
-    // Store code verifier in KV for later validation
+
+    // Store code verifier in D1 for later validation
     const state = crypto.randomUUID();
-    await c.env.KV.put(`oauth_state:${state}`, codeVerifier, { expirationTtl: 600 });
-    
+    const expiresAt = Date.now() + 600000; // 10 minutes
+
+    try {
+      const db = createDb(c.env);
+      await db.insert(oauthStates).values({
+        id: state,
+        codeVerifier,
+        expiresAt
+      });
+    } catch (error) {
+      console.error('Failed to store OAuth state:', error);
+      return c.json({ error: 'Failed to initialize authentication' }, 500);
+    }
+
     const authUrl = new URL('https://auth.valcorner.qzz.io/oauth/authorize');
     authUrl.searchParams.set('client_id', clientId);
     authUrl.searchParams.set('redirect_uri', redirectUri);
@@ -33,7 +45,7 @@ export function createAuthRoutes() {
     authUrl.searchParams.set('state', state);
     authUrl.searchParams.set('code_challenge', codeChallenge);
     authUrl.searchParams.set('code_challenge_method', 'S256');
-    
+
     return c.redirect(authUrl.toString());
   });
 
@@ -45,27 +57,37 @@ export function createAuthRoutes() {
     const code = c.req.query('code');
     const state = c.req.query('state');
     const error = c.req.query('error');
-    
+
     if (error) {
       return c.json({ error: 'OAuth authorization failed', details: c.req.query('error_description') }, 400);
     }
-    
+
     if (!code || !state) {
       return c.json({ error: 'Invalid callback parameters' }, 400);
     }
-    
+
     try {
       const db = createDb(c.env);
-      
-      // Retrieve code verifier from KV
-      const codeVerifier = await c.env.KV.get(`oauth_state:${state}`);
-      if (!codeVerifier) {
+
+      // Retrieve code verifier from D1
+      const stateData = await db.query.oauthStates.findFirst({
+        where: eq(oauthStates.id, state)
+      });
+
+      if (!stateData) {
         return c.json({ error: 'Invalid or expired state parameter' }, 400);
       }
-      
+
       // Delete the state to prevent replay attacks
-      await c.env.KV.delete(`oauth_state:${state}`);
-      
+      await db.delete(oauthStates).where(eq(oauthStates.id, state));
+
+      // Check if state has expired
+      if (stateData.expiresAt < Date.now()) {
+        return c.json({ error: 'State parameter has expired' }, 400);
+      }
+
+      const codeVerifier = stateData.codeVerifier;
+
       // Exchange code for tokens
       const tokenResponse = await fetch('https://auth.valcorner.qzz.io/oauth/token', {
         method: 'POST',
@@ -80,26 +102,26 @@ export function createAuthRoutes() {
           code_verifier: codeVerifier
         })
       });
-      
+
       if (!tokenResponse.ok) {
         throw new Error('Token exchange failed');
       }
-      
+
       const tokens = await tokenResponse.json();
-      
+
       // Get user info from Valcorner
       const userInfoResponse = await fetch('https://auth.valcorner.qzz.io/oauth/userinfo', {
         headers: {
           'Authorization': `Bearer ${tokens.access_token}`
         }
       });
-      
+
       if (!userInfoResponse.ok) {
         throw new Error('Failed to get user info');
       }
-      
+
       const userInfo = await userInfoResponse.json();
-      
+
       // Upsert user in database
       const now = Date.now();
       await db.insert(users).values({
@@ -119,7 +141,7 @@ export function createAuthRoutes() {
           updatedAt: now
         }
       });
-      
+
       // In production, issue JWT session token
       // For now, return user ID directly (simplified)
       return c.json({
@@ -128,7 +150,7 @@ export function createAuthRoutes() {
         // accessToken: tokens.access_token,
         // refreshToken: tokens.refresh_token
       });
-      
+
     } catch (error) {
       console.error('OAuth callback failed:', error);
       return c.json({ error: 'Authentication failed', details: error.message }, 500);

@@ -1,10 +1,88 @@
-```sql
--- Note: SQL schema files typically should not be ignored
--- since they represent important database structure definitions
--- However, if this schema.sql is auto-generated, you might want to uncomment the line below:
-# schema.sql
 ```
+# Dependencies
+node_modules/
 
-Actually, since `schema.sql` appears to be a source/database definition file that was added intentionally, it should NOT be ignored. SQL schema files are typically important for version control as they define the database structure.
+# Build artifacts
+dist/
+build/
+target/
 
-No .gitignore content needed for this case.
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+.venv-bak/
+.ENV/
+.env
+.env.local
+.env.*
+.python-version
+
+# Logs
+*.log
+
+# Environment specific
+.env.local
+.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
+
+# MyPy
+.mypy_cache/
+__pycache__/
+
+# Pytest
+.pytest_cache/
+
+# Gradle
+.gradle/
+
+# Julia
+julia-*/
+
+# Zig
+zig*/
+```
