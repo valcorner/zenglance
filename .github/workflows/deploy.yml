@@ -3,16 +3,11 @@ name: Deploy
 # 触发条件：
 # 1. push 到 main / master 分支 → 完整流水线（测试 + 迁移 + 部署）
 # 2. push 到非主分支 → 仅测试（不部署）
-# 3. 手动 workflow_dispatch → 完整流水线（可选指定分支）
+# 3. 手动 workflow_dispatch → 完整流水线
 on:
   push:
     branches: [main, master]
   workflow_dispatch:
-    inputs:
-      branch:
-        description: '部署目标分支'
-        required: true
-        default: 'main'
 
 # 防止并发部署，新运行会取消进行中的旧运行
 concurrency:
@@ -22,14 +17,16 @@ concurrency:
 # 共享的环境变量，所有步骤均可访问
 env:
   NODE_VERSION: '20'
-  # D1 数据库名称（部署时覆盖 wrangler.jsonc 默认值）
-  D1_DATABASE_NAME: ${{ vars.D1_DATABASE_NAME || 'zenglance-db' }}
-  # 生产环境前端地址（部署时覆盖 vars 默认值，本地开发不受影响）
-  FRONTEND_URL: ${{ vars.FRONTEND_URL || 'https://zenglance.example.com' }}
-  # B2 API 端点（默认 https://api.backblazeb2.com）
-  B2_API_URL: ${{ vars.B2_API_URL || 'https://api.backblazeb2.com' }}
-  # Valcorner OAuth 端点（生产环境按需覆盖）
-  VALCORNER_REDIRECT_URI: ${{ vars.VALCORNER_REDIRECT_URI || 'https://zenglance.example.com/auth/callback' }}
+  # 从 GitHub Secrets 读取，全部配置后必须设置；未配置时保留 wrangler.jsonc 默认值
+  D1_DATABASE_NAME: ${{ secrets.D1_DATABASE_NAME || 'zenglance-db' }}
+  FRONTEND_URL:       ${{ secrets.FRONTEND_URL || 'http://localhost:8787' }}
+  B2_API_URL:         ${{ secrets.B2_API_URL || 'https://api.backblazeb2.com' }}
+  B2_BUCKET_NAME:     ${{ secrets.B2_BUCKET_NAME || 'zenglance-media' }}
+  VALCORNER_REDIRECT_URI: ${{ secrets.VALCORNER_REDIRECT_URI || 'http://localhost:8787/auth/callback' }}
+  VALCORNER_SCOPE:        ${{ secrets.VALCORNER_SCOPE || 'openid email profile' }}
+  VALCORNER_AUTHORIZE_URL: ${{ secrets.VALCORNER_AUTHORIZE_URL || 'https://auth.valcorner.qzz.io/oauth/authorize' }}
+  VALCORNER_TOKEN_URL:     ${{ secrets.VALCORNER_TOKEN_URL || 'https://auth.valcorner.qzz.io/oauth/token' }}
+  VALCORNER_USERINFO_URL:  ${{ secrets.VALCORNER_USERINFO_URL || 'https://auth.valcorner.qzz.io/oauth/userinfo' }}
 
 jobs:
   test:
@@ -51,23 +48,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # wrangler.jsonc 中 database_id 是占位符：
-      # - 有 D1_DATABASE_ID secret 时用真实 ID（部署分支）
-      # - 无 secret 时用占位 UUID（测试分支），让 miniflare 测试仍能通过
-      - name: Inject D1 database_id for tests
+      # D1 database_id 占位符替换：有 secret 用真实值，无则用占位 UUID（测试分支）
+      - name: Inject D1 database_id
         env:
           DB_ID: ${{ secrets.D1_DATABASE_ID }}
         run: |
           DB_ID="${DB_ID:-00000000-0000-0000-0000-000000000000}"
           sed -i "s/\"YOUR_D1_DATABASE_ID\"/\"$DB_ID\"/" wrangler.jsonc
-          echo "D1 database_id: $DB_ID"
 
       - name: Run tests
         run: npm test -- --run
 
   verify-secrets:
     name: Verify Deployment Secrets
-    # 仅在部署分支或手动触发时运行
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 2
@@ -79,12 +72,12 @@ jobs:
 
       - name: Check required secrets
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          D1_DATABASE_ID: ${{ secrets.D1_DATABASE_ID }}
-          B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
-          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
-          VALCORNER_CLIENT_ID: ${{ secrets.VALCORNER_CLIENT_ID }}
+          CLOUDFLARE_API_TOKEN:    ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID:   ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          D1_DATABASE_ID:          ${{ secrets.D1_DATABASE_ID }}
+          B2_APPLICATION_KEY_ID:   ${{ secrets.B2_APPLICATION_KEY_ID }}
+          B2_APPLICATION_KEY:      ${{ secrets.B2_APPLICATION_KEY }}
+          VALCORNER_CLIENT_ID:     ${{ secrets.VALCORNER_CLIENT_ID }}
           VALCORNER_CLIENT_SECRET: ${{ secrets.VALCORNER_CLIENT_SECRET }}
         run: |
           missing=0
@@ -97,13 +90,7 @@ jobs:
             fi
           done
           if [ "$missing" = "1" ]; then
-            echo ""
-            echo "::error::部署失败：缺少必需的 GitHub secrets。"
-            echo "::error::请前往仓库 Settings → Secrets and variables → Actions 配置以下 secrets："
-            echo "::error::  CLOUDFLARE_API_TOKEN、CLOUDFLARE_ACCOUNT_ID、D1_DATABASE_ID"
-            echo "::error::  B2_APPLICATION_KEY_ID、B2_APPLICATION_KEY"
-            echo "::error::  VALCORNER_CLIENT_ID、VALCORNER_CLIENT_SECRET"
-            echo "::error::详见 README.md → GitHub Actions Deployment"
+            echo "::error::缺少必需的 GitHub secrets，请前往仓库 Settings → Secrets and variables → Actions 配置"
             exit 1
           fi
           echo "All required secrets are configured ✅"
@@ -113,7 +100,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     needs: [test, verify-secrets]
-    # verify-secrets 只在部署分支运行，非部署分支时 needs 不满足则跳过整个 job
     if: always() && (needs.test.result == 'success') &&
        (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' || github.event_name == 'workflow_dispatch' || needs.verify-secrets.result == 'skipped')
     permissions:
@@ -131,41 +117,66 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # 注入真实 D1_DATABASE_ID（部署分支）
+      # ── 注入所有 wrangler.jsonc vars（从 GitHub secrets 覆盖默认值）──
+      - name: Inject wrangler.jsonc vars
+        env:
+          FRONTEND_URL:       ${{ secrets.FRONTEND_URL }}
+          B2_API_URL:         ${{ secrets.B2_API_URL }}
+          B2_BUCKET_NAME:     ${{ secrets.B2_BUCKET_NAME }}
+          VALCORNER_REDIRECT_URI: ${{ secrets.VALCORNER_REDIRECT_URI }}
+          VALCORNER_SCOPE:        ${{ secrets.VALCORNER_SCOPE }}
+          VALCORNER_AUTHORIZE_URL: ${{ secrets.VALCORNER_AUTHORIZE_URL }}
+          VALCORNER_TOKEN_URL:     ${{ secrets.VALCORNER_TOKEN_URL }}
+          VALCORNER_USERINFO_URL:  ${{ secrets.VALCORNER_USERINFO_URL }}
+        run: |
+          inject() {
+            local key="$1" val="$2" file="wrangler.jsonc"
+            if [ -n "$val" ]; then
+              sed -i "s|\"$key\":.*\".*\"|$key: \"$val\"|" "$file"
+              echo "  → $key = $val"
+            fi
+          }
+          inject "FRONTEND_URL"         "$FRONTEND_URL"
+          inject "B2_API_URL"           "$B2_API_URL"
+          inject "B2_BUCKET_NAME"       "$B2_BUCKET_NAME"
+          inject "VALCORNER_REDIRECT_URI" "$VALCORNER_REDIRECT_URI"
+          inject "VALCORNER_SCOPE"      "$VALCORNER_SCOPE"
+          inject "VALCORNER_AUTHORIZE_URL" "$VALCORNER_AUTHORIZE_URL"
+          inject "VALCORNER_TOKEN_URL"  "$VALCORNER_TOKEN_URL"
+          inject "VALCORNER_USERINFO_URL" "$VALCORNER_USERINFO_URL"
+          echo "wrangler.jsonc vars injected ✅"
+
+      # 注入 D1 database_id
       - name: Inject D1 database_id
-        if: secrets.D1_DATABASE_ID != ''
         env:
           DB_ID: ${{ secrets.D1_DATABASE_ID }}
         run: |
+          DB_ID="${DB_ID:-00000000-0000-0000-0000-000000000000}"
           sed -i "s/\"YOUR_D1_DATABASE_ID\"/\"$DB_ID\"/" wrangler.jsonc
-          echo "Injected real D1 database_id: $DB_ID"
+          echo "D1 database_id: $DB_ID"
 
-      # D1 migrations：CREATE TABLE IF NOT EXISTS 保证幂等，重复运行安全
+      # D1 migrations（幂等，重复运行安全）
       - name: Apply D1 migrations
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: d1 execute ${{ env.D1_DATABASE_NAME }} --remote --file=migrations/0001_initial.sql
+          command: d1 execute $D1_DATABASE_NAME --remote --file=migrations/0001_initial.sql
 
+      # 部署 Worker
+      # secrets: sync 自动同步所有 GitHub secrets 到 Wrangler secrets（B2、Valcorner 凭据）
       - name: Deploy Worker
         uses: cloudflare/wrangler-action@v4
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
-          # 自动将仓库 GitHub secrets 同步为 Wrangler secrets（无需手动列名）
           secrets: sync
         env:
-          # --- Secrets（来自 GitHub secrets）---
-          B2_APPLICATION_KEY_ID: ${{ secrets.B2_APPLICATION_KEY_ID }}
-          B2_APPLICATION_KEY: ${{ secrets.B2_APPLICATION_KEY }}
-          VALCORNER_CLIENT_ID: ${{ secrets.VALCORNER_CLIENT_ID }}
+          B2_APPLICATION_KEY_ID:  ${{ secrets.B2_APPLICATION_KEY_ID }}
+          B2_APPLICATION_KEY:     ${{ secrets.B2_APPLICATION_KEY }}
+          VALCORNER_CLIENT_ID:    ${{ secrets.VALCORNER_CLIENT_ID }}
           VALCORNER_CLIENT_SECRET: ${{ secrets.VALCORNER_CLIENT_SECRET }}
-          # --- Vars（生产环境覆盖，可从 GitHub vars 配置；未配置则用 workflow env 默认值）---
-          FRONTEND_URL: ${{ env.FRONTEND_URL }}
-          B2_API_URL: ${{ env.B2_API_URL }}
-          VALCORNER_REDIRECT_URI: ${{ env.VALCORNER_REDIRECT_URI }}
 
       - name: Summary
         if: always()
@@ -176,9 +187,7 @@ jobs:
             echo "- **Triggered by**: ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
             echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
             echo "- **Branch**: ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
-            echo "- **Frontend**: ${{ env.FRONTEND_URL }}" >> $GITHUB_STEP_SUMMARY
           else
             echo "### ❌ Deployment failed" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
             echo "Check the logs above for details." >> $GITHUB_STEP_SUMMARY
           fi
