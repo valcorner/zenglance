@@ -3,7 +3,6 @@ import { relations } from 'drizzle-orm';
 
 // User roles enum
 export const roles = ['free', 'premium', 'official'];
-export type Role = typeof roles[number];
 
 // Content types enum
 export const contentTypes = [
@@ -16,7 +15,6 @@ export const contentTypes = [
   'podcast',
   'novel'
 ];
-export type ContentType = typeof contentTypes[number];
 
 // Users table - stores OAuth user info
 export const users = sqliteTable('users', {
