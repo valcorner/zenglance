@@ -46,7 +46,7 @@ export function getCdnType(contentType) {
 // User schema for OAuth
 export const userSchema = z.object({
   id: z.string(),
-  email: z.email(),
+  email: z.string().email(),
   name: z.string().optional(),
   avatar: z.string().url().optional(),
   role: roleSchema,
