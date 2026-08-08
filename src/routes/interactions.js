@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
-import { eq, desc, asc, count, inArray } from 'drizzle-orm';
-import { db, users, contents, likes, favorites, comments, follows, collections, collectionItems, watchHistory, shortDramas, tvSeries, movies, ugcLongVideos, shortVideos } from '../db/schema.js';
+import { eq, desc, count, inArray } from 'drizzle-orm';
+import { users, contents, likes, favorites, comments, follows, collections, collectionItems, watchHistory } from '../db/schema.js';
+import { createDb } from '../db/index.js';
 import { createAuthMiddleware } from '../middleware/auth.js';
 
 const interaction = new Hono();
@@ -11,17 +12,22 @@ function generateId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function db(c) {
+  return createDb(c.env);
+}
+
 // ─── Likes ──────────────────────────────────────────────────────────────────
 
 interaction.get('/content/:id/likes', auth, async (c) => {
   const user = c.get('user');
   const contentId = c.req.param('id');
+  const d = db(c);
 
   try {
-    const countResult = await db.select({ count: count() }).from(likes).where(eq(likes.contentId, contentId));
+    const countResult = await d.select({ count: count() }).from(likes).where(eq(likes.contentId, contentId));
     const likeCount = countResult[0]?.count ?? 0;
 
-    const liked = await db.select().from(likes)
+    const liked = await d.select().from(likes)
       .where(eq(likes.contentId, contentId))
       .and(eq(likes.userId, user.id));
 
@@ -34,16 +40,17 @@ interaction.get('/content/:id/likes', auth, async (c) => {
 interaction.post('/content/:id/like', auth, async (c) => {
   const user = c.get('user');
   const contentId = c.req.param('id');
+  const d = db(c);
 
-  const existing = await db.select().from(likes)
+  const existing = await d.select().from(likes)
     .where(eq(likes.contentId, contentId))
     .and(eq(likes.userId, user.id));
 
   if (existing.length > 0) {
-    await db.delete(likes).where(eq(likes.userId, user.id)).and(eq(likes.contentId, contentId));
+    await d.delete(likes).where(eq(likes.userId, user.id)).and(eq(likes.contentId, contentId));
     return c.json({ liked: false });
   } else {
-    await db.insert(likes).values({
+    await d.insert(likes).values({
       userId: user.id,
       contentId,
       createdAt: new Date()
@@ -57,12 +64,13 @@ interaction.post('/content/:id/like', auth, async (c) => {
 interaction.get('/content/:id/favorite', auth, async (c) => {
   const user = c.get('user');
   const contentId = c.req.param('id');
+  const d = db(c);
 
   try {
-    const countResult = await db.select({ count: count() }).from(favorites).where(eq(favorites.contentId, contentId));
+    const countResult = await d.select({ count: count() }).from(favorites).where(eq(favorites.contentId, contentId));
     const favoriteCount = countResult[0]?.count ?? 0;
 
-    const favorited = await db.select().from(favorites)
+    const favorited = await d.select().from(favorites)
       .where(eq(favorites.contentId, contentId))
       .and(eq(favorites.userId, user.id));
 
@@ -75,16 +83,17 @@ interaction.get('/content/:id/favorite', auth, async (c) => {
 interaction.post('/content/:id/favorite', auth, async (c) => {
   const user = c.get('user');
   const contentId = c.req.param('id');
+  const d = db(c);
 
-  const existing = await db.select().from(favorites)
+  const existing = await d.select().from(favorites)
     .where(eq(favorites.contentId, contentId))
     .and(eq(favorites.userId, user.id));
 
   if (existing.length > 0) {
-    await db.delete(favorites).where(eq(favorites.userId, user.id)).and(eq(favorites.contentId, contentId));
+    await d.delete(favorites).where(eq(favorites.userId, user.id)).and(eq(favorites.contentId, contentId));
     return c.json({ favorited: false });
   } else {
-    await db.insert(favorites).values({
+    await d.insert(favorites).values({
       userId: user.id,
       contentId,
       createdAt: new Date()
@@ -99,12 +108,10 @@ interaction.get('/content/:id/comments', async (c) => {
   const contentId = c.req.param('id');
   const cursor = c.req.query('cursor');
   const limit = Math.min(parseInt(c.req.query('limit') || '20', 10), 50);
+  const d = db(c);
 
   try {
-    const where = eq(comments.contentId, contentId);
-    const order = desc(comments.createdAt);
-
-    const rows = await db
+    const rows = await d
       .select({
         id: comments.id,
         userId: comments.userId,
@@ -114,8 +121,8 @@ interaction.get('/content/:id/comments', async (c) => {
         updatedAt: comments.updatedAt
       })
       .from(comments)
-      .where(where)
-      .orderBy(order)
+      .where(eq(comments.contentId, contentId))
+      .orderBy(desc(comments.createdAt))
       .limit(limit + 1);
 
     let nextCursor = null;
@@ -125,7 +132,7 @@ interaction.get('/content/:id/comments', async (c) => {
     }
 
     const withUsernames = await Promise.all(rows.map(async (row) => {
-      const u = await db.select({ name: users.name }).from(users).where(eq(users.id, row.userId));
+      const u = await d.select({ name: users.name }).from(users).where(eq(users.id, row.userId));
       return { ...row, user: u[0]?.name || 'Unknown' };
     }));
 
@@ -140,6 +147,7 @@ interaction.post('/content/:id/comments', auth, async (c) => {
   const user = c.get('user');
   const contentId = c.req.param('id');
   const now = new Date();
+  const d = db(c);
 
   const { body, parentId } = await c.req.json();
 
@@ -148,14 +156,14 @@ interaction.post('/content/:id/comments', auth, async (c) => {
   }
 
   if (parentId) {
-    const parent = await db.select().from(comments).where(eq(comments.id, parentId)).limit(1);
+    const parent = await d.select().from(comments).where(eq(comments.id, parentId)).limit(1);
     if (parent.length === 0 || parent[0].contentId !== contentId) {
       return c.json({ error: 'Invalid parent comment' }, 400);
     }
   }
 
   const id = generateId();
-  await db.insert(comments).values({
+  await d.insert(comments).values({
     id,
     contentId,
     userId: user.id,
@@ -165,7 +173,7 @@ interaction.post('/content/:id/comments', auth, async (c) => {
     updatedAt: now
   });
 
-  const u = await db.select({ name: users.name }).from(users).where(eq(users.id, user.id));
+  const u = await d.select({ name: users.name }).from(users).where(eq(users.id, user.id));
   return c.json({
     id,
     userId: user.id,
@@ -180,13 +188,14 @@ interaction.post('/content/:id/comments', auth, async (c) => {
 interaction.delete('/comments/:id', auth, async (c) => {
   const user = c.get('user');
   const commentId = c.req.param('id');
+  const d = db(c);
 
-  const comment = await db.select().from(comments).where(eq(comments.id, commentId)).limit(1);
+  const comment = await d.select().from(comments).where(eq(comments.id, commentId)).limit(1);
   if (comment.length === 0) return c.json({ error: 'Not found' }, 404);
 
   if (comment[0].userId !== user.id) return c.json({ error: 'Forbidden' }, 403);
 
-  await db.delete(comments).where(eq(comments.id, commentId));
+  await d.delete(comments).where(eq(comments.id, commentId));
   return c.json({ ok: true });
 });
 
@@ -195,13 +204,14 @@ interaction.delete('/comments/:id', auth, async (c) => {
 interaction.get('/users/:id/followers', auth, async (c) => {
   const user = c.get('user');
   const targetId = c.req.param('id');
+  const d = db(c);
 
   if (user.id === targetId) return c.json({ following: false, followerCount: 0 });
 
-  const countResult = await db.select({ count: count() }).from(follows).where(eq(follows.followingId, targetId));
+  const countResult = await d.select({ count: count() }).from(follows).where(eq(follows.followingId, targetId));
   const followerCount = countResult[0]?.count ?? 0;
 
-  const existing = await db.select().from(follows)
+  const existing = await d.select().from(follows)
     .where(eq(follows.followerId, user.id))
     .and(eq(follows.followingId, targetId));
 
@@ -211,18 +221,19 @@ interaction.get('/users/:id/followers', auth, async (c) => {
 interaction.post('/users/:id/follow', auth, async (c) => {
   const user = c.get('user');
   const targetId = c.req.param('id');
+  const d = db(c);
 
   if (user.id === targetId) return c.json({ following: false });
 
-  const existing = await db.select().from(follows)
+  const existing = await d.select().from(follows)
     .where(eq(follows.followerId, user.id))
     .and(eq(follows.followingId, targetId));
 
   if (existing.length > 0) {
-    await db.delete(follows).where(eq(follows.followerId, user.id)).and(eq(follows.followingId, targetId));
+    await d.delete(follows).where(eq(follows.followerId, user.id)).and(eq(follows.followingId, targetId));
     return c.json({ following: false });
   } else {
-    await db.insert(follows).values({
+    await d.insert(follows).values({
       followerId: user.id,
       followingId: targetId,
       createdAt: new Date()
@@ -235,16 +246,17 @@ interaction.post('/users/:id/follow', auth, async (c) => {
 
 interaction.get('/users/:id', async (c) => {
   const targetId = c.req.param('id');
+  const d = db(c);
 
-  const target = await db.select().from(users).where(eq(users.id, targetId)).limit(1);
+  const target = await d.select().from(users).where(eq(users.id, targetId)).limit(1);
   if (target.length === 0) return c.json({ error: 'User not found' }, 404);
 
   const u = target[0];
 
-  const countResult = await db.select({ count: count() }).from(follows).where(eq(follows.followingId, u.id));
+  const countResult = await d.select({ count: count() }).from(follows).where(eq(follows.followingId, u.id));
   const followerCount = countResult[0]?.count ?? 0;
 
-  const followingCountResult = await db.select({ count: count() }).from(follows).where(eq(follows.followerId, u.id));
+  const followingCountResult = await d.select({ count: count() }).from(follows).where(eq(follows.followerId, u.id));
   const followingCount = followingCountResult[0]?.count ?? 0;
 
   return c.json({
@@ -266,18 +278,19 @@ interaction.get('/users/:id', async (c) => {
 interaction.post('/history', auth, async (c) => {
   const user = c.get('user');
   const { contentId } = await c.req.json();
+  const d = db(c);
 
   if (!contentId) return c.json({ error: 'contentId is required' }, 400);
 
-  const existing = await db.select().from(watchHistory)
+  const existing = await d.select().from(watchHistory)
     .where(eq(watchHistory.userId, user.id)).and(eq(watchHistory.contentId, contentId));
 
   if (existing.length > 0) {
-    await db.update(watchHistory)
+    await d.update(watchHistory)
       .set({ watchedAt: new Date() })
       .where(eq(watchHistory.userId, user.id)).and(eq(watchHistory.contentId, contentId));
   } else {
-    await db.insert(watchHistory).values({
+    await d.insert(watchHistory).values({
       userId: user.id,
       contentId,
       watchedAt: new Date()
@@ -289,11 +302,11 @@ interaction.post('/history', auth, async (c) => {
 
 interaction.get('/history', auth, async (c) => {
   const user = c.get('user');
-  const cursor = c.req.query('cursor');
   const limit = Math.min(parseInt(c.req.query('limit') || '20', 10), 50);
+  const d = db(c);
 
   try {
-    const rows = await db
+    const rows = await d
       .select()
       .from(watchHistory)
       .where(eq(watchHistory.userId, user.id))
@@ -308,7 +321,7 @@ interaction.get('/history', auth, async (c) => {
 
     const contentIds = rows.map(r => r.contentId);
     const contentsList = contentIds.length
-      ? await db.select().from(contents).where(inArray(contents.id, contentIds))
+      ? await d.select().from(contents).where(inArray(contents.id, contentIds))
       : [];
 
     return c.json({ history: contentsList, nextCursor });
@@ -322,9 +335,10 @@ interaction.get('/history', auth, async (c) => {
 
 interaction.get('/collections', auth, async (c) => {
   const user = c.get('user');
+  const d = db(c);
 
   try {
-    const list = await db.select()
+    const list = await d.select()
       .from(collections)
       .where(eq(collections.userId, user.id))
       .orderBy(desc(collections.updatedAt));
@@ -337,6 +351,7 @@ interaction.get('/collections', auth, async (c) => {
 interaction.post('/collections', auth, async (c) => {
   const user = c.get('user');
   const { name } = await c.req.json();
+  const d = db(c);
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return c.json({ error: 'name is required' }, 400);
@@ -344,7 +359,7 @@ interaction.post('/collections', auth, async (c) => {
 
   const id = generateId();
   const now = new Date();
-  await db.insert(collections).values({ id, userId: user.id, name: name.trim(), createdAt: now, updatedAt: now });
+  await d.insert(collections).values({ id, userId: user.id, name: name.trim(), createdAt: now, updatedAt: now });
   return c.json({ id, userId: user.id, name: name.trim(), createdAt: now, updatedAt: now });
 });
 
@@ -352,27 +367,29 @@ interaction.put('/collections/:id', auth, async (c) => {
   const user = c.get('user');
   const id = c.req.param('id');
   const { name } = await c.req.json();
+  const d = db(c);
 
   if (!name || typeof name !== 'string' || name.trim().length === 0) {
     return c.json({ error: 'name is required' }, 400);
   }
 
-  const col = await db.select().from(collections).where(eq(collections.id, id)).and(eq(collections.userId, user.id)).limit(1);
+  const col = await d.select().from(collections).where(eq(collections.id, id)).and(eq(collections.userId, user.id)).limit(1);
   if (col.length === 0) return c.json({ error: 'Not found' }, 404);
 
-  await db.update(collections).set({ name: name.trim(), updatedAt: new Date() }).where(eq(collections.id, id));
+  await d.update(collections).set({ name: name.trim(), updatedAt: new Date() }).where(eq(collections.id, id));
   return c.json({ id, userId: user.id, name: name.trim(), updatedAt: new Date() });
 });
 
 interaction.delete('/collections/:id', auth, async (c) => {
   const user = c.get('user');
   const id = c.req.param('id');
+  const d = db(c);
 
-  const col = await db.select().from(collections).where(eq(collections.id, id)).and(eq(collections.userId, user.id)).limit(1);
+  const col = await d.select().from(collections).where(eq(collections.id, id)).and(eq(collections.userId, user.id)).limit(1);
   if (col.length === 0) return c.json({ error: 'Not found' }, 404);
 
-  await db.delete(collectionItems).where(eq(collectionItems.collectionId, id));
-  await db.delete(collections).where(eq(collections.id, id));
+  await d.delete(collectionItems).where(eq(collectionItems.collectionId, id));
+  await d.delete(collections).where(eq(collections.id, id));
   return c.json({ ok: true });
 });
 
@@ -380,18 +397,19 @@ interaction.delete('/collections/:id', auth, async (c) => {
 interaction.get('/collections/:id', auth, async (c) => {
   const user = c.get('user');
   const id = c.req.param('id');
+  const d = db(c);
 
-  const col = await db.select().from(collections).where(eq(collections.id, id)).and(eq(collections.userId, user.id)).limit(1);
+  const col = await d.select().from(collections).where(eq(collections.id, id)).and(eq(collections.userId, user.id)).limit(1);
   if (col.length === 0) return c.json({ error: 'Not found' }, 404);
 
-  const items = await db
+  const items = await d
     .select({ contentId: collectionItems.contentId, addedAt: collectionItems.addedAt })
     .from(collectionItems)
     .where(eq(collectionItems.collectionId, id));
 
   const contentMap = {};
   for (const item of items) {
-    const rows = await db.select().from(contents).where(eq(contents.id, item.contentId)).limit(1);
+    const rows = await d.select().from(contents).where(eq(contents.id, item.contentId)).limit(1);
     if (rows.length) contentMap[item.contentId] = { ...rows[0], addedAt: item.addedAt };
   }
 
@@ -410,19 +428,20 @@ interaction.post('/collections/:id/items', auth, async (c) => {
   const user = c.get('user');
   const id = c.req.param('id');
   const { contentId } = await c.req.json();
+  const d = db(c);
 
   if (!contentId) return c.json({ error: 'contentId is required' }, 400);
 
-  const col = await db.select().from(collections).where(eq(collections.id, id)).and(eq(collections.userId, user.id)).limit(1);
+  const col = await d.select().from(collections).where(eq(collections.id, id)).and(eq(collections.userId, user.id)).limit(1);
   if (col.length === 0) return c.json({ error: 'Not found' }, 404);
 
-  const existing = await db.select().from(collectionItems)
+  const existing = await d.select().from(collectionItems)
     .where(eq(collectionItems.collectionId, id)).and(eq(collectionItems.contentId, contentId));
 
   if (existing.length > 0) return c.json({ added: false });
 
-  await db.insert(collectionItems).values({ collectionId: id, contentId, addedAt: new Date() });
-  await db.update(collections).set({ updatedAt: new Date() }).where(eq(collections.id, id));
+  await d.insert(collectionItems).values({ collectionId: id, contentId, addedAt: new Date() });
+  await d.update(collections).set({ updatedAt: new Date() }).where(eq(collections.id, id));
   return c.json({ added: true });
 });
 
@@ -431,12 +450,13 @@ interaction.delete('/collections/:id/items/:contentId', auth, async (c) => {
   const user = c.get('user');
   const id = c.req.param('id');
   const contentId = c.req.param('contentId');
+  const d = db(c);
 
-  const col = await db.select().from(collections).where(eq(collections.id, id)).and(eq(collections.userId, user.id)).limit(1);
+  const col = await d.select().from(collections).where(eq(collections.id, id)).and(eq(collections.userId, user.id)).limit(1);
   if (col.length === 0) return c.json({ error: 'Not found' }, 404);
 
-  await db.delete(collectionItems).where(eq(collectionItems.collectionId, id)).and(eq(collectionItems.contentId, contentId));
-  await db.update(collections).set({ updatedAt: new Date() }).where(eq(collections.id, id));
+  await d.delete(collectionItems).where(eq(collectionItems.collectionId, id)).and(eq(collectionItems.contentId, contentId));
+  await d.update(collections).set({ updatedAt: new Date() }).where(eq(collections.id, id));
   return c.json({ ok: true });
 });
 
