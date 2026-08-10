@@ -650,6 +650,14 @@
     await fetchPlaylists();
     initEventListeners();
     renderCategoryList();
+    // Re-render main content when language changes
+    if (typeof window.i18n === 'object' && window.i18n.onLangChange) {
+      window.i18n.onLangChange(() => {
+        if (state.currentPlaylist) renderPlaylist(state.currentPlaylist);
+        else if (state.videos.length) renderVideos();
+        else renderCategoryList();
+      });
+    }
   }
 
   // ── Expose global functions ────────────────────────────────────────────────

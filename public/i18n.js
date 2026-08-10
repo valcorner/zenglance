@@ -538,7 +538,7 @@
     },
   };
 
-  // Category display names keyed by code
+  // Category display names keyed by code (also accessible via t('category.short_drama'))
   const categoryNames = {
     short_drama: { en: 'Short Dramas', fr: 'Court-m\u00E9trages', de: 'Kurzfilme', it: 'Cortometraggi', es: 'Cortos', ar: '\u0642\u0635\u064A\u0631\u0629' },
     tv_series:   { en: 'TV Series',   fr: 'S\u00E9ries TV',       de: 'TV-Serien',   it: 'Serie TV',    es: 'Series',      ar: '\u0633\u0644\u0633\u0644\u064A\u0627\u062A' },
@@ -549,6 +549,9 @@
     podcast:     { en: 'Podcast',     fr: 'Podcast',             de: 'Podcast',     it: 'Podcast',     es: 'Podcast',     ar: '\u0628\u0648\u062F\u0643\u0627\u0633\u062A' },
     novel:       { en: 'Novels',      fr: 'Romans',              de: 'Romanen',     it: 'Romanzi',     es: 'Novelas',     ar: '\u0631\u0648\u0627\u064A\u0627\u062A' },
   };
+
+  // Merge category names into the t object so t('category.short_drama') works
+  t.category = categoryNames;
 
   let currentLang = 'en';
 
@@ -571,6 +574,8 @@
     return str;
   }
 
+  const _langChangeCallbacks = [];
+
   function setLang(lang) {
     if (!LANGUAGES[lang]) return;
     currentLang = lang;
@@ -580,6 +585,7 @@
     document.documentElement.lang = lang;
     applyTranslations();
     renderLanguageSelector();
+    _langChangeCallbacks.forEach(fn => fn(lang));
   }
 
   function applyTranslations() {
@@ -634,7 +640,10 @@
   }
 
   // ── Expose ────────────────────────────────────────────────────────────────
-  window.i18n = { t, setLang, getLang, currentLang: () => currentLang, categoryNames, LANGUAGES };
+  window.i18n = {
+    t, setLang, getLang, currentLang: () => currentLang, categoryNames, LANGUAGES,
+    onLangChange: (fn) => _langChangeCallbacks.push(fn),
+  };
 
   // ── Boot ─────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {
