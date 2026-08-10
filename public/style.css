@@ -359,8 +359,7 @@ html[dir="rtl"] .video-card-duration { right: auto; left: 6px; }
   border-radius: 4px;
   font-weight: 500;
 }
-.meta-tag.encrypted { background: rgba(255,50,50,0.15); color: #ff6b6b; }
-.video-card-desc {
+.meta-tag {
   font-size: 12px;
   color: var(--text-muted);
   display: -webkit-box;
@@ -596,7 +595,7 @@ html[dir="rtl"] .video-card-duration { right: auto; left: 6px; }
 .btn-secondary { background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--border-color); }
 .btn-secondary:hover { border-color: var(--accent); }
 
-.player-encrypted, .player-no-preview, .player-error {
+.player-no-preview, .player-error {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -606,7 +605,6 @@ html[dir="rtl"] .video-card-duration { right: auto; left: 6px; }
   color: var(--text-secondary);
   text-align: center;
 }
-.encrypted-icon { font-size: 3rem; }
 .player-loading { color: var(--text-muted); font-size: 14px; }
 
 /* ── Playlist ────────────────────────────────────────────────────────────── */

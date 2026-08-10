@@ -25,7 +25,7 @@ export class ValcornerCDNService {
   }
 
   /**
-   * Construct HLS manifest URL for premium content
+   * Construct HLS manifest URL
    * Format: https://cdn.valcorner.qzz.io/zenglance/{content_type}/{content_id}/{manifest_index}.m3u8?ticket={ticket}
    */
   buildManifestUrl(contentType, contentId, manifestIndex, ticket) {
@@ -34,7 +34,7 @@ export class ValcornerCDNService {
   }
 
   /**
-   * Construct DASH manifest URL for premium content
+   * Construct DASH manifest URL
    * Format: https://cdn.valcorner.qzz.io/zenglance/{content_type}/{content_id}/{manifest_index}.mpd?ticket={ticket}
    */
   buildDashManifestUrl(contentType, contentId, manifestIndex, ticket) {

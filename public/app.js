@@ -144,10 +144,10 @@
       card.className = 'video-card';
       card.dataset.id = item.id;
       card.innerHTML = `
-        <div class="video-card-thumbnail" onclick="window.__openPlayer('${item.id}', '${item.category || ''}')">
+        <div class="video-card-thumbnail" onclick="window.__openPlayer('${item.id}', '${item.contentType || ''}')">
           ${item.thumbnail ? `<img src="${item.thumbnail}" alt="${escapeHtml(item.title)}" loading="lazy">` : `<div class="video-card-placeholder"><svg width="40" height="40" viewBox="0 0 40 40" fill="none"><rect x="4" y="10" width="32" height="22" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M16 28l8-6-8-6v12z" fill="currentColor"/></svg></div>`}
           <div class="video-card-duration">${item.duration ? formatDuration(item.duration) : ''}</div>
-          <button class="video-card-play" onclick="window.__openPlayer('${item.id}', '${item.category || ''}')" aria-label="Play">
+          <button class="video-card-play" onclick="window.__openPlayer('${item.id}', '${item.contentType || ''}')" aria-label="Play">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
               <path d="M10 8l6 4-6 4V8z" fill="currentColor"/>
@@ -159,8 +159,7 @@
           <div class="video-card-meta">
             <span class="video-card-creator">${escapeHtml(item.creator?.name || t('player.unknownCreator'))}</span>
             ${item.views ? `<span>${formatViews(item.views)} ${t('player.views')}</span>` : ''}
-            ${item.is_encrypted ? `<span class="meta-tag encrypted">${t('player.encrypted')}</span>` : ''}
-            ${item.category ? `<span class="meta-tag">${t('category.' + item.category)}</span>` : ''}
+            ${item.contentType ? `<span class="meta-tag">${t('category.' + item.contentType)}</span>` : ''}
           </div>
           <div class="video-card-desc">${escapeHtml(item.description || '')}</div>
           ${item.created_at ? `<div class="video-card-time">${timeAgo(item.created_at)}</div>` : ''}
@@ -239,13 +238,13 @@
 
     // Role check
     const roleAllowed = {
-      short_drama: ['content_manager', 'admin'],
-      tv_series:   ['content_manager', 'admin'],
-      movie:       ['content_manager', 'admin'],
-      ugc_long_video: ['content_manager', 'uploader', 'admin'],
-      short_video: ['content_manager', 'uploader', 'admin']
+      short_drama:  ['senior', 'admin'],
+      tv_series:    ['senior', 'admin'],
+      movie:        ['senior', 'admin'],
+      ugc_long_video: ['senior', 'admin'],
+      short_video:  ['senior', 'admin']
     };
-    const allowed = roleAllowed[type] || ['content_manager', 'admin'];
+    const allowed = roleAllowed[type] || ['senior', 'admin'];
     if (!allowed.includes(state.user.role)) {
       alert(t('status.permissionDenied'));
       return;
@@ -361,7 +360,7 @@
       playlist.videos.forEach(item => {
         const row = document.createElement('div');
         row.className = 'playlist-item';
-        row.onclick = () => window.__openPlayer(item.id, item.category || '');
+        row.onclick = () => window.__openPlayer(item.id, item.contentType || '');
         row.innerHTML = `
           <div class="playlist-item-thumb">
             ${item.thumbnail ? `<img src="${item.thumbnail}" alt="${escapeHtml(item.title)}" loading="lazy">` : `<div class="playlist-item-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 9-14 9V3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div>`}
@@ -374,7 +373,6 @@
               <span>${escapeHtml(item.creator?.name || t('player.unknownCreator'))}</span>
               ${item.views ? `<span>${formatViews(item.views)} ${t('player.views')}</span>` : ''}
               ${item.duration ? `<span>${formatDuration(item.duration)}</span>` : ''}
-              ${item.is_encrypted ? `<span class="meta-tag encrypted">${t('player.encrypted')}</span>` : ''}
             </div>
           </div>`;
         list.appendChild(row);

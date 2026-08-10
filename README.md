@@ -32,13 +32,11 @@ A self-hosted multi-modal content platform built on Cloudflare Workers with Back
    - Direct: `https://cdn.valcorner.qzz.io/zenglance/{content_type}/{content_id}/{filename}?ticket={ticket}`
 
 3. **Role-Based Upload Permissions**:
-   | Role | Allowed Content Types | Encryption |
-   |------|----------------------|------------|
-   | Official | All types | AES-256-GCM for premium content only |
-   | Premium | UGC content only | Never encrypted |
-   | Free | No upload | - |
-
-4. **Conditional Encryption**: Only `is_premium=true` content from Official users gets AES-256-GCM encryption
+   | Role   | Allowed Content Types |
+   |--------|----------------------|
+   | Admin  | All types            |
+   | Senior | All types            |
+   | Free   | No upload            |
 
 5. **Apple HLS Priority**: All long videos provide HLS fMP4 (.m3u8) for Safari/AVPlayer native playback
 
@@ -229,18 +227,18 @@ npx wrangler d1 execute zenglance-db --remote --file=migrations/0001_initial.sql
 ### Users
 
 - `GET /api/users/:id` - Get public user profile
-- `POST /api/admin/users/:id/role` - Upgrade user role (requires `official` role)
+- `POST /api/admin/users/:id/role` - Upgrade user role (requires `admin` role)
 
 ## Upload Flow
 
 1. Client requests upload permission with content metadata
-2. Workers validates role permissions and encryption requirements
-3. Workers creates content record in D1 (status: pending)
-4. Workers generates B2 upload URL + auth token via native REST API
-5. Workers returns upload URL + session ID to client
-6. Client encrypts file locally (if required) and uploads directly to B2
+2. Server validates role permissions
+3. Server creates content record in D1 (status: pending)
+4. Server generates B2 upload URL + auth token via native REST API
+5. Server returns upload URL + session ID to client
+6. Client uploads file directly to B2
 7. Client calls `/upload/complete` to finalize
-8. Workers updates content status to "ready"
+8. Server updates content status to "ready"
 
 ## Playback Flow
 

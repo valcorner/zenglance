@@ -42,6 +42,9 @@ app.route('/api/upload', createUploadRoutes());
 // Content routes (metadata + CDN access info)
 app.route('/api/content', createContentRoutes());
 
+// Interaction routes
+app.route('/api/interaction', interactions);
+
 // User management routes
 app.get('/api/users/:id', async (c) => {
   const { id } = c.req.param();
@@ -69,9 +72,9 @@ app.get('/api/users/:id', async (c) => {
   }
 });
 
-// Admin: Upgrade user role (requires official role)
+// Admin: Upgrade user role (requires admin role)
 const auth = createAuthMiddleware();
-app.post('/api/admin/users/:id/role', auth, requireRole('official'), async (c) => {
+app.post('/api/admin/users/:id/role', auth, requireRole('admin'), async (c) => {
   const { id } = c.req.param();
   const body = await c.req.json().catch(() => ({}));
   const role = body.role;

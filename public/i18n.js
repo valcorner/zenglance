@@ -101,6 +101,14 @@
         es: 'Cerrar sesi\u00F3n',
         ar: '\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C',
       },
+      profile: {
+        en: 'Profile',
+        fr: 'Profil',
+        de: 'Profil',
+        it: 'Profilo',
+        es: 'Perfil',
+        ar: '\u0627\u0644\u0645\u0648\u0636\u0648\u0639 \u0627\u0644\u0634\u062E\u0635\u064A',
+      },
       categories: {
         en: 'Categories',
         fr: 'Cat\u00E9gories',
@@ -259,6 +267,14 @@
         es: 'Ingrese descripci\u00F3n...',
         ar: '\u0623\u062F\u062E\u0644 \u0627\u0644\u0648\u0635\u0641...',
       },
+      accessType: {
+        en: 'Access Type',
+        fr: 'Type d\'acc\u00E8s',
+        de: 'Zugriffstyp',
+        it: 'Tipo di accesso',
+        es: 'Tipo de acceso',
+        ar: '\u0646\u0648\u0639 \u0627\u0644\u0648\u0635\u0648\u0644',
+      },
       selectFile: {
         en: 'Select File',
         fr: 'S\u00E9lectionner un fichier',
@@ -376,11 +392,19 @@
       },
       notFound: {
         en: 'No results found',
-        fr: 'Aucun r\u00E9sultat trouv\u00E9',
+        fr: 'Aucun résultat trouvé',
         de: 'Keine Ergebnisse gefunden',
         it: 'Nessun risultato trovato',
         es: 'No se encontraron resultados',
         ar: '\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0646\u062A\u0627\u0626\u062C',
+      },
+      noData: {
+        en: 'No data available',
+        fr: 'Aucune donnée',
+        de: 'Keine Daten',
+        it: 'Nessun dato',
+        es: 'Sin datos',
+        ar: '\u0644\u0627 \u062A\u0648\u062C\u062F \u0628\u064A\u0627\u0646\u0627\u062A',
       },
       searchHint: {
         en: 'Try other keywords or categories',
@@ -497,22 +521,6 @@
         es: 'T\u00EDtulo desconocido',
         ar: '\u0639\u0646\u0648\u0627\u0646 \u063A\u064A\u0631 \u0645\u0639\u0631\u0648\u0641',
       },
-      encrypted: {
-        en: 'ENCRYPTED',
-        fr: 'CHIFFR\u00C9',
-        de: 'VERSCHL\u00DCSSELT',
-        it: 'CRIPTATO',
-        es: 'ENCRIPTADO',
-        ar: '\u0645\u0634\u0641\u0631',
-      },
-      encryptedDesc: {
-        en: 'This content is encrypted. Please log in to watch.',
-        fr: 'Ce contenu est chiffr\u00E9. Veuillez vous connecter pour regarder.',
-        de: 'Dieser Inhalt ist verschlüsselt. Bitte melden Sie sich an.',
-        it: 'Questo contenuto \u00E8 crittografato. Effettua il login per guardare.',
-        es: 'Este contenido está encriptado. Inicia sesión para ver.',
-        ar: '\u0647\u0630\u0627 \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0645\u0634\u0641\u0631. \u064A\u0631\u062C\u0649 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0644\u0645\u0634\u0627\u0647\u062F\u062A\u0647.',
-      },
       loadingTitle: {
         en: 'Loading...',
         fr: 'Chargement...',
@@ -581,10 +589,44 @@
     },
 
     formatViews: {
-      thousands:   { en: '{{n}}K', fr: '{{n}}K', de: '{{n}}K', it: '{{n}}K', es: '{{n}}K', ar: '{{n}}\u0623' },
-      tenThousands:{ en: '{{n}}K', fr: '{{n}}K', de: '{{n}}K', it: '{{n}}K', es: '{{n}}K', ar: '{{n}}\u0623' },
-      millions:    { en: '{{n}}M', fr: '{{n}}M', de: '{{n}}M', it: '{{n}}M', es: '{{n}}M', ar: '{{n}}\u0645' },
+      thousands:   { en: '{{n}}K', fr: '{{n}}K', de: '{{n}}K', it: '{{n}}K', es: '{{n}}K', ar: '{{n}}أ' },
+      tenThousands:{ en: '{{n}}K', fr: '{{n}}K', de: '{{n}}K', it: '{{n}}K', es: '{{n}}K', ar: '{{n}}أ' },
+      millions:    { en: '{{n}}M', fr: '{{n}}M', de: '{{n}}M', it: '{{n}}M', es: '{{n}}M', ar: '{{n}}م' },
     },
+
+    interactions: {
+      like:  { en: 'Like',  fr: 'J\'aime', de: 'Gef\u00E4llt mir', it: 'Mi piace', es: 'Me gusta', ar: '\u0623\u062D\u0628' },
+      unlike:{ en: 'Liked', fr: 'Aim\u00E9', de: 'Gef\u00E4llt',   it: 'Mi piace', es: 'Me gusta', ar: '\u064A\u0639\u062C\u0628' },
+      likes: { en: 'Like',  fr: 'J\'aime', de: 'Gef\u00E4llt mir', it: 'Mi piace', es: 'Me gusta', ar: '\u0623\u062D\u0628' },
+      save:  { en: 'Save',  fr: 'Enregistrer', de: 'Speichern',  it: 'Salva', es: 'Guardar', ar: '\u062D\u0641\u0638' },
+      saved: { en: 'Saved', fr: 'Enregistr\u00E9', de: 'Gespeichert', it: 'Salvato', es: 'Guardado', ar: '\u062A\u0645 \u062D\u0641\u0638\u0647' },
+      saves: { en: 'Save',  fr: 'Enregistrer', de: 'Speichern',  it: 'Salva', es: 'Guardar', ar: '\u062D\u0641\u0638' },
+      share: { en: 'Share',  fr: 'Partager',   de: 'Teilen',     it: 'Condividi', es: 'Compartir', ar: '\u0645\u0634\u0627\u0631\u0643\u0629' },
+      follow:{ en: 'Follow', fr: 'Suivre',    de: 'Folgen',     it: 'Segui',   es: 'Seguir',  ar: '\u062A\u0628\u0639' },
+      followed:{ en: 'Following', fr: 'Abonn\u00E9', de: 'Folge', it: 'Seguito', es: 'Siguiendo', ar: '\u062A\u0628\u0639' },
+      comments: { en: 'Comments', fr: 'Commentaires', de: 'Kommentare', it: 'Commenti', es: 'Comentarios', ar: '\u062A\u0639\u0644\u064A\u0642\u0627\u062A' },
+      addComment: { en: 'Add a comment...', fr: 'Ajouter un commentaire...', de: 'Kommentar hinzufügen...', it: 'Aggiungi un commento...', es: 'A\u00F1adir comentario...', ar: '\u0623\u0636\u0641 \u062A\u0639\u0644\u064A\u0642\u0627\u064B...' },
+      post: { en: 'Post', fr: 'Publier', de: 'Senden', it: 'Pubblica', es: 'Publicar', ar: '\u0646\u0634\u0631' },
+      replies: { en: 'Replies', fr: 'R\u00E9ponses', de: 'Antworten', it: 'Risposte', es: 'Respuestas', ar: '\u0627\u0644\u0623\u062C\u0648\u0628\u0629' },
+      cancel: { en: 'Cancel', fr: 'Annuler', de: 'Abbrechen', it: 'Annulla', es: 'Annulla', ar: '\u0625\u0644\u063A\u0627\u0621' },
+      loadMore: { en: 'Load More', fr: 'Charger plus', de: 'Mehr laden', it: 'Carica altro', es: 'Cargar más', ar: '\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0632\u064A\u062F' },
+    },
+
+    collection: {
+      myCollection: { en: 'My Collection', fr: 'Ma Collection', de: 'Meine Sammlung', it: 'La Mia Raccolta', es: 'Mi Colecci\u00F3n', ar: '\u0645\u062C\u0645\u0648\u0639\u062A\u064A' },
+      newCollection: { en: 'New Collection', fr: 'Nouvelle Collection', de: 'Neue Sammlung', it: 'Nuova Raccolta', es: 'Nueva Colecci\u00F3n', ar: '\u0645\u062C\u0645\u0648\u0639\u0629 \u062C\u062F\u064A\u062F\u0629' },
+      collectionName: { en: 'Collection Name', fr: 'Nom de la Collection', de: 'Sammlungsname', it: 'Nome Raccolta', es: 'Nombre Colecci\u00F3n', ar: '\u0627\u0633\u0645 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629' },
+      enterCollectionName: { en: 'Enter collection name...', fr: 'Entrez le nom...', de: 'Namen eingeben...', it: 'Inserisci nome...', es: 'Nombre...', ar: '\u0623\u062F\u062E\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629...' },
+      deleteCollection: { en: 'Delete Collection', fr: 'Supprimer', de: 'L\u00F6schen', it: 'Elimina', es: 'Eliminar', ar: '\u062D\u0630\u0641 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629' },
+      confirmDelete: { en: 'Delete this collection?', fr: 'Supprimer ?', de: 'L\u00F6schen?', it: 'Eliminare?', es: '\u00BFEliminar?', ar: '\u062D\u0630\u0641 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629\u061F' },
+      addToCollection: { en: 'Add to Collection', fr: 'Ajouter', de: 'Hinzuf\u00FCgen', it: 'Aggiungi', es: 'A\u00F1adir', ar: '\u0625\u0636\u0627\u0641\u0629 \u0625\u0644\u0649 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629' },
+      removeFromCollection: { en: 'Remove from Collection', fr: 'Retirer', de: 'Entfernen', it: 'Rimuovi', es: 'Eliminar', ar: '\u0625\u0632\u0627\u0644\u0629' },
+      noCollections: { en: 'No collections yet', fr: 'Aucune collection', de: 'Noch keine Sammlungen', it: 'Nessuna raccolta', es: 'Sin colecciones', ar: '\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062C\u0645\u0648\u0639\u0627\u062A' },
+      noItems: { en: 'This collection is empty', fr: 'Collection vide', de: 'Leer', it: 'Vuota', es: 'Vac\u00EDa', ar: '\u0647\u0630\u0647 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0641\u0627\u0631\u063A\u0629' },
+      editName: { en: 'Edit Name', fr: 'Modifier le nom', de: 'Namen bearbeiten', it: 'Modifica Nome', es: 'Editar Nombre', ar: '\u062A\u062D\u0631\u064A\u0631 \u0627\u0644\u0627\u0633\u0645' },
+      loading: { en: 'Loading...', fr: 'Chargement...', de: 'Laden...', it: 'Caricamento...', es: 'Cargando...', ar: '\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...' },
+    },
+
   };
 
   // ── Category names ────────────────────────────────────────────────────────

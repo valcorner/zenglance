@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT NOT NULL UNIQUE,
   name TEXT,
   avatar TEXT,
-  role TEXT NOT NULL DEFAULT 'free' CHECK(role IN ('free', 'premium', 'official')),
+  role TEXT NOT NULL DEFAULT 'free' CHECK(role IN ('free', 'senior', 'admin')),
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
@@ -21,8 +21,6 @@ CREATE TABLE IF NOT EXISTS contents (
   title TEXT NOT NULL,
   description TEXT,
   content_type TEXT NOT NULL CHECK(content_type IN ('short_drama', 'tv_series', 'movie', 'ugc_long_video', 'short_video')),
-  is_premium BOOLEAN NOT NULL DEFAULT 0,
-  is_encrypted BOOLEAN NOT NULL DEFAULT 0,
   uploader_id TEXT NOT NULL REFERENCES users(id),
   b2_bucket TEXT NOT NULL,
   b2_key TEXT NOT NULL,
@@ -40,20 +38,7 @@ CREATE TABLE IF NOT EXISTS contents (
 CREATE INDEX IF NOT EXISTS contents_slug_idx ON contents(slug);
 CREATE INDEX IF NOT EXISTS contents_uploader_idx ON contents(uploader_id);
 CREATE INDEX IF NOT EXISTS contents_type_idx ON contents(content_type);
-CREATE INDEX IF NOT EXISTS contents_premium_idx ON contents(is_premium);
 CREATE INDEX IF NOT EXISTS contents_status_idx ON contents(status);
-
--- Encryption keys table - stores AES-256-GCM key metadata
-CREATE TABLE IF NOT EXISTS encryption_keys (
-  id TEXT PRIMARY KEY,
-  content_id TEXT NOT NULL UNIQUE REFERENCES contents(id),
-  key_id TEXT NOT NULL,
-  iv TEXT NOT NULL,
-  auth_tag TEXT,
-  key_derivation_info TEXT,
-  created_at INTEGER NOT NULL
-);
-CREATE INDEX IF NOT EXISTS encryption_keys_content_idx ON encryption_keys(content_id);
 
 -- Upload sessions table - tracks presigned URL sessions
 CREATE TABLE IF NOT EXISTS upload_sessions (

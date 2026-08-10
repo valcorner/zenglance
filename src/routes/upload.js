@@ -6,7 +6,6 @@ import { B2Service } from '../services/b2.js';
 import { ValcornerCDNService } from '../services/valcorner.js';
 import {
   uploadPermissions,
-  requiresEncryption,
   getCdnType,
   createContentSchema,
   uploadSessionResponseSchema
@@ -35,10 +34,6 @@ export function checkUploadPermission() {
       }, 403);
     }
 
-    // Check if encryption is required
-    const needsEncryption = requiresEncryption(user.role, contentType);
-    c.set('requiresEncryption', needsEncryption);
-
     await next();
   };
 }
@@ -57,8 +52,7 @@ export function createUploadRoutes() {
    */
   upload.post('/request', auth, checkUploadPermission(), async (c) => {
     const user = c.get('user');
-    const requiresEnc = c.get('requiresEncryption');
-    
+
     try {
       const body = await c.req.json();
       const parsed = createContentSchema.safeParse(body);
@@ -85,10 +79,7 @@ export function createUploadRoutes() {
       const contentId = crypto.randomUUID();
       const filename = mimeType?.split('/')[1] || 'file';
       const b2Key = B2Service.generateObjectKey(contentType, contentId, filename);
-      
-      // Check if encryption is needed
-      const isEncrypted = requiresEnc;
-      
+
       // Create content record
       const cdnType = getCdnType(contentType);
       const now = Date.now();
@@ -99,8 +90,6 @@ export function createUploadRoutes() {
         title,
         description,
         contentType,
-        isPremium: requiresEnc,
-        isEncrypted,
         uploaderId: user.id,
         b2Bucket: c.env.B2_BUCKET_NAME,
         b2Key,
@@ -253,8 +242,6 @@ export function createContentRoutes() {
         slug: item.slug,
         title: item.title,
         contentType: item.contentType,
-        isPremium: item.isPremium,
-        isEncrypted: item.isEncrypted,
         duration: item.duration,
         mimeType: item.mimeType,
         createdAt: item.createdAt,
@@ -323,8 +310,6 @@ export function createContentRoutes() {
         title: contentItem.title,
         description: contentItem.description,
         contentType: contentItem.contentType,
-        isPremium: contentItem.isPremium,
-        isEncrypted: contentItem.isEncrypted,
         duration: contentItem.duration,
         mimeType: contentItem.mimeType,
         createdAt: contentItem.createdAt,

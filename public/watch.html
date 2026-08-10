@@ -123,7 +123,9 @@
       transition: background var(--transition), color var(--transition);
     }
     .watch-action-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .watch-action-btn.active { color: var(--accent); }
     .watch-action-btn svg { width: 16px; height: 16px; }
+    .watch-action-count { font-size: 12px; color: var(--text-muted); font-weight: 500; }
 
     .watch-creator-bar {
       display: flex; align-items: center; gap: 12px;
@@ -147,7 +149,9 @@
       padding: 8px 18px; border-radius: 20px;
       font-size: 13px; font-weight: 600;
       border: none; cursor: pointer;
+      transition: background var(--transition);
     }
+    .watch-follow-btn.active { background: var(--bg-hover); border: 1px solid var(--border-color); color: var(--text-secondary); }
 
     /* ── Sidebar ─────────────────────────────────────────────────── */
     .watch-sidebar {
@@ -191,6 +195,59 @@
     }
     .watch-related-creator { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
     .watch-related-meta { font-size: 11px; color: var(--text-muted); }
+
+    /* ── Comments ────────────────────────────────────────────────── */
+    .watch-comments {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1rem;
+      margin-top: 0.5rem;
+    }
+    .watch-comments-header {
+      display: flex; align-items: center; gap: 0.5rem;
+      font-size: 15px; font-weight: 700; margin-bottom: 1rem;
+    }
+    .watch-comments-count { font-size: 12px; color: var(--text-muted); font-weight: 400; }
+    .watch-comment-input-row {
+      display: flex; gap: 0.75rem; margin-bottom: 1rem;
+    }
+    .watch-comment-input-wrap { flex: 1; }
+    .watch-comment-input {
+      width: 100%; background: var(--bg-secondary);
+      border: 1px solid var(--border-color); border-radius: var(--radius-md);
+      color: var(--text-primary); padding: 0.6rem 0.75rem;
+      font-size: 13px; resize: none; min-height: 44px;
+      transition: border-color var(--transition);
+    }
+    .watch-comment-input:focus { outline: none; border-color: var(--accent); }
+    .watch-comment-post-btn {
+      background: var(--accent); color: #fff; border: none;
+      padding: 0 1rem; border-radius: var(--radius-md);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+      white-space: nowrap; align-self: flex-end;
+    }
+    .watch-comments-list { display: flex; flex-direction: column; gap: 0.75rem; max-height: 400px; overflow-y: auto; }
+    .watch-comment-item {
+      display: flex; gap: 0.75rem; align-items: flex-start;
+    }
+    .watch-comment-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; flex-shrink: 0;
+    }
+    .watch-comment-body { flex: 1; min-width: 0; }
+    .watch-comment-author { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+    .watch-comment-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; word-break: break-word; }
+    .watch-comment-meta { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+    .watch-load-more {
+      background: none; border: 1px solid var(--border-color);
+      color: var(--text-secondary); padding: 6px 16px; border-radius: 20px;
+      font-size: 12px; cursor: pointer; margin-top: 0.5rem;
+      transition: background var(--transition), color var(--transition);
+    }
+    .watch-load-more:hover { background: var(--bg-hover); color: var(--text-primary); }
 
     /* ── Responsive ──────────────────────────────────────────────── */
     @media (max-width: 960px) {
@@ -282,17 +339,19 @@
       <h1 class="watch-title" id="watchTitle" data-i18n="player.loadingTitle">Loading...</h1>
       <div class="watch-meta" id="watchMeta"></div>
       <div class="watch-actions">
-        <button class="watch-action-btn" onclick="watchLike()">
+        <button class="watch-action-btn" id="watchLikeBtn" onclick="toggleLike()">
           <svg viewBox="0 0 24 24" fill="none"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="currentColor" stroke-width="1.8"/></svg>
-          <span data-i18n="meta.like">Like</span>
+          <span id="watchLikeLabel" data-i18n="interactions.like">Like</span>
+          <span id="watchLikeCount" class="watch-action-count"></span>
+        </button>
+        <button class="watch-action-btn" id="watchSaveBtn" onclick="toggleSave()">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z" stroke="currentColor" stroke-width="1.8"/></svg>
+          <span id="watchSaveLabel" data-i18n="interactions.save">Save</span>
+          <span id="watchSaveCount" class="watch-action-count"></span>
         </button>
         <button class="watch-action-btn" onclick="watchShare()">
           <svg viewBox="0 0 24 24" fill="none"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" stroke="currentColor" stroke-width="1.8"/><polyline points="16 6 12 2 8 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="2" x2="12" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          <span data-i18n="meta.share">Share</span>
-        </button>
-        <button class="watch-action-btn" onclick="watchSave()">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z" stroke="currentColor" stroke-width="1.8"/></svg>
-          <span data-i18n="meta.save">Save</span>
+          <span data-i18n="interactions.share">Share</span>
         </button>
       </div>
       <div class="watch-creator-bar" id="watchCreatorBar">
@@ -301,9 +360,25 @@
           <div class="watch-creator-name" id="watchCreatorName">Unknown Creator</div>
           <div class="watch-creator-subs" id="watchCreatorSubs"></div>
         </div>
-        <button class="watch-follow-btn" data-i18n="meta.follow">Follow</button>
+        <button class="watch-follow-btn" id="watchFollowBtn" onclick="toggleFollow()">Follow</button>
       </div>
       <div class="watch-description" id="watchDescription"></div>
+
+      <!-- Comments section -->
+      <div class="watch-comments" id="watchComments">
+        <div class="watch-comments-header">
+          <span data-i18n="interactions.comments">Comments</span>
+          <span class="watch-comments-count" id="watchCommentsCount"></span>
+        </div>
+        <div class="watch-comment-input-row" id="watchCommentInputRow">
+          <div class="watch-comment-input-wrap">
+            <textarea class="watch-comment-input" id="watchCommentInput" data-i18n-placeholder="interactions.addComment" placeholder="Add a comment..."></textarea>
+          </div>
+          <button class="watch-comment-post-btn" id="watchCommentPostBtn" onclick="postComment()" data-i18n="interactions.post">Post</button>
+        </div>
+        <div class="watch-comments-list" id="watchCommentsList"></div>
+        <button class="watch-load-more" id="watchCommentsLoadMore" style="display:none" onclick="loadMoreComments()" data-i18n="interactions.loadMore">Load More</button>
+      </div>
     </div>
 
     <!-- Sidebar: related videos -->
@@ -313,7 +388,9 @@
     </aside>
   </div>
 
-  <script src="i18n.js?v=2"></script>
+  <script src="i18n.js?v=4"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
   <script>
     (function() {
       'use strict';
@@ -337,7 +414,7 @@
 
       function t(key, params) {
         if (window.i18n && window.i18n.t) return window.i18n.t(key, params);
-        var TRANSLATIONS = { meta: { back:{en:'Back'}, like:{en:'Like'}, share:{en:'Share'}, save:{en:'Save'}, follow:{en:'Follow'}, related:{en:'Related Videos'}, notifications:{en:'Notifications'}, profile:{en:'Profile'} }, status:{loading:{en:'Loading...'}}, player:{loadingTitle:{en:'Loading...'}, unknownCreator:{en:'Unknown Creator'}, views:{en:'views'}, encrypted:{en:'ENCRYPTED'} } };
+        var TRANSLATIONS = { meta: { back:{en:'Back'}, like:{en:'Like'}, share:{en:'Share'}, save:{en:'Save'}, follow:{en:'Follow'}, related:{en:'Related Videos'}, notifications:{en:'Notifications'}, profile:{en:'Profile'} }, status:{loading:{en:'Loading...'}}, player:{loadingTitle:{en:'Loading...'}, unknownCreator:{en:'Unknown Creator'}, views:{en:'views'} } };
         var parts = key.split('.');
         var obj = TRANSLATIONS;
         for (var i = 0; i < parts.length; i++) { obj = obj[parts[i]]; if (!obj) return key; }
@@ -419,7 +496,102 @@
         if (wrapper.requestFullscreen) wrapper.requestFullscreen();
       };
 
-      // ── Load video ────────────────────────────────────────────────
+      // ── Streaming player setup ────────────────────────────────────
+      var hlsPlayer = null;
+      var dashPlayer = null;
+      var currentVideoId = null, currentCreatorId = null;
+      var likeCount = 0, saveCount = 0, isLiked = false, isSaved = false, isFollowing = false;
+      var commentCursor = null, loadingComments = false;
+
+      function _getTicket() {
+        return fetch('https://cdn.valcorner.qzz.io/api/token', { signal: AbortSignal.timeout(5000) })
+          .then(function(r) { return r.json(); })
+          .then(function(d) { return d.ticket; });
+      }
+
+      function _injectTicket(url, ticket) {
+        return url.replace('{ticket}', ticket);
+      }
+
+      function _isHls(url) { return /\.m3u8(\?.*)?$/i.test(url); }
+      function _isDash(url) { return /\.mpd(\?.*)?$/i.test(url); }
+      function _isMp4(url) { return /\.mp4(\?.*)?$/i.test(url); }
+
+      function _cleanupPlayer() {
+        if (hlsPlayer) { hlsPlayer.destroy(); hlsPlayer = null; }
+        if (dashPlayer) { dashPlayer.destroy(); dashPlayer = null; }
+        video.src = '';
+        video.load();
+      }
+
+      function _setupPlayer(cdn) {
+        _cleanupPlayer();
+        placeholder.style.display = 'none';
+        video.style.display = 'block';
+
+        var manifestUrl = cdn && cdn.manifestUrl;
+        var directUrl   = cdn && cdn.directUrl;
+
+        if (!manifestUrl && !directUrl) {
+          placeholder.style.display = 'flex';
+          placeholder.innerHTML =
+            '<div style="text-align:center"><div style="font-size:48px;margin-bottom:12px;opacity:0.3">⬡</div><p style="color:rgba(255,255,255,0.5)">' + t('player.noPreview') + '</p></div>';
+          return;
+        }
+
+        _getTicket().then(function(ticket) {
+          // ── HLS (.m3u8) ──────────────────────────────────────────────
+          if (manifestUrl && _isHls(manifestUrl)) {
+            var hlsUrl = _injectTicket(manifestUrl, ticket);
+            if (Hls.isSupported()) {
+              hlsPlayer = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
+              hlsPlayer.loadSource(hlsUrl);
+              hlsPlayer.attachMedia(video);
+              hlsPlayer.on(Hls.Events.MANIFEST_PARSED, function() { video.play(); });
+              hlsPlayer.on(Hls.Events.ERROR, function(e, info) {
+                if (info.fatal) {
+                  console.warn('HLS fatal error, falling back to native:', info.type, info.details);
+                  if (directUrl) {
+                    video.src = _injectTicket(directUrl, ticket);
+                    video.play();
+                  }
+                }
+              });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+              video.src = hlsUrl;
+              video.play();
+            } else {
+              placeholder.innerHTML = '<p style="color:rgba(255,255,255,0.5)">HLS not supported</p>';
+            }
+            return;
+          }
+
+          // ── DASH (.mpd) ──────────────────────────────────────────────
+          if (manifestUrl && _isDash(manifestUrl)) {
+            var dashUrl = _injectTicket(manifestUrl, ticket);
+            if (dashjs) {
+              dashPlayer = dashjs.MediaPlayer().create();
+              dashPlayer.initialize(video, dashUrl, true);
+              dashPlayer.getDebug().setLogToBrowserConsole(false);
+            } else {
+              video.src = dashUrl;
+              video.play();
+            }
+            return;
+          }
+
+          // ── Direct MP4 / WebM ────────────────────────────────────────
+          var srcUrl = directUrl || manifestUrl;
+          video.src = _injectTicket(srcUrl, ticket);
+          video.play();
+
+        }).catch(function(err) {
+          console.error('Failed to get CDN ticket:', err);
+          placeholder.style.display = 'flex';
+          placeholder.innerHTML = '<p style="color:rgba(255,255,255,0.5)">' + t('status.loadFailed') + '</p>';
+        });
+      }
+
       function getQueryParam(name) {
         var params = new URLSearchParams(window.location.search);
         return params.get(name);
@@ -442,9 +614,8 @@
       function renderPlayer(data) {
         var id = data.id, title = data.title, description = data.description;
         var duration = data.duration, category = data.category;
-        var creator = data.creator, views = data.views, isEncrypted = data.is_encrypted;
-        var fileUrl = data.file_url, thumbnail = data.thumbnail;
-        // Use URL ?type= as fallback when video data has no category
+        var creator = data.creator, views = data.views;
+        var cdn = data.cdn;
         var contentType = category || getQueryParam('type') || '';
 
         titleEl.textContent = title || t('player.unknownTitle');
@@ -453,8 +624,7 @@
         metaEl.innerHTML =
           (contentType ? '<span class="watch-meta-tag">' + escapeHtml(t('category.' + contentType)) + '</span>' : '') +
           (views ? '<span>' + formatViews(views) + ' ' + t('player.views') + '</span>' : '') +
-          (duration ? '<span>' + formatDuration(duration) + '</span>' : '') +
-          (isEncrypted ? '<span class="watch-meta-tag" style="color:#ff6b6b;background:rgba(255,50,50,0.15)">' + t('player.encrypted') + '</span>' : '');
+          (duration ? '<span>' + formatDuration(duration) + '</span>' : '');
 
         if (creator) {
           creatorName.textContent = creator.name || t('player.unknownCreator');
@@ -464,36 +634,166 @@
           creatorAvatar.textContent = 'U';
         }
 
-        // Set video source
-        if (!isEncrypted && fileUrl) {
-          placeholder.style.display = 'none';
-          video.style.display = 'block';
-          video.src = fileUrl;
-          video.addEventListener('timeupdate', function() {
-            if (video.duration) {
-              seekBar.value = (video.currentTime / video.duration) * 100;
-              currentTimeEl.textContent = formatTime(video.currentTime);
-            }
-          });
-          video.addEventListener('loadedmetadata', function() {
-            durationEl.textContent = formatTime(video.duration);
-          });
-          video.addEventListener('play', function() {
-            playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
-          });
-          video.addEventListener('pause', function() {
-            playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-          });
-        } else if (isEncrypted) {
-          placeholder.innerHTML =
-            '<div style="text-align:center"><div style="font-size:48px;margin-bottom:12px">&#x{1F512};</div><h3 style="margin-bottom:8px">' + t('player.encrypted') + '</h3><p style="color:rgba(255,255,255,0.5);font-size:13px;margin-bottom:16px">' + t('player.encryptedDesc') + '</p><a href="/auth/login" style="background:var(--accent);color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">' + t('meta.login') + '</a></div>';
-        } else {
-          placeholder.innerHTML =
-            '<div style="text-align:center"><div style="font-size:48px;margin-bottom:12px;opacity:0.3">&#x{1F3AC};</div><p style="color:rgba(255,255,255,0.5)">' + t('player.noPreview') + '</p></div>';
-        }
-
+        _setupPlayer(cdn);
         loadRelated(contentType);
+        loadInteractions(contentId, creator && creator.id ? creator.id : null);
+        loadComments(contentId);
       }
+
+      function loadInteractions(contentId, creatorId) {
+        currentVideoId = contentId;
+        currentCreatorId = creatorId;
+        var token = localStorage.getItem('zenglance_token');
+        if (token) {
+          Promise.all([
+            fetch('/api/interaction/content/' + contentId + '/likes', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r){ return r.json(); }),
+            fetch('/api/interaction/content/' + contentId + '/favorite', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r){ return r.json(); }),
+          ]).then(function(results) {
+            likeCount = results[0].likeCount || 0;
+            isLiked = results[0].isLiked || false;
+            saveCount = results[1].favoriteCount || 0;
+            isSaved = results[1].isFavorite || false;
+            updateLikeUI();
+            updateSaveUI();
+          }).catch(function(e) { console.error(e); });
+          if (creatorId) {
+            fetch('/api/interaction/users/' + creatorId + '/following', { headers: { 'Authorization': 'Bearer ' + token } })
+              .then(function(r) { return r.json(); })
+              .then(function(d) {
+                isFollowing = d.following || false;
+                updateFollowUI();
+              })
+              .catch(function(e) { console.error(e); });
+          }
+        }
+      }
+
+      function updateLikeUI() {
+        var btn = document.getElementById('watchLikeBtn');
+        var label = document.getElementById('watchLikeLabel');
+        var count = document.getElementById('watchLikeCount');
+        if (!btn) return;
+        btn.classList.toggle('active', isLiked);
+        label.textContent = isLiked ? t('interactions.unlike') : t('interactions.like');
+        count.textContent = likeCount ? ' ' + likeCount : '';
+      }
+
+      function updateSaveUI() {
+        var btn = document.getElementById('watchSaveBtn');
+        var label = document.getElementById('watchSaveLabel');
+        var count = document.getElementById('watchSaveCount');
+        if (!btn) return;
+        btn.classList.toggle('active', isSaved);
+        label.textContent = isSaved ? t('interactions.saved') : t('interactions.save');
+        count.textContent = saveCount ? ' ' + saveCount : '';
+      }
+
+      function updateFollowUI() {
+        var btn = document.getElementById('watchFollowBtn');
+        if (!btn) return;
+        btn.textContent = isFollowing ? t('interactions.followed') : t('interactions.follow');
+        btn.classList.toggle('active', isFollowing);
+      }
+
+      async function toggleLike() {
+        var token = localStorage.getItem('zenglance_token');
+        if (!token) { alert(t('status.loginFirst')); return; }
+        if (!currentVideoId) return;
+        isLiked = !isLiked;
+        likeCount += isLiked ? 1 : -1;
+        updateLikeUI();
+        fetch('/api/interaction/content/' + currentVideoId + '/like', {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+        }).catch(function(e) { isLiked = !isLiked; likeCount += isLiked ? 1 : -1; updateLikeUI(); });
+      }
+
+      async function toggleSave() {
+        var token = localStorage.getItem('zenglance_token');
+        if (!token) { alert(t('status.loginFirst')); return; }
+        if (!currentVideoId) return;
+        isSaved = !isSaved;
+        saveCount += isSaved ? 1 : -1;
+        updateSaveUI();
+        fetch('/api/interaction/content/' + currentVideoId + '/favorite', {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+        }).catch(function(e) { isSaved = !isSaved; saveCount += isSaved ? 1 : -1; updateSaveUI(); });
+      }
+
+      async function toggleFollow() {
+        var token = localStorage.getItem('zenglance_token');
+        if (!token) { alert(t('status.loginFirst')); return; }
+        if (!currentCreatorId) return;
+        isFollowing = !isFollowing;
+        updateFollowUI();
+        fetch('/api/interaction/users/' + currentCreatorId + '/follow', {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+        }).catch(function(e) { isFollowing = !isFollowing; updateFollowUI(); });
+      }
+
+      // ── Comments ──────────────────────────────────────────────────
+      async function loadComments(contentId, append) {
+        if (!contentId || loadingComments) return;
+        loadingComments = true;
+        var token = localStorage.getItem('zenglance_token');
+        var listEl = document.getElementById('watchCommentsList');
+        var loadMoreBtn = document.getElementById('watchCommentsLoadMore');
+        if (!append) listEl.innerHTML = '<p style="color:var(--text-muted);padding:.5rem 0">' + t('collection.loading') + '</p>';
+        try {
+          var params = 'limit=20';
+          if (commentCursor) params += '&cursor=' + commentCursor;
+          var res = await fetch('/api/interaction/content/' + contentId + '/comments?' + params, {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          var data = await res.json();
+          var comments = data.comments || [];
+          if (!append) listEl.innerHTML = '';
+          if (!append) commentCursor = null;
+          if (data.nextCursor) commentCursor = data.nextCursor;
+          if (loadMoreBtn) loadMoreBtn.style.display = commentCursor ? '' : 'none';
+          if (!comments.length && !append) {
+            listEl.innerHTML = '<p style="color:var(--text-muted);padding:.5rem 0;font-size:13px">' + t('status.noData') + '</p>';
+          }
+          comments.forEach(function(c) { listEl.appendChild(renderComment(c)); });
+        } catch (e) { console.error(e); }
+        loadingComments = false;
+      }
+
+      function renderComment(c) {
+        var div = document.createElement('div');
+        div.className = 'watch-comment-item';
+        div.innerHTML =
+          '<div class="watch-comment-avatar">' + (c.user ? c.user.charAt(0).toUpperCase() : 'U') + '</div>' +
+          '<div class="watch-comment-body">' +
+            '<div class="watch-comment-author">' + escapeHtml(c.user || 'Unknown') + '</div>' +
+            '<div class="watch-comment-text">' + escapeHtml(c.body) + '</div>' +
+            '<div class="watch-comment-meta">' + timeAgo(c.createdAt) + '</div>' +
+          '</div>';
+        return div;
+      }
+
+      function loadMoreComments() {
+        if (currentVideoId) loadComments(currentVideoId, true);
+      }
+      window.loadMoreComments = loadMoreComments;
+
+      function postComment() {
+        var token = localStorage.getItem('zenglance_token');
+        if (!token) { alert(t('status.loginFirst')); return; }
+        var input = document.getElementById('watchCommentInput');
+        if (!input || !input.value.trim()) return;
+        if (!currentVideoId) return;
+        var body = input.value.trim();
+        input.value = '';
+        fetch('/api/interaction/content/' + currentVideoId + '/comments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+          body: JSON.stringify({ body: body })
+        }).then(function(r) { return r.json(); }).then(function(c) {
+          var listEl = document.getElementById('watchCommentsList');
+          if (listEl) listEl.insertBefore(renderComment(c), listEl.firstChild);
+        }).catch(function(e) { console.error(e); });
+      }
+      window.postComment = postComment;
 
       function formatTime(seconds) {
         var m = Math.floor(seconds / 60);
@@ -542,7 +842,9 @@
       }
 
       // ── Action buttons ────────────────────────────────────────────
-      window.watchLike = function() { alert(t('meta.like') + ' (' + t('status.error') + ')'); };
+      window.toggleLike = toggleLike;
+      window.toggleSave = toggleSave;
+      window.toggleFollow = toggleFollow;
       window.watchShare = function() {
         var url = window.location.href;
         if (navigator.clipboard) {
@@ -551,7 +853,6 @@
           prompt(t('meta.share') + ':', url);
         }
       };
-      window.watchSave = function() { alert(t('meta.save') + ' (' + t('status.error') + ')'); };
 
       // ── Boot ──────────────────────────────────────────────────────
       function init() {

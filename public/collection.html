@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="collection.myCollection">My Collection</title>
+  <link rel="stylesheet" href="style.css?v=3" />
+  <script src="i18n.js?v=4"></script>
+  <style>
+    .collection-page { max-width: 1200px; margin: 0 auto; padding: 1.5rem; }
+    .collection-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .collection-header h1 { font-size: 1.5rem; font-weight: 700; }
+    .collection-create-btn {
+      background: var(--accent); color: #fff; border: none;
+      padding: 8px 20px; border-radius: 20px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .collection-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+    .collection-card {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg); padding: 1rem; cursor: pointer;
+      transition: background var(--transition), border-color var(--transition);
+    }
+    .collection-card:hover { background: var(--bg-hover); border-color: var(--accent); }
+    .collection-card-name { font-size: 15px; font-weight: 600; margin-bottom: 0.5rem; }
+    .collection-card-meta { font-size: 12px; color: var(--text-muted); display: flex; gap: 1rem; }
+    .collection-card-actions { display: flex; gap: 0.5rem; margin-top: 0.75rem; }
+    .collection-card-btn {
+      background: none; border: 1px solid var(--border-color); color: var(--text-secondary);
+      padding: 4px 12px; border-radius: 12px; font-size: 12px; cursor: pointer;
+    }
+    .collection-card-btn.delete { color: #ff6b6b; border-color: rgba(255,107,107,0.3); }
+    .collection-card-btn.delete:hover { background: rgba(255,107,107,0.1); }
+    .collection-empty { text-align: center; padding: 4rem 1rem; color: var(--text-muted); }
+    .collection-empty svg { width: 64px; height: 64px; opacity: 0.3; margin-bottom: 1rem; }
+
+    /* Collection detail */
+    .collection-detail { display: none; }
+    .collection-detail.active { display: block; }
+    .collection-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      color: var(--text-secondary); font-size: 13px; cursor: pointer; margin-bottom: 1rem;
+    }
+    .collection-detail-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+    .collection-detail-header h1 { font-size: 1.5rem; font-weight: 700; }
+    .collection-detail-edit {
+      background: none; border: 1px solid var(--border-color); color: var(--text-secondary);
+      padding: 6px 14px; border-radius: 12px; font-size: 13px; cursor: pointer;
+    }
+    .collection-video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+    .collection-video-item {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: var(--radius-md); overflow: hidden;
+      transition: background var(--transition);
+    }
+    .collection-video-item:hover { background: var(--bg-hover); }
+    .collection-video-thumb {
+      aspect-ratio: 16/9; background: var(--bg-secondary);
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,0.2); font-size: 24px;
+    }
+    .collection-video-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .collection-video-info { padding: 0.5rem 0.75rem; }
+    .collection-video-title { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .collection-video-remove {
+      background: none; border: none; color: var(--text-muted);
+      font-size: 11px; cursor: pointer; padding: 4px 0; margin-top: 4px;
+    }
+    .collection-video-remove:hover { color: #ff6b6b; }
+    .collection-add-btn {
+      border: 2px dashed var(--border-color); border-radius: var(--radius-md);
+      min-height: 120px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 0.5rem;
+      cursor: pointer; color: var(--text-muted); font-size: 13px;
+      transition: border-color var(--transition), color var(--transition);
+    }
+    .collection-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .collection-add-btn svg { width: 24px; height: 24px; }
+    .collection-empty-detail { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
+
+    .collection-modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+      display: flex; align-items: center; justify-content: center; z-index: 1000;
+    }
+    .collection-modal {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg); padding: 1.5rem; width: 90%; max-width: 400px;
+    }
+    .collection-modal h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; }
+    .collection-modal input {
+      width: 100%; background: var(--bg-secondary); border: 1px solid var(--border-color);
+      color: var(--text-primary); padding: 0.6rem 0.75rem; border-radius: var(--radius-md);
+      font-size: 14px; margin-bottom: 1rem;
+    }
+    .collection-modal input:focus { outline: none; border-color: var(--accent); }
+    .collection-modal-actions { display: flex; gap: 0.75rem; justify-content: flex-end; }
+    .collection-modal-btn {
+      padding: 8px 16px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .collection-modal-btn.primary { background: var(--accent); color: #fff; border: none; }
+    .collection-modal-btn.secondary { background: none; border: 1px solid var(--border-color); color: var(--text-secondary); }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <a href="/" class="logo">
+        <span class="logo-icon">Z</span>
+        <span class="logo-text" data-i18n="meta.title">ZenGlance</span>
+      </a>
+    </div>
+    <div class="header-right" id="headerRight"></div>
+  </header>
+
+  <!-- Page -->
+  <div class="collection-page">
+    <!-- List view -->
+    <div id="collectionListView">
+      <div class="collection-header">
+        <h1 data-i18n="collection.myCollection">My Collection</h1>
+        <button class="collection-create-btn" onclick="showCreateModal()" data-i18n="collection.newCollection">+ New Collection</button>
+      </div>
+      <div class="collection-list" id="collectionList"></div>
+    </div>
+
+    <!-- Detail view -->
+    <div id="collectionDetailView" class="collection-detail">
+      <div class="collection-back" onclick="showListView()">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span data-i18n="meta.back">Back</span>
+      </div>
+      <div class="collection-detail-header">
+        <h1 id="detailCollectionName"></h1>
+        <button class="collection-detail-edit" onclick="showEditModal()" data-i18n="collection.editName">Edit Name</button>
+      </div>
+      <div class="collection-video-grid" id="collectionVideoGrid"></div>
+    </div>
+  </div>
+
+  <script>
+    var currentCollectionId = null;
+    var currentCollectionName = '';
+
+    async function apiFetch(url, options) {
+      const token = localStorage.getItem('zenglance_token');
+      const headers = { 'Content-Type': 'application/json', ...(options.headers || {}), ...(token ? { 'Authorization': 'Bearer ' + token } : {}) };
+      return fetch(url, { ...options, headers });
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      var d = document.createElement('div'); d.textContent = str;
+      return d.innerHTML;
+    }
+
+    function timeAgo(iso) {
+      if (!iso) return '';
+      var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+      if (diff < 60) return translations.current.lang === 'ar' ? '\u0645\u0646\u0630 \u0644\u062D\u0638\u0629' : 'just now';
+      if (diff < 3600) return Math.floor(diff / 60) + ' ' + (translations.current.lang === 'ar' ? '\u062F\u0642\u0627\u0626\u0642' : 'min') + ' ' + (translations.current.lang === 'ar' ? '\u0645\u0646\u0630' : 'ago');
+      if (diff < 86400) return Math.floor(diff / 3600) + ' ' + (translations.current.lang === 'ar' ? '\u0633\u0627\u0639\u0629' : 'hr') + ' ' + (translations.current.lang === 'ar' ? '\u0645\u0646\u0630' : 'ago');
+      if (diff < 604800) return Math.floor(diff / 86400) + ' ' + (translations.current.lang === 'ar' ? '\u064A\u0648\u0645' : 'day') + ' ' + (translations.current.lang === 'ar' ? '\u0645\u0646\u0630' : 'ago');
+      return new Date(iso).toLocaleDateString();
+    }
+
+    function t(key) {
+      var obj = window.translations && window.translations[key];
+      if (!obj) return key;
+      var lang = window.i18n ? window.i18n.getCurrentLang() : 'en';
+      return (obj[lang] || obj.en || key);
+    }
+
+    async function loadCollections() {
+      var list = document.getElementById('collectionList');
+      list.innerHTML = '<p style="color:var(--text-muted);padding:1rem">' + t('collection.loading') + '</p>';
+      try {
+        var res = await apiFetch('/api/interaction/collections');
+        var data = await res.json();
+        var cols = data.collections || [];
+        if (!cols.length) {
+          list.innerHTML = '<div class="collection-empty"><svg viewBox="0 0 64 64" fill="none"><rect x="8" y="12" width="48" height="36" rx="4" stroke="currentColor" stroke-width="2"/><path d="M8 24h48" stroke="currentColor" stroke-width="2"/></svg><p>' + t('collection.noCollections') + '</p></div>';
+          return;
+        }
+        list.innerHTML = '';
+        cols.forEach(function(c) {
+          var card = document.createElement('div');
+          card.className = 'collection-card';
+          card.innerHTML =
+            '<div class="collection-card-name">' + escapeHtml(c.name) + '</div>' +
+            '<div class="collection-card-meta">' +
+              '<span>' + timeAgo(c.createdAt) + '</span>' +
+            '</div>' +
+            '<div class="collection-card-actions">' +
+              '<button class="collection-card-btn delete" onclick="deleteCollection(\'' + c.id + '\', event)">' + t('collection.deleteCollection') + '</button>' +
+            '</div>';
+          card.addEventListener('click', function(e) {
+            if (e.target.classList.contains('collection-card-btn')) return;
+            showDetailView(c.id, c.name);
+          });
+          list.appendChild(card);
+        });
+      } catch (e) { console.error(e); }
+    }
+
+    function showDetailView(id, name) {
+      currentCollectionId = id;
+      currentCollectionName = name;
+      document.getElementById('collectionListView').style.display = 'none';
+      document.getElementById('collectionDetailView').classList.add('active');
+      document.getElementById('detailCollectionName').textContent = name;
+      loadCollectionItems(id);
+    }
+
+    function showListView() {
+      currentCollectionId = null;
+      document.getElementById('collectionListView').style.display = '';
+      document.getElementById('collectionDetailView').classList.remove('active');
+      loadCollections();
+    }
+    window.showListView = showListView;
+
+    async function loadCollectionItems(id) {
+      var grid = document.getElementById('collectionVideoGrid');
+      grid.innerHTML = '<p style="color:var(--text-muted);padding:1rem">' + t('collection.loading') + '</p>';
+      try {
+        var res = await apiFetch('/api/interaction/collections/' + id);
+        var data = await res.json();
+        var items = data.contents || [];
+        grid.innerHTML = '';
+        if (!items.length) {
+          grid.innerHTML = '<div class="collection-empty-detail"><p>' + t('collection.noItems') + '</p></div>';
+        }
+        // Add button
+        var addBtn = document.createElement('div');
+        addBtn.className = 'collection-add-btn';
+        addBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>+</span>';
+        grid.appendChild(addBtn);
+
+        items.forEach(function(item) {
+          var el = document.createElement('a');
+          el.className = 'collection-video-item';
+          el.href = '/watch.html?id=' + item.id;
+          el.innerHTML =
+            '<div class="collection-video-thumb">' +
+              (item.thumbnail ? '<img src="' + escapeHtml(item.thumbnail) + '" alt=""/>' : '\u25B6') +
+            '</div>' +
+            '<div class="collection-video-info">' +
+              '<div class="collection-video-title">' + escapeHtml(item.title) + '</div>' +
+              '<button class="collection-video-remove" onclick="event.preventDefault();event.stopPropagation();removeItem(\'' + id + '\',\'' + item.id + '\',this)">' + t('collection.removeFromCollection') + '</button>' +
+            '</div>';
+          grid.appendChild(el);
+        });
+      } catch (e) { console.error(e); }
+    }
+
+    async function removeItem(collectionId, contentId, btn) {
+      await apiFetch('/api/interaction/collections/' + collectionId + '/items/' + contentId, { method: 'DELETE' });
+      var item = btn.closest('.collection-video-item');
+      if (item) item.remove();
+    }
+    window.removeItem = removeItem;
+
+    function showCreateModal() {
+      var overlay = document.createElement('div');
+      overlay.className = 'collection-modal-overlay';
+      overlay.innerHTML =
+        '<div class="collection-modal">' +
+          '<h2>' + t('collection.newCollection') + '</h2>' +
+          '<input id="newCollectionName" ' + (window.i18n && window.i18n.getCurrentLang() === 'ar' ? 'dir="rtl"' : '') + ' placeholder="' + t('collection.enterCollectionName') + '"/>' +
+          '<div class="collection-modal-actions">' +
+            '<button class="collection-modal-btn secondary" onclick="this.closest(\'.collection-modal-overlay\').remove()">' + t('interactions.cancel') + '</button>' +
+            '<button class="collection-modal-btn primary" onclick="createCollection()">' + t('collection.newCollection') + '</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+      var input = overlay.querySelector('#newCollectionName');
+      input.focus();
+      input.addEventListener('keydown', function(e) { if (e.key === 'Enter') createCollection(); });
+    }
+
+    async function createCollection() {
+      var input = document.getElementById('newCollectionName');
+      var name = input.value.trim();
+      if (!name) return;
+      try {
+        var res = await apiFetch('/api/interaction/collections', {
+          method: 'POST',
+          body: JSON.stringify({ name: name })
+        });
+        var data = await res.json();
+        document.querySelector('.collection-modal-overlay').remove();
+        loadCollections();
+      } catch (e) { console.error(e); }
+    }
+    window.createCollection = createCollection;
+
+    function showEditModal() {
+      var overlay = document.createElement('div');
+      overlay.className = 'collection-modal-overlay';
+      overlay.innerHTML =
+        '<div class="collection-modal">' +
+          '<h2>' + t('collection.collectionName') + '</h2>' +
+          '<input id="editCollectionName" value="' + escapeHtml(currentCollectionName) + '" ' + (window.i18n && window.i18n.getCurrentLang() === 'ar' ? 'dir="rtl"' : '') + '/>' +
+          '<div class="collection-modal-actions">' +
+            '<button class="collection-modal-btn secondary" onclick="this.closest(\'.collection-modal-overlay\').remove()">' + t('interactions.cancel') + '</button>' +
+            '<button class="collection-modal-btn primary" onclick="saveCollectionName()">' + t('interactions.post') + '</button>' +
+          '</div>' +
+        '</div>';
+      document.body.appendChild(overlay);
+      overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+      var input = overlay.querySelector('#editCollectionName');
+      input.focus(); input.select();
+      input.addEventListener('keydown', function(e) { if (e.key === 'Enter') saveCollectionName(); });
+    }
+
+    async function saveCollectionName() {
+      var input = document.getElementById('editCollectionName');
+      var name = input.value.trim();
+      if (!name || !currentCollectionId) return;
+      try {
+        await apiFetch('/api/interaction/collections/' + currentCollectionId, {
+          method: 'PUT',
+          body: JSON.stringify({ name: name })
+        });
+        document.querySelector('.collection-modal-overlay').remove();
+        document.getElementById('detailCollectionName').textContent = name;
+        currentCollectionName = name;
+        loadCollections();
+      } catch (e) { console.error(e); }
+    }
+    window.saveCollectionName = saveCollectionName;
+
+    async function deleteCollection(id, event) {
+      event.stopPropagation();
+      if (!confirm(t('collection.confirmDelete'))) return;
+      try {
+        await apiFetch('/api/interaction/collections/' + id, { method: 'DELETE' });
+        loadCollections();
+      } catch (e) { console.error(e); }
+    }
+    window.deleteCollection = deleteCollection;
+
+    // ── Header user menu ─────────────────────────────────────────────
+    async function loadUser() {
+      var token = localStorage.getItem('zenglance_token');
+      var headerRight = document.getElementById('headerRight');
+      if (!token) {
+        headerRight.innerHTML = '<a href="/auth/login" class="login-btn" data-i18n="meta.login">Login</a>';
+        return;
+      }
+      try {
+        var res = await fetch('/api/v1/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) { localStorage.removeItem('zenglance_token'); loadUser(); return; }
+        var data = await res.json();
+        var user = data.user;
+        headerRight.innerHTML =
+          '<div class="user-menu" style="position:relative">' +
+            '<button class="user-menu-btn" onclick="toggleMenu(event)">' +
+              '<div class="user-avatar" style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;">' + (user.name || 'U').charAt(0).toUpperCase() + '</div>' +
+              '<span class="user-name">' + escapeHtml(user.name) + '</span>' +
+              '<svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8L2 4h8z"/></svg>' +
+            '</button>' +
+            '<div class="user-dropdown" id="userDropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-md);min-width:160px;z-index:100;overflow:hidden;">' +
+              '<a href="/auth/login" class="dropdown-item" data-i18n="meta.profile">Profile</a>' +
+              '<div class="dropdown-divider"></div>' +
+              '<a href="#" class="dropdown-item" onclick="logout();return false;" data-i18n="meta.logout">Logout</a>' +
+            '</div>' +
+          '</div>';
+      } catch (e) { console.error(e); }
+    }
+
+    function toggleMenu(e) {
+      e.stopPropagation();
+      var dropdown = document.getElementById('userDropdown');
+      dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function logout() {
+      localStorage.removeItem('zenglance_token');
+      window.location.href = '/';
+    }
+
+    document.addEventListener('click', function() {
+      var dd = document.getElementById('userDropdown');
+      if (dd) dd.style.display = 'none';
+    });
+
+    // ── Boot ──────────────────────────────────────────────────────────
+    function init() {
+      if (window.i18n) window.i18n.init();
+      loadUser();
+      loadCollections();
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

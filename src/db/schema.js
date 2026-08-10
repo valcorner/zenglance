@@ -2,7 +2,7 @@ import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 // User roles enum
-export const roles = ['free', 'premium', 'official'];
+export const roles = ['free', 'senior', 'admin'];
 
 // Content types enum
 export const contentTypes = [
@@ -34,9 +34,7 @@ export const contents = sqliteTable('contents', {
   title: text('title').notNull(),
   description: text('description'),
   contentType: text('content_type', { enum: contentTypes }).notNull(),
-  isPremium: integer('is_premium', { mode: 'boolean' }).notNull().default(false),
-  isEncrypted: integer('is_encrypted', { mode: 'boolean' }).notNull().default(false),
-  
+
   // Upload info
   uploaderId: text('uploader_id').notNull().references(() => users.id),
   b2Bucket: text('b2_bucket').notNull(),
@@ -64,23 +62,7 @@ export const contents = sqliteTable('contents', {
   index('contents_slug_idx').on(table.slug),
   index('contents_uploader_idx').on(table.uploaderId),
   index('contents_type_idx').on(table.contentType),
-  index('contents_premium_idx').on(table.isPremium),
   index('contents_status_idx').on(table.status)
-]);
-
-// Encryption keys table - stores AES-256-GCM key info (NOT the actual key)
-// The actual encrypted content key is stored client-side or in a secure vault
-export const encryptionKeys = sqliteTable('encryption_keys', {
-  id: text('id').primaryKey(),
-  contentId: text('content_id').notNull().unique().references(() => contents.id),
-  // We only store metadata here - actual keys are managed client-side
-  keyId: text('key_id').notNull(), // Identifier for key retrieval
-  iv: text('iv').notNull(), // Base64 encoded initialization vector
-  authTag: text('auth_tag'), // Base64 encoded auth tag (GCM)
-  keyDerivationInfo: text('key_derivation_info'), // HKDF salt/info for derivation
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
-}, (table) => [
-  index('encryption_keys_content_idx').on(table.contentId)
 ]);
 
 // Upload sessions table - tracks presigned URL sessions
@@ -130,13 +112,93 @@ export const sessions = sqliteTable('sessions', {
 ]);
 
 // ---------------------------------------------------------------------------
+// Likes table
+// ---------------------------------------------------------------------------
+export const likes = sqliteTable('likes', {
+  userId: text('user_id').notNull().references(() => users.id),
+  contentId: text('content_id').notNull().references(() => contents.id),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+}, (table) => [
+  { name: 'likes_user_content_unique', constraints: table.unique().on(table.userId, table.contentId) }
+]);
+
+// ---------------------------------------------------------------------------
+// Favorites table
+// ---------------------------------------------------------------------------
+export const favorites = sqliteTable('favorites', {
+  userId: text('user_id').notNull().references(() => users.id),
+  contentId: text('content_id').notNull().references(() => contents.id),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+}, (table) => [
+  { name: 'favorites_user_content_unique', constraints: table.unique().on(table.userId, table.contentId) }
+]);
+
+// ---------------------------------------------------------------------------
+// Comments table
+// ---------------------------------------------------------------------------
+export const comments = sqliteTable('comments', {
+  id: text('id').primaryKey(),
+  contentId: text('content_id').notNull().references(() => contents.id),
+  userId: text('user_id').notNull().references(() => users.id),
+  body: text('body').notNull(),
+  parentId: text('parent_id').references(() => comments.id),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+}, (table) => [
+  index('comments_content_idx').on(table.contentId),
+  index('comments_parent_idx').on(table.parentId)
+]);
+
+// ---------------------------------------------------------------------------
+// Follows table
+// ---------------------------------------------------------------------------
+export const follows = sqliteTable('follows', {
+  followerId: text('follower_id').notNull().references(() => users.id),
+  followingId: text('following_id').notNull().references(() => users.id),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+}, (table) => [
+  { name: 'follows_unique', constraints: table.unique().on(table.followerId, table.followingId) }
+]);
+
+// ---------------------------------------------------------------------------
+// Collections table
+// ---------------------------------------------------------------------------
+export const collections = sqliteTable('collections', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  name: text('name').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+}, (table) => [
+  index('collections_user_idx').on(table.userId)
+]);
+
+// ---------------------------------------------------------------------------
+// Collection items table
+// ---------------------------------------------------------------------------
+export const collectionItems = sqliteTable('collection_items', {
+  collectionId: text('collection_id').notNull().references(() => collections.id),
+  contentId: text('content_id').notNull().references(() => contents.id),
+  addedAt: integer('added_at', { mode: 'timestamp' }).notNull()
+}, (table) => [
+  { name: 'collection_items_unique', constraints: table.unique().on(table.collectionId, table.contentId) },
+  index('collection_items_content_idx').on(table.contentId)
+]);
+
+// ---------------------------------------------------------------------------
 // Relations - 必需，否则 db.query.*.findMany({ with: {...} }) 会抛错
 // ---------------------------------------------------------------------------
 
 export const usersRelations = relations(users, ({ many }) => ({
   uploadedContents: many(contents),
   uploadSessions: many(uploadSessions),
-  sessions: many(sessions)
+  sessions: many(sessions),
+  likes: many(likes),
+  favorites: many(favorites),
+  comments: many(comments),
+  follows: many(follows),
+  followedBy: many(follows, { relationName: 'follows' }),
+  collections: many(collections)
 }));
 
 export const contentsRelations = relations(contents, ({ one, many }) => ({
@@ -144,16 +206,12 @@ export const contentsRelations = relations(contents, ({ one, many }) => ({
     fields: [contents.uploaderId],
     references: [users.id]
   }),
-  encryptionKeys: many(encryptionKeys),
   uploadSessions: many(uploadSessions),
-  viewCount: one(viewCounts)
-}));
-
-export const encryptionKeysRelations = relations(encryptionKeys, ({ one }) => ({
-  content: one(contents, {
-    fields: [encryptionKeys.contentId],
-    references: [contents.id]
-  })
+  viewCount: one(viewCounts),
+  likes: many(likes),
+  favorites: many(favorites),
+  comments: many(comments),
+  collectionItems: many(collectionItems)
 }));
 
 export const uploadSessionsRelations = relations(uploadSessions, ({ one }) => ({
@@ -179,4 +237,36 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
     fields: [sessions.userId],
     references: [users.id]
   })
+}));
+
+export const likesRelations = relations(likes, ({ one }) => ({
+  user: one(users, { fields: [likes.userId], references: [users.id] }),
+  content: one(contents, { fields: [likes.contentId], references: [contents.id] })
+}));
+
+export const favoritesRelations = relations(favorites, ({ one }) => ({
+  user: one(users, { fields: [favorites.userId], references: [users.id] }),
+  content: one(contents, { fields: [favorites.contentId], references: [contents.id] })
+}));
+
+export const commentsRelations = relations(comments, ({ one, many }) => ({
+  content: one(contents, { fields: [comments.contentId], references: [contents.id] }),
+  author: one(users, { fields: [comments.userId], references: [users.id] }),
+  parent: one(comments, { fields: [comments.parentId], references: [comments.id] }),
+  replies: many(comments, { relationName: 'commentReplies' })
+}));
+
+export const followsRelations = relations(follows, ({ one }) => ({
+  follower: one(users, { fields: [follows.followerId], references: [users.id] }),
+  following: one(users, { fields: [follows.followingId], references: [users.id] })
+}));
+
+export const collectionsRelations = relations(collections, ({ one, many }) => ({
+  owner: one(users, { fields: [collections.userId], references: [users.id] }),
+  items: many(collectionItems)
+}));
+
+export const collectionItemsRelations = relations(collectionItems, ({ one }) => ({
+  collection: one(collections, { fields: [collectionItems.collectionId], references: [collections.id] }),
+  content: one(contents, { fields: [collectionItems.contentId], references: [contents.id] })
 }));

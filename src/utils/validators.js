@@ -7,26 +7,12 @@ export const roleSchema = z.enum(roles);
 // Content type validation
 export const contentTypeSchema = z.enum(contentTypes);
 
-// Premium content types (require encryption for Official)
-export const premiumContentTypes = ['short_drama', 'tv_series', 'movie'];
-export const ugcContentTypes = ['ugc_long_video', 'short_video'];
-
 // Upload permission rules
 export const uploadPermissions = {
-  official: [...contentTypes], // Can upload everything
-  premium: [...ugcContentTypes], // Can only upload UGC content
-  free: [] // Cannot upload anything
+  free:   [],                              // Cannot upload anything
+  senior: [...contentTypes],               // Can upload all content types
+  admin:  [...contentTypes],               // Can upload all content types
 };
-
-// Encryption rules
-export function requiresEncryption(role, contentType) {
-  // Only Official users uploading premium content types need encryption
-  if (role === 'official' && premiumContentTypes.includes(contentType)) {
-    return true;
-  }
-  // Premium users never encrypt (all their content is plaintext)
-  return false;
-}
 
 // CDN type mapping
 export function getCdnType(contentType) {
