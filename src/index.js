@@ -25,7 +25,7 @@ app.use('*', logger());
 app.use('/api/*', prettyJSON());
 
 // Health check
-app.get('/', (c) => {
+app.get('/health', (c) => {
   return c.json({
     name: 'ZenGlance API',
     version: '0.1.0',
@@ -111,6 +111,11 @@ app.notFound((c) => {
     error: 'Not found',
     code: 'NOT_FOUND'
   }, 404);
+});
+
+// Serve static frontend assets (must be last, catches all non-API routes)
+app.all('*', async (c) => {
+  return c.env.ASSETS?.fetch(c.req.raw) ?? c.notFound();
 });
 
 export default app;
