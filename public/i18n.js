@@ -93,6 +93,14 @@
         es: 'Categor\u00EDas',
         ar: '\u0627\u0644\u062A\u0635\u0646\u064A\u0641\u0627\u062A',
       },
+      collections: {
+        en: 'Collections',
+        fr: 'Collections',
+        de: 'Sammlungen',
+        it: 'Collezioni',
+        es: 'Colecciones',
+        ar: '\u0645\u062c\u0645\u0648\u0639\u0627\u062a',
+      },
     },
 
     menu: {
@@ -654,6 +662,9 @@
     btn.title = 'Change language';
     document.querySelectorAll('.lang-option').forEach(opt => {
       opt.classList.toggle('active', opt.dataset.lang === currentLang);
+      const label = opt.dataset.langLabel || lang.label;
+      const flag = opt.dataset.lang === currentLang ? lang.flag : LANGUAGES[opt.dataset.lang]?.flag || '';
+      opt.innerHTML = `<span>${flag}</span> ${label}`;
     });
   }
 

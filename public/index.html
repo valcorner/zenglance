@@ -106,12 +106,12 @@
           </svg>
         </button>
         <div class="lang-dropdown" id="langDropdown">
-          <button class="lang-option active" data-lang="en"><span>\u{1F1EC}\u{1F1E7}</span> English</button>
-          <button class="lang-option" data-lang="fr"><span>\u{1F1EB}\u{1F1F7}</span> Fran\u00E7ais</button>
-          <button class="lang-option" data-lang="de"><span>\u{1F1E9}\u{1F1EA}</span> Deutsch</button>
-          <button class="lang-option" data-lang="it"><span>\u{1F1EE}\u{1F1F9}</span> Italiano</button>
-          <button class="lang-option" data-lang="es"><span>\u{1F1EA}\u{1F1F8}</span> Espa\u00F1ol</button>
-          <button class="lang-option" data-lang="ar"><span>\u{1F1E6}\u{1F1E8}</span> \u0627\u0644\u0639\u0631\u0628\u064A\u0629</button>
+          <button class="lang-option active" data-lang="en" data-lang-label="English"><span>GB</span> English</button>
+          <button class="lang-option" data-lang="fr" data-lang-label="Fran\u00E7ais"><span>FR</span> Fran\u00E7ais</button>
+          <button class="lang-option" data-lang="de" data-lang-label="Deutsch"><span>DE</span> Deutsch</button>
+          <button class="lang-option" data-lang="it" data-lang-label="Italiano"><span>IT</span> Italiano</button>
+          <button class="lang-option" data-lang="es" data-lang-label="Espa\u00F1ol"><span>ES</span> Espa\u00F1ol</button>
+          <button class="lang-option" data-lang="ar" data-lang-label="\u0627\u0644\u0639\u0631\u0628\u064A\u0629"><span>SA</span> \u0627\u0644\u0639\u0631\u0628\u064A\u0629</button>
         </div>
       </div>
 
@@ -220,7 +220,7 @@
     <div class="sidebar-divider"></div>
 
     <div class="sidebar-section">
-      <div class="sidebar-title">Collections</div>
+      <div class="sidebar-title" data-i18n="meta.collections">Collections</div>
       <a href="/collection/my" class="sidebar-item">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
           <path d="M2 4h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V4z" stroke="currentColor" stroke-width="1.3"/>
@@ -243,14 +243,14 @@
           <label data-i18n="modal.contentType">Content Type</label>
           <select id="uploadType" class="form-input">
             <option value="" data-i18n="modal.selectType">Select type...</option>
-            <option value="short_drama">Short Dramas</option>
-            <option value="tv_series">TV Series</option>
-            <option value="movie">Movies</option>
-            <option value="ugc_long_video">UGC Videos</option>
-            <option value="short_video">Short Videos</option>
-            <option value="music">Music</option>
-            <option value="podcast">Podcast</option>
-            <option value="novel">Novels</option>
+            <option value="short_drama" data-i18n="menu.short_drama">Short Dramas</option>
+            <option value="tv_series" data-i18n="menu.tv_series">TV Series</option>
+            <option value="movie" data-i18n="menu.movie">Movies</option>
+            <option value="ugc_long_video" data-i18n="menu.ugc_long_video">UGC Videos</option>
+            <option value="short_video" data-i18n="menu.short_video">Short Videos</option>
+            <option value="music" data-i18n="menu.music">Music</option>
+            <option value="podcast" data-i18n="menu.podcast">Podcast</option>
+            <option value="novel" data-i18n="menu.novel">Novels</option>
           </select>
         </div>
         <div class="form-group">
@@ -288,7 +288,7 @@
     <!-- Content area rendered by app.js -->
   </main>
 
-  <script src="i18n.js"></script>
-  <script src="app.js"></script>
+  <script src="i18n.js?v=2"></script>
+  <script src="app.js?v=2"></script>
 </body>
 </html>

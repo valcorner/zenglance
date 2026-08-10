@@ -72,22 +72,17 @@
   function updateUserInfo() {
     const avatar = document.getElementById('userAvatar');
     const name = document.getElementById('userName');
-    const loginBtn = document.getElementById('loginBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
     const uploadBtn = document.getElementById('uploadBtn');
 
     if (state.user) {
       const initials = (state.user.name || 'U').slice(0, 2).toUpperCase();
       if (avatar) avatar.textContent = initials;
       if (name) name.textContent = state.user.name;
-      if (loginBtn) loginBtn.style.display = 'none';
-      if (logoutBtn) logoutBtn.style.display = 'flex';
       if (uploadBtn) uploadBtn.style.display = 'inline-flex';
     } else {
       if (avatar) avatar.textContent = 'U';
       if (name) name.textContent = t('meta.notLoggedIn');
-      if (loginBtn) loginBtn.style.display = 'inline-flex';
-      if (logoutBtn) logoutBtn.style.display = 'none';
+      if (uploadBtn) uploadBtn.style.display = 'none';
     }
   }
 
