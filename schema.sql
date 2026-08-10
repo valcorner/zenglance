@@ -81,3 +81,127 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 CREATE INDEX IF NOT EXISTS sessions_user_idx ON sessions(user_id);
 CREATE INDEX IF NOT EXISTS sessions_expires_idx ON sessions(expires_at);
+
+-- Type-specific content tables (each references contents.id as FK)
+-- All interactions (likes, favorites, comments) use contents.id as universal PK
+
+-- Short dramas: season, episode count, studio
+CREATE TABLE IF NOT EXISTS short_dramas (
+  contents_id TEXT PRIMARY KEY REFERENCES contents(id) ON DELETE CASCADE,
+  season INTEGER NOT NULL DEFAULT 1,
+  total_episodes INTEGER NOT NULL DEFAULT 0,
+  episode_length INTEGER,
+  studio TEXT,
+  genre TEXT,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+CREATE INDEX IF NOT EXISTS short_dramas_content_idx ON short_dramas(contents_id);
+
+-- TV series: seasons/episodes, network, status
+CREATE TABLE IF NOT EXISTS tv_series (
+  contents_id TEXT PRIMARY KEY REFERENCES contents(id) ON DELETE CASCADE,
+  total_seasons INTEGER NOT NULL DEFAULT 1,
+  total_episodes INTEGER NOT NULL DEFAULT 0,
+  series_status TEXT CHECK(series_status IN ('ongoing', 'completed', 'hiatus')),
+  genre TEXT,
+  network TEXT,
+  first_aired INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+CREATE INDEX IF NOT EXISTS tv_series_content_idx ON tv_series(contents_id);
+
+-- Movies: director, rating, box office
+CREATE TABLE IF NOT EXISTS movies (
+  contents_id TEXT PRIMARY KEY REFERENCES contents(id) ON DELETE CASCADE,
+  director TEXT,
+  genre TEXT,
+  rating TEXT,
+  release_year INTEGER,
+  budget INTEGER,
+  box_office INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+CREATE INDEX IF NOT EXISTS movies_content_idx ON movies(contents_id);
+
+-- UGC long videos: category, tags, license
+CREATE TABLE IF NOT EXISTS ugc_long_videos (
+  contents_id TEXT PRIMARY KEY REFERENCES contents(id) ON DELETE CASCADE,
+  category TEXT,
+  tags TEXT,
+  views_target INTEGER,
+  license TEXT,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+CREATE INDEX IF NOT EXISTS ugc_long_videos_content_idx ON ugc_long_videos(contents_id);
+
+-- Short videos: platform, hashtags, trending
+CREATE TABLE IF NOT EXISTS short_videos (
+  contents_id TEXT PRIMARY KEY REFERENCES contents(id) ON DELETE CASCADE,
+  platform TEXT CHECK(platform IN ('tiktok', 'youtube_shorts', 'instagram_reels')),
+  hashtags TEXT,
+  challenge TEXT,
+  trending_score INTEGER,
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
+);
+CREATE INDEX IF NOT EXISTS short_videos_content_idx ON short_videos(contents_id);
+
+-- Likes
+CREATE TABLE IF NOT EXISTS likes (
+  user_id TEXT NOT NULL REFERENCES users(id),
+  content_id TEXT NOT NULL REFERENCES contents(id),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, content_id)
+);
+
+-- Favorites
+CREATE TABLE IF NOT EXISTS favorites (
+  user_id TEXT NOT NULL REFERENCES users(id),
+  content_id TEXT NOT NULL REFERENCES contents(id),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, content_id)
+);
+
+-- Comments (supports nested replies via parent_id)
+CREATE TABLE IF NOT EXISTS comments (
+  id TEXT PRIMARY KEY,
+  content_id TEXT NOT NULL REFERENCES contents(id),
+  user_id TEXT NOT NULL REFERENCES users(id),
+  body TEXT NOT NULL,
+  parent_id TEXT REFERENCES comments(id),
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS comments_content_idx ON comments(content_id);
+CREATE INDEX IF NOT EXISTS comments_parent_idx ON comments(parent_id);
+
+-- Follows (self-referencing: user follows another user)
+CREATE TABLE IF NOT EXISTS follows (
+  follower_id TEXT NOT NULL REFERENCES users(id),
+  following_id TEXT NOT NULL REFERENCES users(id),
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (follower_id, following_id)
+);
+
+-- Collections (owned by users)
+CREATE TABLE IF NOT EXISTS collections (
+  id TEXT PRIMARY KEY,
+  user_id TEXT NOT NULL REFERENCES users(id),
+  name TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS collections_user_idx ON collections(user_id);
+
+-- Collection items (many-to-many between collections and contents)
+CREATE TABLE IF NOT EXISTS collection_items (
+  collection_id TEXT NOT NULL REFERENCES collections(id) ON DELETE CASCADE,
+  content_id TEXT NOT NULL REFERENCES contents(id) ON DELETE CASCADE,
+  added_at INTEGER NOT NULL,
+  PRIMARY KEY (collection_id, content_id)
+);
+CREATE INDEX IF NOT EXISTS collection_items_content_idx ON collection_items(content_id);

@@ -12,7 +12,7 @@ import {
 } from '../utils/validators.js';
 import { createAuthMiddleware } from '../middleware/auth.js';
 import { eq, and, desc } from 'drizzle-orm';
-import { contents, uploadSessions } from '../db/schema.js';
+import { contents, uploadSessions, shortDramas, tvSeries, movies, ugcLongVideos, shortVideos } from '../db/schema.js';
 
 export function checkUploadPermission() {
   return async (c, next) => {
@@ -66,7 +66,7 @@ export function createUploadRoutes() {
       }
       
       const { title, description, contentType, slug, fileSize, duration, mimeType } = parsed.data;
-      
+
       const db = createDb(c.env);
       const b2 = new B2Service(
         c.env.B2_APPLICATION_KEY_ID,
@@ -83,7 +83,7 @@ export function createUploadRoutes() {
       // Create content record
       const cdnType = getCdnType(contentType);
       const now = Date.now();
-      
+
       await db.insert(contents).values({
         id: contentId,
         slug,
@@ -101,6 +101,16 @@ export function createUploadRoutes() {
         createdAt: now,
         updatedAt: now
       });
+
+      // Insert into type-specific table
+      const typeData = {
+        short_drama: () => db.insert(shortDramas).values({ contentsId: contentId }),
+        tv_series:  () => db.insert(tvSeries).values({ contentsId: contentId }),
+        movie:      () => db.insert(movies).values({ contentsId: contentId }),
+        ugc_long_video: () => db.insert(ugcLongVideos).values({ contentsId: contentId }),
+        short_video:    () => db.insert(shortVideos).values({ contentsId: contentId }),
+      }[contentType];
+      if (typeData) await typeData();
       
       // Get native B2 upload URL and auth token
       const { uploadUrl, uploadAuth } = await b2.getUploadUrl(mimeType || 'application/octet-stream');

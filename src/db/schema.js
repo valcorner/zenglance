@@ -27,7 +27,7 @@ export const users = sqliteTable('users', {
   index('users_role_idx').on(table.role)
 ]);
 
-// Contents table - metadata for all media
+// Contents table - base metadata for all media (universal PK for likes/favorites/comments)
 export const contents = sqliteTable('contents', {
   id: text('id').primaryKey(), // D1 generated content_id (UUID)
   slug: text('slug').notNull().unique(), // Human-readable URL slug
@@ -39,23 +39,23 @@ export const contents = sqliteTable('contents', {
   uploaderId: text('uploader_id').notNull().references(() => users.id),
   b2Bucket: text('b2_bucket').notNull(),
   b2Key: text('b2_key').notNull(), // B2 对象路径
-  
+
   // CDN routing info
   cdnType: text('cdn_type').notNull(), // drama/series/movie/video/short
-  
+
   // File info
   fileSize: integer('file_size'),
   duration: integer('duration'), // seconds, for video/audio
   mimeType: text('mime_type'),
-  
+
   // Manifest files (for HLS/DASH)
   manifestIndex: text('manifest_index'), // e.g., "1.m3u8" or "1.mpd"
-  
+
   // Status
   status: text('status').notNull().default('pending'), // pending, ready, error
   errorCode: text('error_code'),
   errorMessage: text('error_message'),
-  
+
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 }, (table) => [
@@ -109,6 +109,71 @@ export const sessions = sqliteTable('sessions', {
 }, (table) => [
   index('sessions_user_idx').on(table.userId),
   index('sessions_expires_idx').on(table.expiresAt)
+]);
+
+// ---------------------------------------------------------------------------
+// Type-specific content tables
+// Each has contents_id FK → contents.id (universal PK for all interactions)
+// ---------------------------------------------------------------------------
+
+// Short dramas: episode info, season, studio
+export const shortDramas = sqliteTable('short_dramas', {
+  contentsId: text('contents_id').primaryKey().references(() => contents.id, { onDelete: 'cascade' }),
+  season: integer('season').notNull().default(1),
+  totalEpisodes: integer('total_episodes').notNull().default(0),
+  episodeLength: integer('episode_length'), // seconds per episode
+  studio: text('studio'),
+  genre: text('genre'), // e.g. romance, action, comedy
+}, (table) => [
+  index('short_dramas_content_idx').on(table.contentsId)
+]);
+
+// TV series: seasons/episodes structure
+export const tvSeries = sqliteTable('tv_series', {
+  contentsId: text('contents_id').primaryKey().references(() => contents.id, { onDelete: 'cascade' }),
+  totalSeasons: integer('total_seasons').notNull().default(1),
+  totalEpisodes: integer('total_episodes').notNull().default(0),
+  status: text('series_status'), // 'ongoing', 'completed', 'hiatus'
+  genre: text('genre'),
+  network: text('network'),
+  firstAired: integer('first_aired', { mode: 'timestamp' }),
+}, (table) => [
+  index('tv_series_content_idx').on(table.contentsId)
+]);
+
+// Movies: director, cast, runtime metadata
+export const movies = sqliteTable('movies', {
+  contentsId: text('contents_id').primaryKey().references(() => contents.id, { onDelete: 'cascade' }),
+  director: text('director'),
+  genre: text('genre'),
+  rating: text('rating'), // e.g. 'PG-13', 'R', 'G'
+  releaseYear: integer('release_year'),
+  budget: integer('budget'),
+  boxOffice: integer('box_office'),
+}, (table) => [
+  index('movies_content_idx').on(table.contentsId)
+]);
+
+// UGC long videos: channel/social metadata
+export const ugcLongVideos = sqliteTable('ugc_long_videos', {
+  contentsId: text('contents_id').primaryKey().references(() => contents.id, { onDelete: 'cascade' }),
+  category: text('category'), // e.g. 'gaming', 'education', 'vlog'
+  tags: text('tags'), // comma-separated
+  viewsTarget: integer('views_target'),
+  license: text('license'), // e.g. 'youtube_standard', 'cc_by'
+}, (table) => [
+  index('ugc_long_videos_content_idx').on(table.contentsId)
+]);
+
+// Short videos: platform-specific metadata
+export const shortVideos = sqliteTable('short_videos', {
+  contentsId: text('contents_id').primaryKey().references(() => contents.id, { onDelete: 'cascade' }),
+  platform: text('platform'), // 'tiktok', 'youtube_shorts', 'instagram_reels'
+  hashtags: text('hashtags'), // comma-separated
+  challenge: text('challenge'),
+  trendingScore: integer('trending_score'),
+}, (table) => [
+  index('short_videos_content_idx').on(table.contentsId)
 ]);
 
 // ---------------------------------------------------------------------------
@@ -186,7 +251,7 @@ export const collectionItems = sqliteTable('collection_items', {
 ]);
 
 // ---------------------------------------------------------------------------
-// Relations - 必需，否则 db.query.*.findMany({ with: {...} }) 会抛错
+// Relations
 // ---------------------------------------------------------------------------
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -208,6 +273,26 @@ export const contentsRelations = relations(contents, ({ one, many }) => ({
   }),
   uploadSessions: many(uploadSessions),
   viewCount: one(viewCounts),
+  shortDrama: one(shortDramas, {
+    fields: [contents.id],
+    references: [shortDramas.contentsId]
+  }),
+  tvSeries: one(tvSeries, {
+    fields: [contents.id],
+    references: [tvSeries.contentsId]
+  }),
+  movie: one(movies, {
+    fields: [contents.id],
+    references: [movies.contentsId]
+  }),
+  ugcLongVideo: one(ugcLongVideos, {
+    fields: [contents.id],
+    references: [ugcLongVideos.contentsId]
+  }),
+  shortVideo: one(shortVideos, {
+    fields: [contents.id],
+    references: [shortVideos.contentsId]
+  }),
   likes: many(likes),
   favorites: many(favorites),
   comments: many(comments),
@@ -236,6 +321,41 @@ export const sessionsRelations = relations(sessions, ({ one }) => ({
   user: one(users, {
     fields: [sessions.userId],
     references: [users.id]
+  })
+}));
+
+export const shortDramasRelations = relations(shortDramas, ({ one }) => ({
+  content: one(contents, {
+    fields: [shortDramas.contentsId],
+    references: [contents.id]
+  })
+}));
+
+export const tvSeriesRelations = relations(tvSeries, ({ one }) => ({
+  content: one(contents, {
+    fields: [tvSeries.contentsId],
+    references: [contents.id]
+  })
+}));
+
+export const moviesRelations = relations(movies, ({ one }) => ({
+  content: one(contents, {
+    fields: [movies.contentsId],
+    references: [contents.id]
+  })
+}));
+
+export const ugcLongVideosRelations = relations(ugcLongVideos, ({ one }) => ({
+  content: one(contents, {
+    fields: [ugcLongVideos.contentsId],
+    references: [contents.id]
+  })
+}));
+
+export const shortVideosRelations = relations(shortVideos, ({ one }) => ({
+  content: one(contents, {
+    fields: [shortVideos.contentsId],
+    references: [contents.id]
   })
 }));
 
