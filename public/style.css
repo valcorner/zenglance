@@ -140,6 +140,15 @@ html[dir="rtl"] .search-input { padding-right: 12px; padding-left: 36px; }
 .user-name { font-size: 13px; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dropdown-arrow { transition: transform var(--transition); flex-shrink: 0; color: var(--text-secondary); }
 .dropdown-arrow.show { transform: rotate(180deg); }
+.login-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 14px; border-radius: 20px;
+  background: var(--accent); color: #fff;
+  font-size: 13px; font-weight: 600;
+  text-decoration: none;
+  transition: opacity var(--transition);
+}
+.login-btn:hover { opacity: 0.85; }
 .user-dropdown {
   display: none;
   position: absolute;

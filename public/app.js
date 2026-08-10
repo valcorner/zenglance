@@ -72,16 +72,20 @@
   function updateUserInfo() {
     const avatar = document.getElementById('userAvatar');
     const name = document.getElementById('userName');
+    const userMenu = document.getElementById('userMenu');
+    const loginBtn = document.getElementById('loginBtn');
     const uploadBtn = document.getElementById('uploadBtn');
 
     if (state.user) {
       const initials = (state.user.name || 'U').slice(0, 2).toUpperCase();
       if (avatar) avatar.textContent = initials;
       if (name) name.textContent = state.user.name;
+      if (userMenu) userMenu.style.display = 'flex';
+      if (loginBtn) loginBtn.style.display = 'none';
       if (uploadBtn) uploadBtn.style.display = 'inline-flex';
     } else {
-      if (avatar) avatar.textContent = 'U';
-      if (name) name.textContent = t('meta.notLoggedIn');
+      if (userMenu) userMenu.style.display = 'none';
+      if (loginBtn) loginBtn.style.display = 'inline-flex';
       if (uploadBtn) uploadBtn.style.display = 'none';
     }
   }
@@ -480,6 +484,8 @@
   async function init() {
     // Register all event listeners immediately on DOM ready
     registerEventListeners();
+    // Show login button immediately (fetchUser is async, update it when it returns)
+    updateUserInfo();
     // Start API calls in background
     await Promise.all([fetchUser(), fetchPlaylists()]);
     renderCategoryList();
