@@ -161,7 +161,7 @@
             <span class="video-card-creator">${escapeHtml(item.creator?.name || t('player.unknownCreator'))}</span>
             ${item.views ? `<span>${formatViews(item.views)} ${t('player.views')}</span>` : ''}
             ${item.is_encrypted ? `<span class="meta-tag encrypted">${t('player.encrypted')}</span>` : ''}
-            ${item.category ? `<span class="meta-tag">${t('category.' + item.category) || item.category}</span>` : ''}
+            ${item.category ? `<span class="meta-tag">${t('category.' + item.category)}</span>` : ''}
           </div>
           <div class="video-card-desc">${escapeHtml(item.description || '')}</div>
           ${item.created_at ? `<div class="video-card-time">${timeAgo(item.created_at)}</div>` : ''}
@@ -201,7 +201,7 @@
         ${categories.map(c => `
           <div class="category-card" onclick="window.__selectCategory('${c.code}')">
             <div class="category-card-icon">${c.icon}</div>
-            <div class="category-card-name">${t('category.' + c.code) || c.code}</div>
+            <div class="category-card-name">${t('category.' + c.code)}</div>
           </div>
         `).join('')}
       </div>`;
@@ -359,7 +359,7 @@
 
     document.getElementById('playerTitle').textContent = title || t('player.unknownTitle');
     document.getElementById('playerMeta').innerHTML = `
-      <span class="meta-tag">${t('category.' + category) || category || ''}</span>
+      <span class="meta-tag">${t('category.' + category) || ''}</span>
       <span class="meta-tag">${creator?.name || t('player.unknownCreator')}</span>
       ${views ? `<span class="meta-tag">${formatViews(views)} ${t('player.views')}</span>` : ''}
       ${is_encrypted ? `<span class="meta-tag encrypted">${t('player.encrypted')}</span>` : ''}
@@ -368,7 +368,7 @@
 
     const playerContainer = document.getElementById('playerContainer');
     if (is_encrypted) {
-      playerContainer.innerHTML = `<div class="player-encrypted"><div class="encrypted-icon">&#x{1F512};</div><h3>${t('player.encrypted')}</h3><p>${t('player.encryptedDesc')}</p><a href="/auth/login" class="btn btn-primary">${t('meta.login')}</a></div>`;
+      playerContainer.innerHTML = `<div class="player-encrypted"><div class="encrypted-icon">\uD83D\uDD12</div><h3>${t('player.encrypted')}</h3><p>${t('player.encryptedDesc')}</p><a href="/auth/login" class="btn btn-primary">${t('meta.login')}</a></div>`;
     } else if (file_url) {
       const ext = file_url.split('.').pop().toLowerCase();
       const isVideo = ['mp4', 'webm', 'ogg'].includes(ext);
