@@ -1,25 +1,25 @@
-// ZenGlance i18n — 7 languages, RTL for Arabic, no Chinese in source
+// ZenGlance i18n — 6 languages, RTL for Arabic, no Chinese in source
 (function () {
   const LANGUAGES = {
-    en: { label: 'English', flag: '\u{1F1EC}\u{1F1E7}', rtl: false },
-    fr: { label: 'Fran\u00E7ais', flag: '\u{1F1EB}\u{1F1F7}', rtl: false },
-    de: { label: 'Deutsch', flag: '\u{1F1E9}\u{1F1EA}', rtl: false },
-    it: { label: 'Italiano', flag: '\u{1F1EE}\u{1F1F9}', rtl: false },
-    es: { label: 'Espa\u00F1ol', flag: '\u{1F1EA}\u{1F1F8}', rtl: false },
-    ar: { label: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629', flag: '\u{1F1E6}\u{1F1E8}', rtl: true },
+    en: { label: 'English', flag: 'GB', rtl: false },
+    fr: { label: 'Fran\u00E7ais', flag: 'FR', rtl: false },
+    de: { label: 'Deutsch', flag: 'DE', rtl: false },
+    it: { label: 'Italiano', flag: 'IT', rtl: false },
+    es: { label: 'Espa\u00F1ol', flag: 'ES', rtl: false },
+    ar: { label: '\u0627\u0644\u0639\u0631\u0628\u064A\u0629', flag: 'SA', rtl: true },
   };
   const LANG_LIST = Object.keys(LANGUAGES);
 
-  // ── Translation data (separate name to avoid conflict with t() function) ──
+  // ── Translation data ──────────────────────────────────────────────────────
   const TRANSLATIONS = {
     meta: {
       title: {
-        en: 'ZenGlance — Multi-modal Content Platform',
-        fr: 'ZenGlance — Plateforme Multi-modalit\u00E9',
-        de: 'ZenGlance — Multilaterale Content-Plattform',
-        it: 'ZenGlance — Piattaforma Contenuti Multi-modale',
-        es: 'ZenGlance — Plataforma de Contenidos Multi-modal',
-        ar: 'ZenGlance — منصة المحتوى المتعدد الوسائط',
+        en: 'ZenGlance \u2014 Multi-modal Content Platform',
+        fr: 'ZenGlance \u2014 Plateforme Multi-modalit\u00E9',
+        de: 'ZenGlance \u2014 Multilaterale Content-Plattform',
+        it: 'ZenGlance \u2014 Piattaforma Contenuti Multi-modale',
+        es: 'ZenGlance \u2014 Plataforma de Contenidos Multi-modal',
+        ar: 'ZenGlance \u2014 \u0645\u0646\u0635\u0629 \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u062A\u0639\u062F\u062F \u0627\u0644\u0648\u0633\u0627\u0626\u0637',
       },
       search: {
         en: 'Search content...',
@@ -27,7 +27,7 @@
         de: 'Inhalt suchen...',
         it: 'Cerca contenuto...',
         es: 'Buscar contenido...',
-        ar: '\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0645\u062D\u062A\u0648\u0649...',
+        ar: '\u0627\u0644\u0628\u062D\u062B \u0639\u0646 \u0627\u0644\u0645\u062D\u062A\u0648\u0649...',
       },
       upload: {
         en: 'Upload',
@@ -76,6 +76,14 @@
         it: 'Accedi',
         es: 'Iniciar sesi\u00F3n',
         ar: '\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644',
+      },
+      logout: {
+        en: 'Log out',
+        fr: 'D\u00E9connexion',
+        de: 'Abmelden',
+        it: 'Esci',
+        es: 'Cerrar sesi\u00F3n',
+        ar: '\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062E\u0631\u0648\u062C',
       },
       categories: {
         en: 'Categories',
@@ -533,7 +541,7 @@
 
     timeAgo: {
       justNow:      { en: 'just now',      fr: '\u00E0 l\'instant',        de: 'gerade eben',      it: 'proprio ora',      es: 'ahora mismo',       ar: '\u0627\u0644\u0622\u0646' },
-      minutesAgo:   { en: '{{n}} min ago', fr: 'il y a {{n}} min',       de: 'vor {{n}} Min',    it: '{{n}} min fa',     es: 'hace {{n}} min',    ar: '\u0645\u0646\u0630 {{n}} \u062f\u0642' },
+      minutesAgo:   { en: '{{n}} min ago', fr: 'il y a {{n}} min',       de: 'vor {{n}} Min',    it: '{{n}} min fa',     es: 'hace {{n}} min',    ar: '\u0645\u0646\u0630 {{n}} \u062F\u0642' },
       hoursAgo:     { en: '{{n}}h ago',    fr: 'il y a {{n}}h',          de: 'vor {{n}}h',       it: '{{n}}h fa',        es: 'hace {{n}}h',       ar: '\u0645\u0646\u0630 {{n}} \u0633\u0627\u0639\u0629' },
       daysAgo:      { en: '{{n}}d ago',    fr: 'il y a {{n}}j',          de: 'vor {{n}}d',       it: '{{n}}g fa',        es: 'hace {{n}}d',       ar: '\u0645\u0646\u0630 {{n}} \u064A\u0648\u0645' },
       monthsAgo:    { en: '{{n}}mo ago',   fr: 'il y a {{n}}ms',         de: 'vor {{n}}Mon',     it: '{{n}}m fa',        es: 'hace {{n}}m',       ar: '\u0645\u0646\u0630 {{n}} \u0634\u0647\u0631' },
@@ -547,19 +555,7 @@
     },
   };
 
-  // ── Translation function (use TRANSLATIONS data object, not t) ───────────
-  function t(key, params) {
-    const parts = key.split('.');
-    let obj = TRANSLATIONS;
-    for (const p of parts) { obj = obj[p]; if (!obj) return key; }
-    let str = obj[currentLang] || obj.en || key;
-    if (params) {
-      Object.keys(params).forEach(k => { str = str.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), params[k]); });
-    }
-    return str;
-  }
-
-  // Category display names (also accessible via t('category.xxx'))
+  // ── Category names ────────────────────────────────────────────────────────
   const categoryNames = {
     short_drama: { en: 'Short Dramas', fr: 'Court-m\u00E9trages', de: 'Kurzfilme', it: 'Cortometraggi', es: 'Cortos', ar: '\u0642\u0635\u064A\u0631\u0629' },
     tv_series:   { en: 'TV Series',   fr: 'S\u00E9ries TV',       de: 'TV-Serien',   it: 'Serie TV',    es: 'Series',      ar: '\u0633\u0644\u0633\u0644\u064A\u0627\u062A' },
@@ -575,12 +571,23 @@
   let currentLang = 'en';
   const _langChangeCallbacks = [];
 
-  // ── Init ─────────────────────────────────────────────────────────────────
+  // ── Core functions ────────────────────────────────────────────────────────
   function getLang() {
     const stored = localStorage.getItem('zenglance_lang');
     if (stored && LANGUAGES[stored]) return stored;
     const browser = (navigator.language || 'en').slice(0, 2);
     return LANGUAGES[browser] ? browser : 'en';
+  }
+
+  function t(key, params) {
+    const parts = key.split('.');
+    let obj = TRANSLATIONS;
+    for (const p of parts) { obj = obj[p]; if (!obj) return key; }
+    let str = obj[currentLang] || obj.en || key;
+    if (params) {
+      Object.keys(params).forEach(k => { str = str.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), params[k]); });
+    }
+    return str;
   }
 
   function setLang(lang) {
