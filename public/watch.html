@@ -153,6 +153,9 @@
     }
     .watch-follow-btn.active { background: var(--bg-hover); border: 1px solid var(--border-color); color: var(--text-secondary); }
 
+    .watch-type-info { font-size: 12px; color: var(--text-muted); margin-bottom: 0.5rem; }
+    .watch-type-info span { margin-right: 0.5rem; }
+
     /* ── Sidebar ─────────────────────────────────────────────────── */
     .watch-sidebar {
       width: 360px; flex-shrink: 0;
@@ -338,6 +341,7 @@
 
       <h1 class="watch-title" id="watchTitle" data-i18n="player.loadingTitle">Loading...</h1>
       <div class="watch-meta" id="watchMeta"></div>
+      <div class="watch-type-info" id="watchTypeInfo" style="display:none;font-size:12px;color:var(--text-muted);margin-bottom:.5rem"></div>
       <div class="watch-actions">
         <button class="watch-action-btn" id="watchLikeBtn" onclick="toggleLike()">
           <svg viewBox="0 0 24 24" fill="none"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="currentColor" stroke-width="1.8"/></svg>
@@ -600,32 +604,59 @@
       async function loadVideo(id) {
         var token = localStorage.getItem('zenglance_token');
         var apiUrl = '/api/v1/content/' + id;
-        try {
-          var res = await fetch(apiUrl, { headers: { 'Authorization': 'Bearer ' + token } });
-          if (!res.ok) throw new Error('Not found');
-          var data = await res.json();
-          renderPlayer(data.data);
-        } catch (e) {
-          document.getElementById('playerPlaceholder').innerHTML =
-            '<svg viewBox="0 0 64 64" fill="none" width="48" height="48"><circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2"/><path d="M32 20v12M32 36v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><p>' + t('status.loadFailed') + '</p>';
+        var res = await fetch(apiUrl, {
+          headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+        });
+        if (!res.ok) {
+          placeholder.style.display = 'flex';
+          placeholder.innerHTML = '<p style="color:rgba(255,255,255,0.5)">' + t('status.notFound') + '</p>';
+          return;
         }
+        var data = await res.json();
+        renderPlayer(data, id);
       }
 
-      function renderPlayer(data) {
-        var id = data.id, title = data.title, description = data.description;
-        var duration = data.duration, category = data.category;
-        var creator = data.creator, views = data.views;
+      function renderPlayer(data, contentId) {
         var cdn = data.cdn;
-        var contentType = category || getQueryParam('type') || '';
+        if (!cdn) {
+          placeholder.style.display = 'flex';
+          placeholder.innerHTML = '<p style="color:rgba(255,255,255,0.5)">' + t('status.noData') + '</p>';
+          return;
+        }
 
-        titleEl.textContent = title || t('player.unknownTitle');
+        titleEl.textContent = data.title || t('player.unknownTitle');
+        var description = data.description;
         descEl.textContent = description || '';
+
+        var metaEl = document.getElementById('watchMeta');
+        var genre = data.genre, director = data.director;
+        var season = data.season, totalEpisodes = data.totalEpisodes;
+        var seriesStatus = data.seriesStatus, rating = data.rating;
+        var platform = data.platform;
+        var views = data.views, duration = data.duration, contentType = data.contentType;
 
         metaEl.innerHTML =
           (contentType ? '<span class="watch-meta-tag">' + escapeHtml(t('category.' + contentType)) + '</span>' : '') +
           (views ? '<span>' + formatViews(views) + ' ' + t('player.views') + '</span>' : '') +
-          (duration ? '<span>' + formatDuration(duration) + '</span>' : '');
+          (duration ? '<span>' + formatDuration(duration) + '</span>' : '') +
+          (genre ? '<span class="watch-meta-tag">' + escapeHtml(genre) + '</span>' : '') +
+          (director ? '<span>' + escapeHtml(director) + '</span>' : '');
 
+        var typeInfoEl = document.getElementById('watchTypeInfo');
+        if (typeInfoEl) {
+          var parts = [];
+          if (season != null) parts.push(t('player.season') + ' ' + season);
+          if (totalEpisodes) parts.push(totalEpisodes + ' ' + t('player.episodes'));
+          if (seriesStatus) parts.push(t('player.status.' + seriesStatus) || seriesStatus);
+          if (rating) parts.push(t('player.rating') + ' ' + rating);
+          if (platform) parts.push('@' + platform);
+          typeInfoEl.textContent = parts.join('  \u00B7  ');
+          typeInfoEl.style.display = parts.length ? '' : 'none';
+        }
+
+        var creator = data.creator;
+        var creatorName = document.getElementById('watchCreatorName');
+        var creatorAvatar = document.getElementById('watchCreatorAvatar');
         if (creator) {
           creatorName.textContent = creator.name || t('player.unknownCreator');
           creatorAvatar.textContent = (creator.name || 'U').charAt(0).toUpperCase();
@@ -688,11 +719,19 @@
         count.textContent = saveCount ? ' ' + saveCount : '';
       }
 
-      function updateFollowUI() {
+      function updateFollowUI(followerCount) {
         var btn = document.getElementById('watchFollowBtn');
         if (!btn) return;
         btn.textContent = isFollowing ? t('interactions.followed') : t('interactions.follow');
         btn.classList.toggle('active', isFollowing);
+        var subsEl = document.getElementById('watchCreatorSubs');
+        if (subsEl) subsEl.textContent = followerCount ? formatFollowers(followerCount) + ' ' + t('interactions.followers') : '';
+      }
+
+      function formatFollowers(n) {
+        if (n >= 1000000) return (n / 1000000).toFixed(1).replace('.0', '') + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1).replace('.0', '') + 'K';
+        return String(n);
       }
 
       async function toggleLike() {

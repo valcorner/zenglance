@@ -12,7 +12,7 @@ import {
 } from '../utils/validators.js';
 import { createAuthMiddleware } from '../middleware/auth.js';
 import { eq, and, desc } from 'drizzle-orm';
-import { contents, uploadSessions, shortDramas, tvSeries, movies, ugcLongVideos, shortVideos } from '../db/schema.js';
+import { contents, uploadSessions, shortDramas, tvSeries, movies, ugcLongVideos, shortVideos, viewCounts } from '../db/schema.js';
 
 export function checkUploadPermission() {
   return async (c, next) => {
@@ -241,27 +241,48 @@ export function createContentRoutes() {
         where: and(...conditions),
         with: {
           uploader: true,
-          viewCount: true
+          viewCount: true,
+          shortDrama: true,
+          tvSeries: true,
+          movie: true,
+          ugcLongVideo: true,
+          shortVideo: true
         },
         orderBy: desc(contents.createdAt),
         limit
       });
 
-      const result = items.map((item) => ({
-        id: item.id,
-        slug: item.slug,
-        title: item.title,
-        contentType: item.contentType,
-        duration: item.duration,
-        mimeType: item.mimeType,
-        createdAt: item.createdAt,
-        views: item.viewCount?.count || 0,
-        uploader: {
-          id: item.uploader?.id,
-          name: item.uploader?.name,
-          avatar: item.uploader?.avatar
-        }
-      }));
+      const result = items.map((item) => {
+        const typeMeta = item.contentType === 'short_drama' ? item.shortDrama
+          : item.contentType === 'tv_series' ? item.tvSeries
+          : item.contentType === 'movie' ? item.movie
+          : item.contentType === 'ugc_long_video' ? item.ugcLongVideo
+          : item.contentType === 'short_video' ? item.shortVideo
+          : null;
+        return {
+          id: item.id,
+          slug: item.slug,
+          title: item.title,
+          contentType: item.contentType,
+          duration: item.duration,
+          mimeType: item.mimeType,
+          createdAt: item.createdAt,
+          views: item.viewCount?.count || 0,
+          uploader: {
+            id: item.uploader?.id,
+            name: item.uploader?.name,
+            avatar: item.uploader?.avatar
+          },
+          genre: typeMeta?.genre,
+          director: typeMeta?.director,
+          season: typeMeta?.season,
+          totalEpisodes: typeMeta?.totalEpisodes,
+          seriesStatus: typeMeta?.status,
+          rating: typeMeta?.rating,
+          platform: typeMeta?.platform,
+          hashtags: typeMeta?.hashtags
+        };
+      });
 
       return c.json(result);
     } catch (error) {
@@ -289,7 +310,12 @@ export function createContentRoutes() {
         where: eq(contents.id, id),
         with: {
           uploader: true,
-          viewCount: true
+          viewCount: true,
+          shortDrama: true,
+          tvSeries: true,
+          movie: true,
+          ugcLongVideo: true,
+          shortVideo: true
         }
       });
 
@@ -314,6 +340,13 @@ export function createContentRoutes() {
         incrementViewCount(db, id)
       );
 
+      const typeMeta = contentItem.contentType === 'short_drama' ? contentItem.shortDrama
+        : contentItem.contentType === 'tv_series' ? contentItem.tvSeries
+        : contentItem.contentType === 'movie' ? contentItem.movie
+        : contentItem.contentType === 'ugc_long_video' ? contentItem.ugcLongVideo
+        : contentItem.contentType === 'short_video' ? contentItem.shortVideo
+        : null;
+
       return c.json({
         id: contentItem.id,
         slug: contentItem.slug,
@@ -324,12 +357,20 @@ export function createContentRoutes() {
         mimeType: contentItem.mimeType,
         createdAt: contentItem.createdAt,
         views: contentItem.viewCount?.count || 0,
-        uploader: {
+        creator: {
           id: contentItem.uploader?.id,
           name: contentItem.uploader?.name,
           avatar: contentItem.uploader?.avatar
         },
-        cdn: cdnAccess
+        cdn: cdnAccess,
+        genre: typeMeta?.genre,
+        director: typeMeta?.director,
+        season: typeMeta?.season,
+        totalEpisodes: typeMeta?.totalEpisodes,
+        seriesStatus: typeMeta?.status,
+        rating: typeMeta?.rating,
+        platform: typeMeta?.platform,
+        hashtags: typeMeta?.hashtags
       });
     } catch (error) {
       console.error('Content fetch failed:', error);

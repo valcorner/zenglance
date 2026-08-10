@@ -83,10 +83,14 @@
       if (userMenu) userMenu.style.display = 'flex';
       if (loginBtn) loginBtn.style.display = 'none';
       if (uploadBtn) uploadBtn.style.display = 'inline-flex';
+      const profileLink = document.getElementById('profileLink');
+      if (profileLink) profileLink.href = '/profile.html?id=' + state.user.id;
     } else {
       if (userMenu) userMenu.style.display = 'none';
       if (loginBtn) loginBtn.style.display = 'inline-flex';
       if (uploadBtn) uploadBtn.style.display = 'none';
+      const profileLink = document.getElementById('profileLink');
+      if (profileLink) { profileLink.style.display = 'none'; }
     }
   }
 

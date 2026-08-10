@@ -205,3 +205,13 @@ CREATE TABLE IF NOT EXISTS collection_items (
   PRIMARY KEY (collection_id, content_id)
 );
 CREATE INDEX IF NOT EXISTS collection_items_content_idx ON collection_items(content_id);
+
+-- Watch history - tracks which user watched which content
+CREATE TABLE IF NOT EXISTS watch_history (
+  user_id TEXT NOT NULL REFERENCES users(id),
+  content_id TEXT NOT NULL REFERENCES contents(id),
+  watched_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, content_id)
+);
+CREATE INDEX IF NOT EXISTS watch_history_user_idx ON watch_history(user_id);
+CREATE INDEX IF NOT EXISTS watch_history_content_idx ON watch_history(content_id);

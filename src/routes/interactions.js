@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { eq, desc, asc, count } from 'drizzle-orm';
-import { db, users, contents, likes, favorites, comments, follows, collections, collectionItems } from '../db/schema.js';
+import { eq, desc, asc, count, inArray } from 'drizzle-orm';
+import { db, users, contents, likes, favorites, comments, follows, collections, collectionItems, watchHistory, shortDramas, tvSeries, movies, ugcLongVideos, shortVideos } from '../db/schema.js';
 
 const interaction = new Hono();
 const auth = createAuthMiddleware();
@@ -191,17 +191,20 @@ interaction.delete('/comments/:id', auth, async (c) => {
 
 // ─── Follow ─────────────────────────────────────────────────────────────────
 
-interaction.get('/users/:id/following', auth, async (c) => {
+interaction.get('/users/:id/followers', auth, async (c) => {
   const user = c.get('user');
   const targetId = c.req.param('id');
 
-  if (user.id === targetId) return c.json({ following: false });
+  if (user.id === targetId) return c.json({ following: false, followerCount: 0 });
+
+  const countResult = await db.select({ count: count() }).from(follows).where(eq(follows.followingId, targetId));
+  const followerCount = countResult[0]?.count ?? 0;
 
   const existing = await db.select().from(follows)
     .where(eq(follows.followerId, user.id))
     .and(eq(follows.followingId, targetId));
 
-  return c.json({ following: existing.length > 0 });
+  return c.json({ following: existing.length > 0, followerCount });
 });
 
 interaction.post('/users/:id/follow', auth, async (c) => {
@@ -224,6 +227,93 @@ interaction.post('/users/:id/follow', auth, async (c) => {
       createdAt: new Date()
     });
     return c.json({ following: true });
+  }
+});
+
+// ─── User Profile ───────────────────────────────────────────────────────────
+
+interaction.get('/users/:id', async (c) => {
+  const targetId = c.req.param('id');
+
+  const target = await db.select().from(users).where(eq(users.id, targetId)).limit(1);
+  if (target.length === 0) return c.json({ error: 'User not found' }, 404);
+
+  const u = target[0];
+
+  const countResult = await db.select({ count: count() }).from(follows).where(eq(follows.followingId, u.id));
+  const followerCount = countResult[0]?.count ?? 0;
+
+  const followingCountResult = await db.select({ count: count() }).from(follows).where(eq(follows.followerId, u.id));
+  const followingCount = followingCountResult[0]?.count ?? 0;
+
+  return c.json({
+    id: u.id,
+    email: u.email,
+    name: u.name,
+    avatar: u.avatar,
+    bio: u.bio,
+    role: u.role,
+    isPublic: u.isPublic,
+    followerCount,
+    followingCount,
+    createdAt: u.createdAt
+  });
+});
+
+// ─── Watch History ───────────────────────────────────────────────────────────
+
+interaction.post('/history', auth, async (c) => {
+  const user = c.get('user');
+  const { contentId } = await c.req.json();
+
+  if (!contentId) return c.json({ error: 'contentId is required' }, 400);
+
+  const existing = await db.select().from(watchHistory)
+    .where(eq(watchHistory.userId, user.id)).and(eq(watchHistory.contentId, contentId));
+
+  if (existing.length > 0) {
+    await db.update(watchHistory)
+      .set({ watchedAt: new Date() })
+      .where(eq(watchHistory.userId, user.id)).and(eq(watchHistory.contentId, contentId));
+  } else {
+    await db.insert(watchHistory).values({
+      userId: user.id,
+      contentId,
+      watchedAt: new Date()
+    });
+  }
+
+  return c.json({ ok: true });
+});
+
+interaction.get('/history', auth, async (c) => {
+  const user = c.get('user');
+  const cursor = c.req.query('cursor');
+  const limit = Math.min(parseInt(c.req.query('limit') || '20', 10), 50);
+
+  try {
+    const rows = await db
+      .select()
+      .from(watchHistory)
+      .where(eq(watchHistory.userId, user.id))
+      .orderBy(desc(watchHistory.watchedAt))
+      .limit(limit + 1);
+
+    let nextCursor = null;
+    if (rows.length > limit) {
+      nextCursor = rows[limit].contentId;
+      rows.pop();
+    }
+
+    const contentIds = rows.map(r => r.contentId);
+    const contentsList = contentIds.length
+      ? await db.select().from(contents).where(inArray(contents.id, contentIds))
+      : [];
+
+    return c.json({ history: contentsList, nextCursor });
+  } catch (e) {
+    console.error('Failed to load history:', e);
+    return c.json({ history: [], nextCursor: null });
   }
 });
 

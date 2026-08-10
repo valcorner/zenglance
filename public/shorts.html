@@ -94,7 +94,22 @@
       transition: background 0.2s;
     }
     .shorts-action-btn:active .icon-circle { background: rgba(255,255,255,0.3); }
+    .shorts-action-btn.active .icon-circle { background: rgba(255,100,100,0.3); }
+    .shorts-action-btn.active .icon-circle.saved { background: rgba(70,130,255,0.3); }
+    .shorts-action-btn.active .icon-circle.saved svg { color: #4682ff; }
+    .shorts-action-btn.active .icon-circle.saved path { fill: #4682ff; }
     .shorts-action-btn span { font-size: 11px; color: rgba(255,255,255,0.8); }
+    .shorts-action-btn.active span { color: #ff6b6b; }
+    .shorts-action-btn.active span.saved-count { color: #4682ff; }
+
+    .shorts-follow-btn {
+      background: rgba(255,255,255,0.2); color: #fff;
+      border: 1px solid rgba(255,255,255,0.3); border-radius: 12px;
+      padding: 3px 10px; font-size: 11px; font-weight: 600;
+      cursor: pointer; margin-top: 4px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .shorts-follow-btn.active { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
 
     /* Bottom info */
     .shorts-info {
@@ -252,6 +267,9 @@
       let currentVideo = null;
       let loading = false;
       let page = 1;
+      let likeState = {};
+      let saveState = {};
+      let followState = {};
 
       // Build language selector
       function buildLangSelector() {
@@ -320,13 +338,84 @@
         }
       }
 
+      async function toggleLike(id, btnEl) {
+        var token = localStorage.getItem('zenglance_token');
+        if (!token) { alert(t('status.loginFirst')); return; }
+        likeState[id] = !likeState[id];
+        var countEl = btnEl.querySelector('span');
+        var iconEl = btnEl.querySelector('svg path');
+        var currentCount = parseInt(countEl.textContent) || 0;
+        if (likeState[id]) {
+          btnEl.classList.add('active');
+          iconEl.setAttribute('fill', 'currentColor');
+          countEl.textContent = currentCount + 1;
+        } else {
+          btnEl.classList.remove('active');
+          iconEl.setAttribute('fill', 'none');
+          countEl.textContent = Math.max(0, currentCount - 1);
+        }
+        fetch('/api/interaction/content/' + id + '/like', {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+        }).catch(function() { likeState[id] = !likeState[id]; });
+      }
+
+      function shareShort(id) {
+        var url = window.location.href.split('?')[0] + '?id=' + id;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(url).then(function() { alert(t('status.copied')); });
+        } else {
+          prompt(t('meta.share') + ':', url);
+        }
+      }
+
+      async function toggleSave(id, btnEl) {
+        var token = localStorage.getItem('zenglance_token');
+        if (!token) { alert(t('status.loginFirst')); return; }
+        saveState[id] = !saveState[id];
+        var circleEl = btnEl.querySelector('.icon-circle');
+        var iconEl = btnEl.querySelector('svg path');
+        if (saveState[id]) {
+          btnEl.classList.add('active');
+          circleEl.classList.add('saved');
+          iconEl.setAttribute('fill', 'currentColor');
+        } else {
+          btnEl.classList.remove('active');
+          circleEl.classList.remove('saved');
+          iconEl.setAttribute('fill', 'none');
+        }
+        fetch('/api/interaction/content/' + id + '/favorite', {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+        }).catch(function() { saveState[id] = !saveState[id]; });
+      }
+
+      async function toggleFollow(userId, btnEl) {
+        var token = localStorage.getItem('zenglance_token');
+        if (!token) { alert(t('status.loginFirst')); return; }
+        followState[userId] = !followState[userId];
+        if (followState[userId]) {
+          btnEl.textContent = t('interactions.followed');
+          btnEl.classList.add('active');
+        } else {
+          btnEl.textContent = t('interactions.follow');
+          btnEl.classList.remove('active');
+        }
+        fetch('/api/interaction/users/' + userId + '/follow', {
+          method: 'POST', headers: { 'Authorization': 'Bearer ' + token }
+        }).catch(function() { followState[userId] = !followState[userId]; toggleFollow(userId, btnEl); });
+      }
+
       function createShortCard(video, index) {
         var card = document.createElement('div');
         card.className = 'shorts-card';
         card.dataset.index = index;
+        card.dataset.id = video.id;
+        card.dataset.creatorId = video.uploader && video.uploader.id ? video.uploader.id : '';
 
         var videoSrc = video.file_url || '';
         var hasVideo = videoSrc && /\.(mp4|webm|ogg)(\?|$)/i.test(videoSrc);
+        var likeCount = video.likes || 0;
+        var saveCount = video.saves || 0;
+        var creatorId = video.uploader && video.uploader.id;
 
         card.innerHTML =
           (hasVideo
@@ -342,23 +431,28 @@
             '</svg>' +
           '</div>' +
           '<div class="shorts-actions">' +
-            '<button class="shorts-action-btn" onclick="event.stopPropagation()">' +
+            '<button class="shorts-action-btn" onclick="event.stopPropagation();toggleLike(\'' + (video.id || '') + '\',this)">' +
               '<div class="icon-circle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="currentColor" stroke-width="1.8" fill="none"/></svg></div>' +
-              '<span id="likeCount' + index + '">' + (video.likes || 0) + '</span>' +
+              '<span>' + likeCount + '</span>' +
             '</button>' +
-            '<button class="shorts-action-btn" onclick="event.stopPropagation()">' +
+            '<button class="shorts-action-btn" onclick="event.stopPropagation();window.location.href=\'/watch.html?id=' + (video.id || '') + '\'">' +
               '<div class="icon-circle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" stroke="currentColor" stroke-width="1.8"/></svg></div>' +
               '<span>' + (video.comments || 0) + '</span>' +
             '</button>' +
-            '<button class="shorts-action-btn" onclick="event.stopPropagation()">' +
+            '<button class="shorts-action-btn" onclick="event.stopPropagation();shareShort(\'' + (video.id || '') + '\')">' +
               '<div class="icon-circle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" stroke="currentColor" stroke-width="1.8"/><polyline points="16 6 12 2 8 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="2" x2="12" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></div>' +
-              '<span>' + t('meta.share') + '</span>' +
+              '<span>' + t('interactions.share') + '</span>' +
+            '</button>' +
+            '<button class="shorts-action-btn" onclick="event.stopPropagation();toggleSave(\'' + (video.id || '') + '\',this)">' +
+              '<div class="icon-circle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z" stroke="currentColor" stroke-width="1.8" fill="none"/></svg></div>' +
+              '<span>' + saveCount + '</span>' +
             '</button>' +
           '</div>' +
           '<div class="shorts-info">' +
             '<div class="shorts-creator">' +
               '<div class="shorts-creator-avatar">' + ((video.creator && video.creator.name) ? video.creator.name.charAt(0).toUpperCase() : 'U') + '</div>' +
               '<div class="shorts-creator-name">' + escapeHtml(video.creator && video.creator.name ? video.creator.name : t('player.unknownCreator')) + '</div>' +
+              (creatorId ? '<button class="shorts-follow-btn" onclick="event.stopPropagation();toggleFollow(\'' + creatorId + '\',this)">' + t('interactions.follow') + '</button>' : '') +
             '</div>' +
             '<div class="shorts-title">' + escapeHtml(video.title) + '</div>' +
             '<div class="shorts-meta">' +
@@ -368,7 +462,6 @@
             '</div>' +
           '</div>';
 
-        // Tap to play/pause
         card.addEventListener('click', function() {
           var videoEl = card.querySelector('video');
           var overlay = document.getElementById('playOverlay' + index);
@@ -376,6 +469,14 @@
             if (videoEl.paused) {
               videoEl.play();
               if (overlay) overlay.classList.remove('show');
+              var token = localStorage.getItem('zenglance_token');
+              if (token && video.id) {
+                fetch('/api/interaction/history', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+                  body: JSON.stringify({ contentId: video.id })
+                }).catch(function() {});
+              }
             } else {
               videoEl.pause();
               if (overlay) overlay.classList.add('show');

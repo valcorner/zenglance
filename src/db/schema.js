@@ -19,7 +19,9 @@ export const users = sqliteTable('users', {
   email: text('email').notNull().unique(),
   name: text('name'),
   avatar: text('avatar'),
+  bio: text('bio'),
   role: text('role', { enum: roles }).notNull().default('free'),
+  isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
 }, (table) => [
@@ -251,6 +253,19 @@ export const collectionItems = sqliteTable('collection_items', {
 ]);
 
 // ---------------------------------------------------------------------------
+// Watch history table - tracks which user watched which content and when
+// ---------------------------------------------------------------------------
+export const watchHistory = sqliteTable('watch_history', {
+  userId: text('user_id').notNull().references(() => users.id),
+  contentId: text('content_id').notNull().references(() => contents.id),
+  watchedAt: integer('watched_at', { mode: 'timestamp' }).notNull()
+}, (table) => [
+  { name: 'watch_history_unique', constraints: table.unique().on(table.userId, table.contentId) },
+  index('watch_history_user_idx').on(table.userId),
+  index('watch_history_content_idx').on(table.contentId)
+]);
+
+// ---------------------------------------------------------------------------
 // Relations
 // ---------------------------------------------------------------------------
 
@@ -389,4 +404,9 @@ export const collectionsRelations = relations(collections, ({ one, many }) => ({
 export const collectionItemsRelations = relations(collectionItems, ({ one }) => ({
   collection: one(collections, { fields: [collectionItems.collectionId], references: [collections.id] }),
   content: one(contents, { fields: [collectionItems.contentId], references: [contents.id] })
+}));
+
+export const watchHistoryRelations = relations(watchHistory, ({ one }) => ({
+  user: one(users, { fields: [watchHistory.userId], references: [users.id] }),
+  content: one(contents, { fields: [watchHistory.contentId], references: [contents.id] })
 }));
