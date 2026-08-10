@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="meta.titleWatch">Watch — ZenGlance</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .watch-page {
+      display: flex;
+      gap: 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      align-items: flex-start;
+    }
+    html[dir="rtl"] .watch-page { flex-direction: row-reverse; }
+
+    /* ── Main column ─────────────────────────────────────────────── */
+    .watch-main { flex: 1; min-width: 0; }
+
+    .watch-player-wrapper {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .watch-player-wrapper video {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .watch-player-placeholder {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 1rem; color: rgba(255,255,255,0.3);
+    }
+    .watch-player-placeholder svg { width: 64px; height: 64px; opacity: 0.4; }
+
+    /* Custom controls overlay */
+    .watch-controls {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%);
+      padding: 2rem 12px 10px;
+      display: flex; align-items: flex-end; gap: 10px;
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .watch-player-wrapper:hover .watch-controls { opacity: 1; }
+    .watch-play-btn {
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.15);
+      border: none; border-radius: 50%;
+      color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .watch-seek-bar {
+      flex: 1; height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px; cursor: pointer;
+      position: relative;
+    }
+    .watch-seek-bar::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px; height: 12px;
+      background: var(--accent);
+      border-radius: 50%; cursor: pointer;
+    }
+    .watch-time { font-size: 11px; color: rgba(255,255,255,0.7); white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .watch-volume-btn {
+      width: 32px; height: 32px;
+      background: none; border: none; color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .watch-volume-bar {
+      width: 70px; height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px; cursor: pointer;
+    }
+    .watch-volume-bar::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px; height: 12px;
+      background: #fff;
+      border-radius: 50%; cursor: pointer;
+    }
+
+    .watch-title {
+      font-size: 1.25rem; font-weight: 700;
+      margin: 1rem 0 0.5rem;
+      line-height: 1.4;
+    }
+    .watch-meta {
+      display: flex; flex-wrap: wrap; align-items: center;
+      gap: 0.75rem; margin-bottom: 1rem;
+      font-size: 13px; color: var(--text-secondary);
+    }
+    .watch-meta-tag {
+      background: var(--bg-hover);
+      padding: 3px 10px; border-radius: 4px;
+      font-size: 12px; color: var(--text-muted);
+    }
+    .watch-description {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 1rem;
+      font-size: 13px; color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+    .watch-actions {
+      display: flex; gap: 0.5rem; flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+    .watch-action-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 7px 14px; border-radius: 20px;
+      font-size: 13px; cursor: pointer;
+      transition: background var(--transition), color var(--transition);
+    }
+    .watch-action-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .watch-action-btn svg { width: 16px; height: 16px; }
+
+    .watch-creator-bar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 1rem 0;
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      margin-bottom: 1.5rem;
+    }
+    .watch-creator-avatar {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, #7b2fff, #3ea6ff);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700; flex-shrink: 0;
+    }
+    .watch-creator-info { flex: 1; min-width: 0; }
+    .watch-creator-name { font-size: 14px; font-weight: 600; }
+    .watch-creator-subs { font-size: 12px; color: var(--text-muted); }
+    .watch-follow-btn {
+      background: var(--accent); color: #fff;
+      padding: 8px 18px; border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      border: none; cursor: pointer;
+    }
+
+    /* ── Sidebar ─────────────────────────────────────────────────── */
+    .watch-sidebar {
+      width: 360px; flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 0.75rem;
+    }
+    html[dir="rtl"] .watch-sidebar { width: 360px; }
+    .watch-sidebar-title {
+      font-size: 14px; font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+    .watch-related-item {
+      display: flex; gap: 0.6rem;
+      padding: 6px; border-radius: var(--radius-md);
+      cursor: pointer; transition: background var(--transition);
+      text-decoration: none; color: inherit;
+    }
+    .watch-related-item:hover { background: var(--bg-hover); }
+    .watch-related-thumb {
+      width: 160px; aspect-ratio: 16/9;
+      border-radius: var(--radius-sm);
+      overflow: hidden; flex-shrink: 0;
+      background: var(--bg-secondary);
+      position: relative;
+    }
+    .watch-related-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .watch-related-duration {
+      position: absolute; bottom: 4px; right: 4px;
+      background: rgba(0,0,0,0.8); color: #fff;
+      font-size: 10px; padding: 1px 4px; border-radius: 3px;
+      font-weight: 600;
+    }
+    html[dir="rtl"] .watch-related-duration { right: auto; left: 4px; }
+    .watch-related-info { flex: 1; min-width: 0; }
+    .watch-related-title {
+      font-size: 13px; font-weight: 600;
+      display: -webkit-box; -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical; overflow: hidden;
+      line-height: 1.3; margin-bottom: 4px;
+    }
+    .watch-related-creator { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+    .watch-related-meta { font-size: 11px; color: var(--text-muted); }
+
+    /* ── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 960px) {
+      .watch-page { flex-direction: column; }
+      .watch-sidebar { width: 100%; }
+      .watch-player-wrapper { max-width: 100%; }
+    }
+    @media (max-width: 640px) {
+      .watch-player-wrapper { border-radius: 0; margin: -1.5rem -1.5rem 1rem; }
+      .watch-title { font-size: 1rem; }
+      .watch-sidebar { gap: 0.5rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <a href="/" class="logo">
+        <span class="logo-icon">Z</span>
+        <span class="logo-text">ZenGlance</span>
+      </a>
+    </div>
+    <div class="header-center">
+      <div class="search-wrapper">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="7" cy="7" r="4.5" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M10.5 10.5L14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search..." />
+      </div>
+    </div>
+    <div class="header-right">
+      <button class="watch-back-btn" onclick="history.back()">
+        <svg width="18" height="18" viewBox="0 0 16 16" fill="none">
+          <path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span data-i18n="meta.back">Back</span>
+      </button>
+      <div class="lang-wrapper">
+        <button class="lang-btn" id="langBtn" aria-label="Change language">
+          <span>GB</span>
+          <svg class="dropdown-arrow" width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        <div class="lang-dropdown" id="langDropdown">
+          <button class="lang-option active" data-lang="en" data-lang-label="English"><span>GB</span> English</button>
+          <button class="lang-option" data-lang="fr" data-lang-label="Fran\u00E7ais"><span>FR</span> Fran\u00E7ais</button>
+          <button class="lang-option" data-lang="de" data-lang-label="Deutsch"><span>DE</span> Deutsch</button>
+          <button class="lang-option" data-lang="it" data-lang-label="Italiano"><span>IT</span> Italiano</button>
+          <button class="lang-option" data-lang="es" data-lang-label="Espa\u00F1ol"><span>ES</span> Espa\u00F1ol</button>
+          <button class="lang-option" data-lang="ar" data-lang-label="\u0627\u0644\u0639\u0631\u0628\u064A\u0629"><span>SA</span> \u0627\u0644\u0639\u0631\u0628\u064A\u0629</button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Page content -->
+  <div class="watch-page" style="margin-top:calc(var(--header-h) + 1rem)">
+    <!-- Main: player + info -->
+    <div class="watch-main">
+      <div class="watch-player-wrapper" id="playerWrapper">
+        <div class="watch-player-placeholder" id="playerPlaceholder">
+          <svg viewBox="0 0 64 64" fill="none">
+            <rect x="8" y="14" width="48" height="36" rx="4" stroke="currentColor" stroke-width="2"/>
+            <path d="M26 32l12 8-12 8V32z" fill="currentColor"/>
+          </svg>
+          <span data-i18n="status.loading">Loading...</span>
+        </div>
+        <video id="watchVideo" style="display:none" playsinline></video>
+        <div class="watch-controls" id="watchControls">
+          <button class="watch-play-btn" id="watchPlayBtn" onclick="toggleWatchPlay()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          </button>
+          <input type="range" class="watch-seek-bar" id="watchSeekBar" min="0" max="100" value="0" oninput="watchSeek(this.value)" />
+          <span class="watch-time" id="watchCurrentTime">0:00</span>
+          <span class="watch-time" id="watchDuration">0:00</span>
+          <button class="watch-volume-btn" id="watchMuteBtn" onclick="toggleWatchMute()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor"/><path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <input type="range" class="watch-volume-bar" id="watchVolumeBar" min="0" max="100" value="80" oninput="watchSetVolume(this.value)" />
+          <button class="watch-play-btn" onclick="watchToggleFullscreen()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3m0 18h3a2 2 0 002-2v-3M3 16v3a2 2 0 002 2h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <h1 class="watch-title" id="watchTitle" data-i18n="player.loadingTitle">Loading...</h1>
+      <div class="watch-meta" id="watchMeta"></div>
+      <div class="watch-actions">
+        <button class="watch-action-btn" onclick="watchLike()">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="currentColor" stroke-width="1.8"/></svg>
+          <span data-i18n="meta.like">Like</span>
+        </button>
+        <button class="watch-action-btn" onclick="watchShare()">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" stroke="currentColor" stroke-width="1.8"/><polyline points="16 6 12 2 8 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="2" x2="12" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span data-i18n="meta.share">Share</span>
+        </button>
+        <button class="watch-action-btn" onclick="watchSave()">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2v16z" stroke="currentColor" stroke-width="1.8"/></svg>
+          <span data-i18n="meta.save">Save</span>
+        </button>
+      </div>
+      <div class="watch-creator-bar" id="watchCreatorBar">
+        <div class="watch-creator-avatar" id="watchCreatorAvatar">U</div>
+        <div class="watch-creator-info">
+          <div class="watch-creator-name" id="watchCreatorName">Unknown Creator</div>
+          <div class="watch-creator-subs" id="watchCreatorSubs"></div>
+        </div>
+        <button class="watch-follow-btn" data-i18n="meta.follow">Follow</button>
+      </div>
+      <div class="watch-description" id="watchDescription"></div>
+    </div>
+
+    <!-- Sidebar: related videos -->
+    <aside class="watch-sidebar">
+      <div class="watch-sidebar-title" data-i18n="meta.related">Related Videos</div>
+      <div id="watchRelatedList"></div>
+    </aside>
+  </div>
+
+  <script src="i18n.js?v=2"></script>
+  <script>
+    (function() {
+      'use strict';
+
+      var video = document.getElementById('watchVideo');
+      var placeholder = document.getElementById('playerPlaceholder');
+      var controls = document.getElementById('watchControls');
+      var playBtn = document.getElementById('watchPlayBtn');
+      var seekBar = document.getElementById('watchSeekBar');
+      var currentTimeEl = document.getElementById('watchCurrentTime');
+      var durationEl = document.getElementById('watchDuration');
+      var titleEl = document.getElementById('watchTitle');
+      var metaEl = document.getElementById('watchMeta');
+      var descEl = document.getElementById('watchDescription');
+      var creatorName = document.getElementById('watchCreatorName');
+      var creatorAvatar = document.getElementById('watchCreatorAvatar');
+      var relatedList = document.getElementById('watchRelatedList');
+
+      var currentLang = 'en';
+      if (window.i18n && window.i18n.getLang) currentLang = window.i18n.getLang();
+
+      function t(key, params) {
+        if (window.i18n && window.i18n.t) return window.i18n.t(key, params);
+        var TRANSLATIONS = { meta: { back:{en:'Back'}, like:{en:'Like'}, share:{en:'Share'}, save:{en:'Save'}, follow:{en:'Follow'}, related:{en:'Related Videos'}, notifications:{en:'Notifications'}, profile:{en:'Profile'} }, status:{loading:{en:'Loading...'}}, player:{loadingTitle:{en:'Loading...'}, unknownCreator:{en:'Unknown Creator'}, views:{en:'views'}, encrypted:{en:'ENCRYPTED'} } };
+        var parts = key.split('.');
+        var obj = TRANSLATIONS;
+        for (var i = 0; i < parts.length; i++) { obj = obj[parts[i]]; if (!obj) return key; }
+        return (obj[currentLang] || obj.en || key);
+      }
+
+      function escapeHtml(str) {
+        if (!str) return '';
+        var d = document.createElement('div'); d.textContent = str;
+        return d.innerHTML;
+      }
+
+      function formatViews(n) {
+        if (!n) return '';
+        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
+        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+        return String(n);
+      }
+
+      function formatDuration(seconds) {
+        if (!seconds) return '';
+        var m = Math.floor(seconds / 60);
+        var s = seconds % 60;
+        return m + ':' + s.toString().padStart(2, '0');
+      }
+
+      function timeAgo(iso) {
+        if (!iso) return '';
+        var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+        if (diff < 60) return t('timeAgo.justNow');
+        if (diff < 3600) return t('timeAgo.hoursAgo', { n: Math.floor(diff / 3600) });
+        if (diff < 86400) return t('timeAgo.daysAgo', { n: Math.floor(diff / 86400) });
+        return t('timeAgo.monthsAgo', { n: Math.floor(diff / 2592000) });
+      }
+
+      // ── Language selector ─────────────────────────────────────────
+      function buildLangSelector() {
+        var btn = document.getElementById('langBtn');
+        var dropdown = document.getElementById('langDropdown');
+        if (!btn || !dropdown) return;
+        dropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+        btn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          dropdown.classList.toggle('show');
+        });
+        document.addEventListener('click', function(e) {
+          if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+            dropdown.classList.remove('show');
+          }
+        });
+        document.querySelectorAll('.lang-option').forEach(function(opt) {
+          opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (window.i18n) window.i18n.setLang(opt.dataset.lang);
+            dropdown.classList.remove('show');
+          });
+        });
+      }
+
+      // ── Player controls ───────────────────────────────────────────
+      window.toggleWatchPlay = function() {
+        if (video.paused) { video.play(); } else { video.pause(); }
+      };
+
+      window.watchSeek = function(val) {
+        if (video.duration) video.currentTime = (val / 100) * video.duration;
+      };
+
+      window.toggleWatchMute = function() {
+        video.muted = !video.muted;
+      };
+
+      window.watchSetVolume = function(val) {
+        video.volume = val / 100;
+      };
+
+      window.watchToggleFullscreen = function() {
+        var wrapper = document.getElementById('playerWrapper');
+        if (wrapper.requestFullscreen) wrapper.requestFullscreen();
+      };
+
+      // ── Load video ────────────────────────────────────────────────
+      function getQueryParam(name) {
+        var params = new URLSearchParams(window.location.search);
+        return params.get(name);
+      }
+
+      async function loadVideo(id) {
+        var token = localStorage.getItem('zenglance_token');
+        var apiUrl = '/api/v1/content/' + id;
+        try {
+          var res = await fetch(apiUrl, { headers: { 'Authorization': 'Bearer ' + token } });
+          if (!res.ok) throw new Error('Not found');
+          var data = await res.json();
+          renderPlayer(data.data);
+        } catch (e) {
+          document.getElementById('playerPlaceholder').innerHTML =
+            '<svg viewBox="0 0 64 64" fill="none" width="48" height="48"><circle cx="32" cy="32" r="28" stroke="currentColor" stroke-width="2"/><path d="M32 20v12M32 36v4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><p>' + t('status.loadFailed') + '</p>';
+        }
+      }
+
+      function renderPlayer(data) {
+        var id = data.id, title = data.title, description = data.description;
+        var duration = data.duration, category = data.category;
+        var creator = data.creator, views = data.views, isEncrypted = data.is_encrypted;
+        var fileUrl = data.file_url, thumbnail = data.thumbnail;
+        // Use URL ?type= as fallback when video data has no category
+        var contentType = category || getQueryParam('type') || '';
+
+        titleEl.textContent = title || t('player.unknownTitle');
+        descEl.textContent = description || '';
+
+        metaEl.innerHTML =
+          (contentType ? '<span class="watch-meta-tag">' + escapeHtml(t('category.' + contentType)) + '</span>' : '') +
+          (views ? '<span>' + formatViews(views) + ' ' + t('player.views') + '</span>' : '') +
+          (duration ? '<span>' + formatDuration(duration) + '</span>' : '') +
+          (isEncrypted ? '<span class="watch-meta-tag" style="color:#ff6b6b;background:rgba(255,50,50,0.15)">' + t('player.encrypted') + '</span>' : '');
+
+        if (creator) {
+          creatorName.textContent = creator.name || t('player.unknownCreator');
+          creatorAvatar.textContent = (creator.name || 'U').charAt(0).toUpperCase();
+        } else {
+          creatorName.textContent = t('player.unknownCreator');
+          creatorAvatar.textContent = 'U';
+        }
+
+        // Set video source
+        if (!isEncrypted && fileUrl) {
+          placeholder.style.display = 'none';
+          video.style.display = 'block';
+          video.src = fileUrl;
+          video.addEventListener('timeupdate', function() {
+            if (video.duration) {
+              seekBar.value = (video.currentTime / video.duration) * 100;
+              currentTimeEl.textContent = formatTime(video.currentTime);
+            }
+          });
+          video.addEventListener('loadedmetadata', function() {
+            durationEl.textContent = formatTime(video.duration);
+          });
+          video.addEventListener('play', function() {
+            playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
+          });
+          video.addEventListener('pause', function() {
+            playBtn.innerHTML = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+          });
+        } else if (isEncrypted) {
+          placeholder.innerHTML =
+            '<div style="text-align:center"><div style="font-size:48px;margin-bottom:12px">&#x{1F512};</div><h3 style="margin-bottom:8px">' + t('player.encrypted') + '</h3><p style="color:rgba(255,255,255,0.5);font-size:13px;margin-bottom:16px">' + t('player.encryptedDesc') + '</p><a href="/auth/login" style="background:var(--accent);color:#fff;padding:10px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:600">' + t('meta.login') + '</a></div>';
+        } else {
+          placeholder.innerHTML =
+            '<div style="text-align:center"><div style="font-size:48px;margin-bottom:12px;opacity:0.3">&#x{1F3AC};</div><p style="color:rgba(255,255,255,0.5)">' + t('player.noPreview') + '</p></div>';
+        }
+
+        loadRelated(contentType);
+      }
+
+      function formatTime(seconds) {
+        var m = Math.floor(seconds / 60);
+        var s = seconds % 60;
+        return m + ':' + s.toString().padStart(2, '0');
+      }
+
+      // ── Related videos ────────────────────────────────────────────
+      async function loadRelated(category) {
+        var token = localStorage.getItem('zenglance_token');
+        try {
+          var url = category ? '/api/v1/content?category=' + category + '&limit=8' : '/api/v1/content?limit=8';
+          var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+          var data = await res.json();
+          var list = (data.data || []).filter(function(v) { return v.id !== getQueryParam('id'); });
+          renderRelated(list);
+        } catch (e) { console.error(e); }
+      }
+
+      function renderRelated(list) {
+        var currentType = getQueryParam('type');
+        relatedList.innerHTML = '';
+        if (!list.length) {
+          relatedList.innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:1rem 0">' + t('status.notFound') + '</p>';
+          return;
+        }
+        list.forEach(function(video) {
+          var item = document.createElement('a');
+          item.className = 'watch-related-item';
+          item.href = '/watch.html?id=' + video.id + (currentType ? '&type=' + currentType : '');
+          item.innerHTML =
+            '<div class="watch-related-thumb">' +
+              (video.thumbnail ? '<img src="' + escapeHtml(video.thumbnail) + '" alt="" loading="lazy"/>' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.2)">></div>') +
+              (video.duration ? '<span class="watch-related-duration">' + formatDuration(video.duration) + '</span>' : '') +
+            '</div>' +
+            '<div class="watch-related-info">' +
+              '<div class="watch-related-title">' + escapeHtml(video.title) + '</div>' +
+              '<div class="watch-related-creator">' + escapeHtml(video.creator && video.creator.name ? video.creator.name : t('player.unknownCreator')) + '</div>' +
+              '<div class="watch-related-meta">' +
+                (video.views ? formatViews(video.views) + ' ' + t('player.views') + ' &middot;' : '') +
+                ' ' + timeAgo(video.created_at) +
+              '</div>' +
+            '</div>';
+          relatedList.appendChild(item);
+        });
+      }
+
+      // ── Action buttons ────────────────────────────────────────────
+      window.watchLike = function() { alert(t('meta.like') + ' (' + t('status.error') + ')'); };
+      window.watchShare = function() {
+        var url = window.location.href;
+        if (navigator.clipboard) {
+          navigator.clipboard.writeText(url).then(function() { alert(t('meta.share') + ' - ' + t('status.copied')); });
+        } else {
+          prompt(t('meta.share') + ':', url);
+        }
+      };
+      window.watchSave = function() { alert(t('meta.save') + ' (' + t('status.error') + ')'); };
+
+      // ── Boot ──────────────────────────────────────────────────────
+      function init() {
+        buildLangSelector();
+        var id = getQueryParam('id');
+        if (!id) {
+          document.querySelector('.watch-main').innerHTML =
+            '<div class="empty-state"><h3>' + t('status.error') + '</h3><p>' + t('meta.noVideo') + '</p></div>';
+          return;
+        }
+        loadVideo(id);
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -7,13 +7,10 @@ export const roles = ['free', 'premium', 'official'];
 // Content types enum
 export const contentTypes = [
   'short_drama',
-  'tv_series', 
+  'tv_series',
   'movie',
   'ugc_long_video',
-  'short_video',
-  'music',
-  'podcast',
-  'novel'
+  'short_video'
 ];
 
 // Users table - stores OAuth user info
@@ -46,7 +43,7 @@ export const contents = sqliteTable('contents', {
   b2Key: text('b2_key').notNull(), // B2 对象路径
   
   // CDN routing info
-  cdnType: text('cdn_type').notNull(), // drama/series/movie/video/short/music/podcast/novel
+  cdnType: text('cdn_type').notNull(), // drama/series/movie/video/short
   
   // File info
   fileSize: integer('file_size'),

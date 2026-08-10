@@ -9,7 +9,7 @@ export const contentTypeSchema = z.enum(contentTypes);
 
 // Premium content types (require encryption for Official)
 export const premiumContentTypes = ['short_drama', 'tv_series', 'movie'];
-export const ugcContentTypes = ['ugc_long_video', 'short_video', 'music', 'podcast', 'novel'];
+export const ugcContentTypes = ['ugc_long_video', 'short_video'];
 
 // Upload permission rules
 export const uploadPermissions = {
@@ -35,10 +35,7 @@ export function getCdnType(contentType) {
     tv_series: 'series',
     movie: 'movie',
     ugc_long_video: 'video',
-    short_video: 'short',
-    music: 'music',
-    podcast: 'podcast',
-    novel: 'novel'
+    short_video: 'short'
   };
   return mapping[contentType];
 }

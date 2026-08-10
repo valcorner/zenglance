@@ -21,6 +21,22 @@
         es: 'ZenGlance \u2014 Plataforma de Contenidos Multi-modal',
         ar: 'ZenGlance \u2014 \u0645\u0646\u0635\u0629 \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0627\u0644\u0645\u062A\u0639\u062F\u062F \u0627\u0644\u0648\u0633\u0627\u0626\u0637',
       },
+      titleShorts: {
+        en: 'Shorts \u2014 ZenGlance',
+        fr: 'Shorts \u2014 ZenGlance',
+        de: 'Shorts \u2014 ZenGlance',
+        it: 'Shorts \u2014 ZenGlance',
+        es: 'Shorts \u2014 ZenGlance',
+        ar: '\u0634\u0631\u0648\u0637 \u2014 ZenGlance',
+      },
+      titleWatch: {
+        en: 'Watch \u2014 ZenGlance',
+        fr: 'Regarder \u2014 ZenGlance',
+        de: 'Ansehen \u2014 ZenGlance',
+        it: 'Guarda \u2014 ZenGlance',
+        es: 'Ver \u2014 ZenGlance',
+        ar: '\u0634\u0627\u062A \u2014 ZenGlance',
+      },
       search: {
         en: 'Search content...',
         fr: 'Rechercher du contenu...',
@@ -101,6 +117,14 @@
         es: 'Colecciones',
         ar: '\u0645\u062c\u0645\u0648\u0639\u0627\u062a',
       },
+      noVideo: {
+        en: 'No video found',
+        fr: 'Aucune vid\u00E9o trouv\u00E9e',
+        de: 'Kein Video gefunden',
+        it: 'Nessun video trovato',
+        es: 'Ning\u00FAn video encontrado',
+        ar: '\u0644\u0645 \u064A\u062A\u0645 \u0627\u0644\u0639\u062B\u0648\u0631 \u0639\u0644\u0649 \u0641\u064A\u062F\u064A\u0648',
+      },
     },
 
     menu: {
@@ -111,6 +135,22 @@
         it: 'Home',
         es: 'Inicio',
         ar: '\u0627\u0644\u0635\u0641\u062D\u0629 \u0627\u0644\u0631\u0626\u064A\u0633\u064A\u0629',
+      },
+      shorts: {
+        en: 'Shorts',
+        fr: 'Shorts',
+        de: 'Shorts',
+        it: 'Shorts',
+        es: 'Shorts',
+        ar: '\u0634\u0631\u0648\u0637',
+      },
+      explorer: {
+        en: 'Explore',
+        fr: 'Explorer',
+        de: 'Entdecken',
+        it: 'Esplora',
+        es: 'Explorar',
+        ar: '\u0627\u0633\u062a\u0643\u0634\u0627\u0641',
       },
       short_drama: {
         en: 'Short Dramas',
@@ -151,30 +191,6 @@
         it: 'Video brevi',
         es: 'Videos cortos',
         ar: '\u0641\u064A\u062F\u064A\u0648\u0647\u0627\u062A \u0642\u0635\u064A\u0631\u0629',
-      },
-      music: {
-        en: 'Music',
-        fr: 'Musique',
-        de: 'Musik',
-        it: 'Musica',
-        es: 'M\u00FAsica',
-        ar: '\u0645\u0648\u0633\u064A\u0642\u0649',
-      },
-      podcast: {
-        en: 'Podcast',
-        fr: 'Podcast',
-        de: 'Podcast',
-        it: 'Podcast',
-        es: 'Podcast',
-        ar: '\u0628\u0648\u062F\u0643\u0627\u0633\u062A',
-      },
-      novel: {
-        en: 'Novels',
-        fr: 'Romans',
-        de: 'Romanen',
-        it: 'Romanzi',
-        es: 'Novelas',
-        ar: '\u0631\u0648\u0627\u064A\u0627\u062A',
       },
     },
 
@@ -430,6 +446,14 @@
         es: 'Vista previa no disponible',
         ar: '\u0644\u0627 \u062A\u062C\u0648\u064A\u062F \u0645\u0639\u0627\u064A\u0646\u0629',
       },
+      copied: {
+        en: 'Copied to clipboard',
+        fr: 'Copi\u00E9 dans le presse-papiers',
+        de: 'In Zwischenablage kopiert',
+        it: 'Copiato negli appunti',
+        es: 'Copiado al portapapeles',
+        ar: '\u062A\u0645 \u0627\u0644\u0646\u0633\u062E \u0625\u0644\u0649 \u0627\u0644\u0645\u0644\u062D\u0642',
+      },
       downloadFile: {
         en: 'Download file',
         fr: 'T\u00E9l\u00E9charger le fichier',
@@ -570,9 +594,6 @@
     movie:       { en: 'Movies',      fr: 'Films',               de: 'Filme',       it: 'Film',        es: 'Pel\u00EDculas',ar: '\u0623\u0641\u0644\u0627\u0645' },
     ugc_long_video: { en: 'UGC',      fr: 'UGC',                de: 'UGC',         it: 'UGC',         es: 'UGC',         ar: '\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646' },
     short_video: { en: 'Short Videos', fr: 'Courtes vid\u00E9os', de: 'Kurzvideos',  it: 'Video brevi', es: 'Videos cortos', ar: '\u0641\u064A\u062F\u064A\u0648\u0647\u0627\u062A' },
-    music:       { en: 'Music',       fr: 'Musique',             de: 'Musik',       it: 'Musica',      es: 'M\u00FAsica',   ar: '\u0645\u0648\u0633\u064A\u0642\u0649' },
-    podcast:     { en: 'Podcast',     fr: 'Podcast',             de: 'Podcast',     it: 'Podcast',     es: 'Podcast',     ar: '\u0628\u0648\u062F\u0643\u0627\u0633\u062A' },
-    novel:       { en: 'Novels',      fr: 'Romans',              de: 'Romanen',     it: 'Romanzi',     es: 'Novelas',     ar: '\u0631\u0648\u0627\u064A\u0627\u062A' },
   };
   TRANSLATIONS.category = categoryNames;
 

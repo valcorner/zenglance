@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS contents (
   slug TEXT NOT NULL UNIQUE,
   title TEXT NOT NULL,
   description TEXT,
-  content_type TEXT NOT NULL CHECK(content_type IN ('short_drama', 'tv_series', 'movie', 'ugc_long_video', 'short_video', 'music', 'podcast', 'novel')),
+  content_type TEXT NOT NULL CHECK(content_type IN ('short_drama', 'tv_series', 'movie', 'ugc_long_video', 'short_video')),
   is_premium BOOLEAN NOT NULL DEFAULT 0,
   is_encrypted BOOLEAN NOT NULL DEFAULT 0,
   uploader_id TEXT NOT NULL REFERENCES users(id),

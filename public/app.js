@@ -140,10 +140,10 @@
       card.className = 'video-card';
       card.dataset.id = item.id;
       card.innerHTML = `
-        <div class="video-card-thumbnail" onclick="window.__openPlayer('${item.id}')">
+        <div class="video-card-thumbnail" onclick="window.__openPlayer('${item.id}', '${item.category || ''}')">
           ${item.thumbnail ? `<img src="${item.thumbnail}" alt="${escapeHtml(item.title)}" loading="lazy">` : `<div class="video-card-placeholder"><svg width="40" height="40" viewBox="0 0 40 40" fill="none"><rect x="4" y="10" width="32" height="22" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M16 28l8-6-8-6v12z" fill="currentColor"/></svg></div>`}
           <div class="video-card-duration">${item.duration ? formatDuration(item.duration) : ''}</div>
-          <button class="video-card-play" onclick="window.__openPlayer('${item.id}')" aria-label="Play">
+          <button class="video-card-play" onclick="window.__openPlayer('${item.id}', '${item.category || ''}')" aria-label="Play">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
               <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
               <path d="M10 8l6 4-6 4V8z" fill="currentColor"/>
@@ -185,10 +185,7 @@
       { code: 'tv_series', icon: '\u{1F4FA}' },
       { code: 'movie', icon: '\u{1F3AC}' },
       { code: 'ugc_long_video', icon: '\u{1F3A8}' },
-      { code: 'short_video', icon: '\u{1F4F1}' },
-      { code: 'music', icon: '\u{1F3B5}' },
-      { code: 'podcast', icon: '\u{1F3A4}' },
-      { code: 'novel', icon: '\u{1F4D6}' }
+      { code: 'short_video', icon: '\u{1F4F1}' }
     ];
 
     main.innerHTML = `
@@ -242,10 +239,7 @@
       tv_series:   ['content_manager', 'admin'],
       movie:       ['content_manager', 'admin'],
       ugc_long_video: ['content_manager', 'uploader', 'admin'],
-      short_video: ['content_manager', 'uploader', 'admin'],
-      music:       ['content_manager', 'uploader', 'admin'],
-      podcast:     ['content_manager', 'uploader', 'admin'],
-      novel:       ['content_manager', 'uploader', 'admin']
+      short_video: ['content_manager', 'uploader', 'admin']
     };
     const allowed = roleAllowed[type] || ['content_manager', 'admin'];
     if (!allowed.includes(state.user.role)) {
@@ -296,170 +290,10 @@
   }
 
   // ── Player ─────────────────────────────────────────────────────────────────
-  function openPlayer(id) {
-    const main = document.getElementById('main');
-    if (!main) return;
-
-    main.innerHTML = `
-      <div class="player-page">
-        <div class="player-container">
-          <button class="player-back" onclick="window.__backToList()">&larr; ${t('status.backToList')}</button>
-          <div class="player-content">
-            <div class="player-video-wrapper">
-              <div class="player-video" id="playerContainer">
-                <div class="player-loading">${t('status.loading')}</div>
-              </div>
-              <div class="player-controls" id="playerControls">
-                <button class="ctrl-btn" id="playPauseBtn" onclick="window.__togglePlay()">&#x25B6;</button>
-                <span class="ctrl-time" id="currentTime">0:00</span>
-                <input type="range" class="ctrl-seek" id="seekBar" min="0" max="100" value="0" oninput="window.__seek(this.value)">
-                <span class="ctrl-time" id="duration">0:00</span>
-                <button class="ctrl-btn" onclick="window.__toggleMute()">&#x1F50A;</button>
-                <input type="range" class="ctrl-volume" id="volumeBar" min="0" max="100" value="80" oninput="window.__setVolume(this.value)">
-                <button class="ctrl-btn" onclick="window.__toggleFullscreen()">&#x26F6;</button>
-              </div>
-            </div>
-            <div class="player-details">
-              <h1 class="player-title" id="playerTitle">${t('player.loadingTitle')}</h1>
-              <div class="player-meta" id="playerMeta"></div>
-              <div class="player-description" id="playerDesc"></div>
-            </div>
-          </div>
-        </div>
-      </div>`;
-
-    loadPlayerContent(id);
-  }
-
-  function loadPlayerContent(id) {
-    const token = localStorage.getItem('zenglance_token');
-    const apiUrl = `https://video.valcorner.qzz.io/api/v1/content/${id}`;
-
-    fetch(apiUrl, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
-        renderPlayer(data);
-      })
-      .catch(err => {
-        console.error('Failed to load player content:', err);
-        document.getElementById('playerContainer').innerHTML =
-          `<div class="player-error"><p>${t('status.loadFailed')}</p></div>`;
-      });
-  }
-
-  function renderPlayer(data) {
-    const { id, title, description, duration, category, creator, views, is_encrypted, file_url, thumbnail } = data.data;
-
-    document.getElementById('playerTitle').textContent = title || t('player.unknownTitle');
-    document.getElementById('playerMeta').innerHTML = `
-      <span class="meta-tag">${t('category.' + category) || ''}</span>
-      <span class="meta-tag">${creator?.name || t('player.unknownCreator')}</span>
-      ${views ? `<span class="meta-tag">${formatViews(views)} ${t('player.views')}</span>` : ''}
-      ${is_encrypted ? `<span class="meta-tag encrypted">${t('player.encrypted')}</span>` : ''}
-    `;
-    document.getElementById('playerDesc').textContent = description || '';
-
-    const playerContainer = document.getElementById('playerContainer');
-    if (is_encrypted) {
-      playerContainer.innerHTML = `<div class="player-encrypted"><div class="encrypted-icon">\uD83D\uDD12</div><h3>${t('player.encrypted')}</h3><p>${t('player.encryptedDesc')}</p><a href="/auth/login" class="btn btn-primary">${t('meta.login')}</a></div>`;
-    } else if (file_url) {
-      const ext = file_url.split('.').pop().toLowerCase();
-      const isVideo = ['mp4', 'webm', 'ogg'].includes(ext);
-      const isAudio = ['mp3', 'wav', 'ogg', 'flac', 'aac'].includes(ext);
-
-      if (isVideo) {
-        playerContainer.innerHTML = `
-          <video id="mainVideo" src="${file_url}" controls crossorigin="anonymous"></video>
-          <div class="player-download">
-            <a href="${file_url}" download class="btn btn-secondary" onclick="event.stopPropagation()">${t('player.download')}</a>
-          </div>`;
-      } else if (isAudio) {
-        playerContainer.innerHTML = `
-          <audio id="mainVideo" src="${file_url}" controls crossorigin="anonymous"></audio>
-          <div class="player-download">
-            <a href="${file_url}" download class="btn btn-secondary" onclick="event.stopPropagation()">${t('player.download')}</a>
-          </div>`;
-      } else {
-        playerContainer.innerHTML = `<div class="player-no-preview"><p>${t('player.noPreview')}</p><a href="${file_url}" download class="btn btn-primary">${t('player.download')}</a></div>`;
-      }
-
-      // Init player controls
-      setTimeout(initPlayerControls, 100);
-    } else {
-      playerContainer.innerHTML = `<div class="player-no-preview"><p>${t('player.noPreview')}</p></div>`;
-    }
-  }
-
-  function initPlayerControls() {
-    const video = document.getElementById('mainVideo');
-    if (!video) return;
-
-    const playPauseBtn = document.getElementById('playPauseBtn');
-    const seekBar = document.getElementById('seekBar');
-    const currentTimeEl = document.getElementById('currentTime');
-    const durationEl = document.getElementById('duration');
-    const volumeBar = document.getElementById('volumeBar');
-
-    if (playPauseBtn) playPauseBtn.onclick = () => togglePlay();
-    if (seekBar) seekBar.oninput = (e) => { video.currentTime = (e.target.value / 100) * video.duration; };
-    if (volumeBar) volumeBar.oninput = (e) => { video.volume = e.target.value / 100; };
-
-    video.addEventListener('timeupdate', () => {
-      if (video.duration) {
-        const pct = (video.currentTime / video.duration) * 100;
-        if (seekBar) seekBar.value = pct;
-        if (currentTimeEl) currentTimeEl.textContent = formatTime(video.currentTime);
-      }
-    });
-
-    video.addEventListener('loadedmetadata', () => {
-      if (durationEl) durationEl.textContent = formatTime(video.duration);
-    });
-
-    video.addEventListener('play', () => {
-      if (playPauseBtn) playPauseBtn.innerHTML = '&#x23F8;';
-    });
-
-    video.addEventListener('pause', () => {
-      if (playPauseBtn) playPauseBtn.innerHTML = '&#x25B6;';
-    });
-  }
-
-  function togglePlay() {
-    const video = document.getElementById('mainVideo');
-    if (video) video.paused ? video.play() : video.pause();
-  }
-
-  function seek(value) {
-    const video = document.getElementById('mainVideo');
-    if (video) video.currentTime = (value / 100) * video.duration;
-  }
-
-  function toggleMute() {
-    const video = document.getElementById('mainVideo');
-    if (video) video.muted = !video.muted;
-  }
-
-  function setVolume(value) {
-    const video = document.getElementById('mainVideo');
-    if (video) video.volume = value / 100;
-  }
-
-  function toggleFullscreen() {
-    const container = document.getElementById('playerContainer');
-    if (container) container.requestFullscreen?.();
-  }
-
-  function backToList() {
-    const video = document.getElementById('mainVideo');
-    if (video) video.pause();
-    if (state.currentPlaylist) {
-      showPlaylist(state.currentPlaylist);
-    } else {
-      renderCategoryList();
-    }
+  function openPlayer(id, type) {
+    const base = '/watch.html?id=' + encodeURIComponent(id);
+    const url = type ? base + '&type=' + encodeURIComponent(type) : base;
+    window.location.href = url;
   }
 
   // ── Helper functions ───────────────────────────────────────────────────────
@@ -523,7 +357,7 @@
       playlist.videos.forEach(item => {
         const row = document.createElement('div');
         row.className = 'playlist-item';
-        row.onclick = () => window.__openPlayer(item.id);
+        row.onclick = () => window.__openPlayer(item.id, item.category || '');
         row.innerHTML = `
           <div class="playlist-item-thumb">
             ${item.thumbnail ? `<img src="${item.thumbnail}" alt="${escapeHtml(item.title)}" loading="lazy">` : `<div class="playlist-item-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 9-14 9V3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div>`}
@@ -663,12 +497,6 @@
   window.__openPlayer = openPlayer;
   window.__loadMore = () => fetchVideos(state.currentPage + 1);
   window.__selectCategory = showCategory;
-  window.__backToList = backToList;
-  window.__togglePlay = togglePlay;
-  window.__seek = seek;
-  window.__toggleMute = toggleMute;
-  window.__setVolume = setVolume;
-  window.__toggleFullscreen = toggleFullscreen;
 
   document.addEventListener('DOMContentLoaded', init);
 })();

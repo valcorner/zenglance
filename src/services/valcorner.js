@@ -68,10 +68,7 @@ export class ValcornerCDNService {
       'tv_series': 'series',
       'movie': 'movie',
       'ugc_long_video': 'video',
-      'short_video': 'short',
-      'music': 'music',
-      'podcast': 'podcast',
-      'novel': 'novel'
+      'short_video': 'short'
     };
     return mapping[contentType] || 'video';
   }
