@@ -10,7 +10,8 @@
   };
   const LANG_LIST = Object.keys(LANGUAGES);
 
-  const t = {
+  // ── Translation data (separate name to avoid conflict with t() function) ──
+  const TRANSLATIONS = {
     meta: {
       title: {
         en: 'ZenGlance — Multi-modal Content Platform',
@@ -275,7 +276,7 @@
         de: 'Bitte zuerst anmelden',
         it: 'Effettua prima il login',
         es: 'Inicia sesi\u00F3n primero',
-        ar: '\u064A\u0631\u062C\u0649 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0623\u0648\u0644\u0627',
+        ar: '\u064A\u0631\u062C\u0649 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062D\u0636\u0648\u0631 \u0623\u0648\u0644\u0627',
       },
       freeCannotUpload: {
         en: 'Free users cannot upload content',
@@ -437,6 +438,14 @@
         es: 'Volver a la lista',
         ar: '\u0627\u0644\u0639\u0648\u062F\u0629 \u0625\u0644\u0649 \u0627\u0644\u0642\u0627\u0626\u0645\u0629',
       },
+      fileUploadFailed: {
+        en: 'Failed to upload file',
+        fr: '\u00C9chec du t\u00E9l\u00E9chargement du fichier',
+        de: 'Datei-Upload fehlgeschlagen',
+        it: 'Caricamento file fallito',
+        es: 'Error al subir el archivo',
+        ar: '\u0641\u0634\u0644 \u062A\u0631\u0627\u0642 \u0627\u0644\u0645\u0644\u0641',
+      },
     },
 
     player: {
@@ -461,7 +470,7 @@
         fr: 'Ce contenu est chiffr\u00E9. Veuillez vous connecter pour regarder.',
         de: 'Dieser Inhalt ist verschlüsselt. Bitte melden Sie sich an.',
         it: 'Questo contenuto \u00E8 crittografato. Effettua il login per guardare.',
-        es: 'Este contenido est\u00E1 encriptado. Inicia sesi\u00F3n para ver.',
+        es: 'Este contenido está encriptado. Inicia sesión para ver.',
         ar: '\u0647\u0630\u0627 \u0627\u0644\u0645\u062D\u062A\u0648\u0649 \u0645\u0634\u0641\u0631. \u064A\u0631\u062C\u0649 \u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0644\u0645\u0634\u0627\u0647\u062F\u062A\u0647.',
       },
       loadingTitle: {
@@ -523,22 +532,34 @@
     },
 
     timeAgo: {
-      justNow: { en: 'just now', fr: '\u00E0 l\'instant', de: 'gerade eben', it: 'proprio ora', es: 'ahora mismo', ar: '\u0627\u0644\u0622\u0646' },
-      minutesAgo: { en: '{{n}} min ago', fr: 'il y a {{n}} min', de: 'vor {{n}} Min', it: '{{n}} min fa', es: 'hace {{n}} min', ar: '\u0645\u0646\u0630 {{n}} \u062f\u0642' },
-      hoursAgo: { en: '{{n}}h ago', fr: 'il y a {{n}}h', de: 'vor {{n}}h', it: '{{n}}h fa', es: 'hace {{n}}h', ar: '\u0645\u0646\u0630 {{n}} \u0633\u0627\u0639\u0629' },
-      daysAgo: { en: '{{n}}d ago', fr: 'il y a {{n}}j', de: 'vor {{n}}d', it: '{{n}}g fa', es: 'hace {{n}}d', ar: '\u0645\u0646\u0630 {{n}} \u064A\u0648\u0645' },
-      monthsAgo: { en: '{{n}}mo ago', fr: 'il y a {{n}}ms', de: 'vor {{n}}Mon', it: '{{n}}m fa', es: 'hace {{n}}m', ar: '\u0645\u0646\u0630 {{n}} \u0634\u0647\u0631' },
-      yearsAgo: { en: '{{n}}y ago', fr: 'il y a {{n}}ans', de: 'vor {{n}}J', it: '{{n}}a fa', es: 'hace {{n}}a', ar: '\u0645\u0646\u0630 {{n}} \u0639\u0627\u0645' },
+      justNow:      { en: 'just now',      fr: '\u00E0 l\'instant',        de: 'gerade eben',      it: 'proprio ora',      es: 'ahora mismo',       ar: '\u0627\u0644\u0622\u0646' },
+      minutesAgo:   { en: '{{n}} min ago', fr: 'il y a {{n}} min',       de: 'vor {{n}} Min',    it: '{{n}} min fa',     es: 'hace {{n}} min',    ar: '\u0645\u0646\u0630 {{n}} \u062f\u0642' },
+      hoursAgo:     { en: '{{n}}h ago',    fr: 'il y a {{n}}h',          de: 'vor {{n}}h',       it: '{{n}}h fa',        es: 'hace {{n}}h',       ar: '\u0645\u0646\u0630 {{n}} \u0633\u0627\u0639\u0629' },
+      daysAgo:      { en: '{{n}}d ago',    fr: 'il y a {{n}}j',          de: 'vor {{n}}d',       it: '{{n}}g fa',        es: 'hace {{n}}d',       ar: '\u0645\u0646\u0630 {{n}} \u064A\u0648\u0645' },
+      monthsAgo:    { en: '{{n}}mo ago',   fr: 'il y a {{n}}ms',         de: 'vor {{n}}Mon',     it: '{{n}}m fa',        es: 'hace {{n}}m',       ar: '\u0645\u0646\u0630 {{n}} \u0634\u0647\u0631' },
+      yearsAgo:     { en: '{{n}}y ago',    fr: 'il y a {{n}}ans',        de: 'vor {{n}}J',       it: '{{n}}a fa',        es: 'hace {{n}}a',       ar: '\u0645\u0646\u0630 {{n}} \u0639\u0627\u0645' },
     },
 
     formatViews: {
-      thousands: { en: '{{n}}K', fr: '{{n}}K', de: '{{n}}K', it: '{{n}}K', es: '{{n}}K', ar: '{{n}}\u0623' },
-      tenThousands: { en: '{{n}}K', fr: '{{n}}K', de: '{{n}}K', it: '{{n}}K', es: '{{n}}K', ar: '{{n}}\u0623' },
-      millions: { en: '{{n}}M', fr: '{{n}}M', de: '{{n}}M', it: '{{n}}M', es: '{{n}}M', ar: '{{n}}\u0645' },
+      thousands:   { en: '{{n}}K', fr: '{{n}}K', de: '{{n}}K', it: '{{n}}K', es: '{{n}}K', ar: '{{n}}\u0623' },
+      tenThousands:{ en: '{{n}}K', fr: '{{n}}K', de: '{{n}}K', it: '{{n}}K', es: '{{n}}K', ar: '{{n}}\u0623' },
+      millions:    { en: '{{n}}M', fr: '{{n}}M', de: '{{n}}M', it: '{{n}}M', es: '{{n}}M', ar: '{{n}}\u0645' },
     },
   };
 
-  // Category display names keyed by code (also accessible via t('category.short_drama'))
+  // ── Translation function (use TRANSLATIONS data object, not t) ───────────
+  function t(key, params) {
+    const parts = key.split('.');
+    let obj = TRANSLATIONS;
+    for (const p of parts) { obj = obj[p]; if (!obj) return key; }
+    let str = obj[currentLang] || obj.en || key;
+    if (params) {
+      Object.keys(params).forEach(k => { str = str.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), params[k]); });
+    }
+    return str;
+  }
+
+  // Category display names (also accessible via t('category.xxx'))
   const categoryNames = {
     short_drama: { en: 'Short Dramas', fr: 'Court-m\u00E9trages', de: 'Kurzfilme', it: 'Cortometraggi', es: 'Cortos', ar: '\u0642\u0635\u064A\u0631\u0629' },
     tv_series:   { en: 'TV Series',   fr: 'S\u00E9ries TV',       de: 'TV-Serien',   it: 'Serie TV',    es: 'Series',      ar: '\u0633\u0644\u0633\u0644\u064A\u0627\u062A' },
@@ -549,11 +570,10 @@
     podcast:     { en: 'Podcast',     fr: 'Podcast',             de: 'Podcast',     it: 'Podcast',     es: 'Podcast',     ar: '\u0628\u0648\u062F\u0643\u0627\u0633\u062A' },
     novel:       { en: 'Novels',      fr: 'Romans',              de: 'Romanen',     it: 'Romanzi',     es: 'Novelas',     ar: '\u0631\u0648\u0627\u064A\u0627\u062A' },
   };
-
-  // Merge category names into the t object so t('category.short_drama') works
-  t.category = categoryNames;
+  TRANSLATIONS.category = categoryNames;
 
   let currentLang = 'en';
+  const _langChangeCallbacks = [];
 
   // ── Init ─────────────────────────────────────────────────────────────────
   function getLang() {
@@ -562,19 +582,6 @@
     const browser = (navigator.language || 'en').slice(0, 2);
     return LANGUAGES[browser] ? browser : 'en';
   }
-
-  function t(key, params) {
-    const parts = key.split('.');
-    let obj = t;
-    for (const p of parts) { obj = obj[p]; if (!obj) return key; }
-    let str = obj[currentLang] || obj.en || key;
-    if (params) {
-      Object.keys(params).forEach(k => { str = str.replace(new RegExp('\\{\\{' + k + '\\}\\}', 'g'), params[k]); });
-    }
-    return str;
-  }
-
-  const _langChangeCallbacks = [];
 
   function setLang(lang) {
     if (!LANGUAGES[lang]) return;
@@ -599,7 +606,6 @@
     document.querySelectorAll('[data-i18n-title]').forEach(el => {
       el.title = t(el.dataset.i18nTitle);
     });
-    // Update page title
     const titleEl = document.querySelector('title');
     if (titleEl) titleEl.textContent = t('meta.title');
   }
@@ -610,17 +616,22 @@
     const dropdown = document.getElementById('langDropdown');
     if (!btn || !dropdown) return;
 
+    dropdown.addEventListener('click', (e) => e.stopPropagation());
+
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
       dropdown.classList.toggle('show');
     });
 
     document.addEventListener('click', (e) => {
-      if (!dropdown.contains(e.target) && e.target !== btn) dropdown.classList.remove('show');
+      if (!dropdown.contains(e.target) && !btn.contains(e.target)) {
+        dropdown.classList.remove('show');
+      }
     });
 
     document.querySelectorAll('.lang-option').forEach(opt => {
-      opt.addEventListener('click', () => {
+      opt.addEventListener('click', (e) => {
+        e.stopPropagation();
         setLang(opt.dataset.lang);
         dropdown.classList.remove('show');
       });
@@ -631,9 +642,9 @@
     const btn = document.getElementById('langBtn');
     if (!btn) return;
     const lang = LANGUAGES[currentLang];
+    if (!lang) return;
     btn.innerHTML = `${lang.flag} ${lang.label}`;
     btn.title = 'Change language';
-    // Update active state in dropdown
     document.querySelectorAll('.lang-option').forEach(opt => {
       opt.classList.toggle('active', opt.dataset.lang === currentLang);
     });

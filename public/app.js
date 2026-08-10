@@ -562,8 +562,8 @@
     }
   }
 
-  // ── Event listeners ────────────────────────────────────────────────────────
-  function initEventListeners() {
+  // ── Event listeners (synchronous — register immediately, not after API calls) ──
+  function registerEventListeners() {
     // Sidebar toggle
     document.getElementById('sidebarToggle')?.addEventListener('click', () => {
       document.body.classList.toggle('sidebar-open');
@@ -636,6 +636,9 @@
       if (dropdown) dropdown.classList.toggle('show');
     });
 
+    // Prevent user-dropdown from closing when clicking inside it
+    document.querySelector('.user-dropdown')?.addEventListener('click', (e) => e.stopPropagation());
+
     // Close dropdowns on outside click
     document.addEventListener('click', (e) => {
       if (!e.target.closest('.user-menu')) {
@@ -646,9 +649,10 @@
 
   // ── Initialize ─────────────────────────────────────────────────────────────
   async function init() {
-    await fetchUser();
-    await fetchPlaylists();
-    initEventListeners();
+    // Register all event listeners immediately on DOM ready
+    registerEventListeners();
+    // Start API calls in background
+    await Promise.all([fetchUser(), fetchPlaylists()]);
     renderCategoryList();
     // Re-render main content when language changes
     if (typeof window.i18n === 'object' && window.i18n.onLangChange) {
