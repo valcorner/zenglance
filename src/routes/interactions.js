@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { eq, desc, asc, count, inArray } from 'drizzle-orm';
 import { db, users, contents, likes, favorites, comments, follows, collections, collectionItems, watchHistory, shortDramas, tvSeries, movies, ugcLongVideos, shortVideos } from '../db/schema.js';
+import { createAuthMiddleware } from '../middleware/auth.js';
 
 const interaction = new Hono();
 const auth = createAuthMiddleware();
