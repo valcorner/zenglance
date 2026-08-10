@@ -5,6 +5,12 @@ declare global {
 	const env: {
 		DB: D1Database;
 		ASSETS: { fetch: (request: Request) => Promise<Response> };
+		// Secrets (managed via `wrangler secret put`; local dev values in `vars` below)
+		B2_APPLICATION_KEY_ID: string;
+		B2_APPLICATION_KEY: string;
+		VALCORNER_CLIENT_ID: string;
+		VALCORNER_CLIENT_SECRET: string;
+		// Config vars (local dev defaults; production values injected via GitHub Secrets in CI)
 		B2_API_URL: string;
 		B2_BUCKET_NAME: string;
 		VALCORNER_REDIRECT_URI: string;
