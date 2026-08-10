@@ -1,606 +1,667 @@
-// ZenGlance Frontend Application
+/* ZenGlance Frontend Application */
 
-// ── State ────────────────────────────────────────────────────────────────────
-let currentUser = null;
-let selectedFile = null;
-let sidebarOpen = false;
-let currentCategory = '全部';
-let allVideos = [];
-let searchDebounce = null;
+(function() {
+  'use strict';
 
-// ── DOM refs ─────────────────────────────────────────────────────────────────
-const $ = id => document.getElementById(id);
-const menuToggle     = $('menuToggle');
-const sidebar        = $('sidebar');
-const mainContent    = $('mainContent');
-const uploadBtn      = $('uploadBtn');
-const uploadModal    = $('uploadModal');
-const closeUploadModal = $('closeUploadModal');
-const uploadForm     = $('uploadForm');
-const dropZone       = $('dropZone');
-const fileInput      = $('fileInput');
-const fileInfo       = $('fileInfo');
-const fileName       = $('fileName');
-const fileSize       = $('fileSize');
-const progressBar    = $('progressBar');
-const progressFill   = $('progressFill');
-const statusMessage  = $('statusMessage');
-const submitBtn      = $('submitBtn');
-const userAvatar     = $('userAvatar');
-const userDropdown   = $('userDropdown');
-const dropdownHeader = $('dropdownHeader');
-const dropdownName   = $('dropdownName');
-const dropdownEmail  = $('dropdownEmail');
-const dropdownRole   = $('dropdownRole');
-const dropdownLogin  = $('dropdownLogin');
-const dropdownLogout = $('dropdownLogout');
-const videoGrid      = $('videoGrid');
-const categoryBar    = $('categoryBar');
-const searchInput    = $('searchInput');
-const searchInputMobile = $('searchInputMobile');
-const searchBtn      = $('searchBtn');
-const themeToggle    = $('themeToggle');
-const playerModal    = $('playerModal');
-const playerContainer = $('playerContainer');
+  // ── State ─────────────────────────────────────────────────────────────────
+  const state = {
+    user: null,
+    videos: [],
+    playlists: [],
+    collections: [],
+    currentCategory: null,
+    currentPlaylist: null,
+    currentPage: 1,
+    loading: false,
+    searchQuery: ''
+  };
 
-// ── Session helpers ──────────────────────────────────────────────────────────
-const SESSION_KEY = 'zenglance_session';
-
-function getSessionId()     { return localStorage.getItem(SESSION_KEY); }
-function setSessionId(id)   { id ? localStorage.setItem(SESSION_KEY, id) : localStorage.removeItem(SESSION_KEY); }
-function authHeaders()      { const id = getSessionId(); return id ? { Authorization: `Bearer ${id}` } : {}; }
-
-function consumeSessionFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('session_id');
-    if (id) {
-        setSessionId(id);
-        window.history.replaceState({}, document.title, window.location.pathname);
+  // ── API ────────────────────────────────────────────────────────────────────
+  async function apiFetch(url, options = {}) {
+    const token = localStorage.getItem('zenglance_token');
+    const headers = {
+      'Content-Type': 'application/json',
+      ...options.headers
+    };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(url, { ...options, headers });
+    if (res.status === 401) {
+      window.location.href = '/auth/login';
+      return null;
     }
-}
+    return res;
+  }
 
-// ── Theme ────────────────────────────────────────────────────────────────────
-function initTheme() {
-    const saved = localStorage.getItem('zenglance_theme') || 'light';
-    document.documentElement.setAttribute('data-theme', saved);
-}
-function toggleTheme() {
-    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('zenglance_theme', next);
-}
+  async function fetchVideos(page = 1) {
+    try {
+      const url = state.currentCategory
+        ? `/api/v1/content?category=${state.currentCategory}&page=${page}&limit=12`
+        : `/api/v1/content?page=${page}&limit=12`;
+      const res = await apiFetch(url);
+      if (!res) return;
+      const data = await res.json();
+      if (page === 1) state.videos = data.data || [];
+      else state.videos = [...state.videos, ...(data.data || [])];
+      renderVideos();
+    } catch (e) {
+      console.error('Failed to load videos:', e);
+      document.getElementById('main').innerHTML = `<div class="empty-state"><p>${t('status.loadFailedTitle')}</p><p>${t('status.loadFailed')}</p></div>`;
+    }
+  }
 
-// ── Category map ─────────────────────────────────────────────────────────────
-const typeMap = {
-    '全部': null,
-    '短片短剧': 'short_drama',
-    '剧集': 'tv_series',
-    '电影': 'movie',
-    'UGC 视频': 'ugc_long_video',
-    '短视频': 'short_video',
-    '音乐': 'music',
-    '播客': 'podcast',
-    '小说': 'novel'
-};
-const typeNameMap = {
-    short_drama: '短片短剧', tv_series: '剧集', movie: '电影',
-    ugc_long_video: 'UGC', short_video: '短视频', music: '音乐',
-    podcast: '播客', novel: '小说'
-};
+  async function fetchPlaylists() {
+    try {
+      const res = await apiFetch('/api/v1/playlists');
+      if (!res) return;
+      const data = await res.json();
+      state.playlists = data.data || [];
+    } catch (e) { console.error(e); }
+  }
 
-// ── Init ─────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    initTheme();
-    consumeSessionFromUrl();
-    bindEvents();
-    loadCurrentUser();
-    loadVideos();
-});
+  // ── User helpers ───────────────────────────────────────────────────────────
+  async function fetchUser() {
+    const res = await apiFetch('/api/v1/me');
+    if (!res) return;
+    const data = await res.json();
+    if (data.data) {
+      state.user = data.data;
+      updateUserInfo();
+    }
+  }
 
-function bindEvents() {
+  function updateUserInfo() {
+    const avatar = document.getElementById('userAvatar');
+    const name = document.getElementById('userName');
+    const loginBtn = document.getElementById('loginBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    if (state.user) {
+      const initials = (state.user.name || 'U').slice(0, 2).toUpperCase();
+      if (avatar) avatar.textContent = initials;
+      if (name) name.textContent = state.user.name;
+      if (loginBtn) loginBtn.style.display = 'none';
+      if (logoutBtn) logoutBtn.style.display = 'flex';
+      if (uploadBtn) uploadBtn.style.display = 'inline-flex';
+    } else {
+      if (avatar) avatar.textContent = 'U';
+      if (name) name.textContent = t('meta.notLoggedIn');
+      if (loginBtn) loginBtn.style.display = 'inline-flex';
+      if (logoutBtn) logoutBtn.style.display = 'none';
+    }
+  }
+
+  // ── Time helpers ───────────────────────────────────────────────────────────
+  function timeAgo(iso) {
+    if (!iso) return '';
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60) return t('timeAgo.justNow');
+    if (diff < 3600) {
+      const m = Math.floor(diff / 60);
+      return t('timeAgo.minutesAgo', { n: m });
+    }
+    if (diff < 86400) {
+      const h = Math.floor(diff / 3600);
+      return t('timeAgo.hoursAgo', { n: h });
+    }
+    if (diff < 2592000) {
+      const d = Math.floor(diff / 86400);
+      return t('timeAgo.daysAgo', { n: d });
+    }
+    if (diff < 31536000) {
+      const mo = Math.floor(diff / 2592000);
+      return t('timeAgo.monthsAgo', { n: mo });
+    }
+    const y = Math.floor(diff / 31536000);
+    return t('timeAgo.yearsAgo', { n: y });
+  }
+
+  function formatViews(n) {
+    if (n >= 1000000) return t('formatViews.millions', { n: (n / 1000000).toFixed(1) });
+    if (n >= 10000) return t('formatViews.thousands', { n: Math.floor(n / 1000) });
+    if (n >= 1000) return t('formatViews.thousands', { n: (n / 1000).toFixed(1) });
+    return String(n);
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
+  function renderVideos() {
+    const main = document.getElementById('main');
+    if (!main) return;
+
+    const list = state.currentPlaylist ? state.currentPlaylist.videos : state.videos;
+
+    if (!list || list.length === 0) {
+      const emptyTitle = state.searchQuery ? t('status.notFound') : t('status.empty');
+      const emptyHint = state.searchQuery ? t('status.searchHint') : t('status.emptyHint');
+      main.innerHTML = `<div class="empty-state"><h3>${emptyTitle}</h3><p>${emptyHint}</p></div>`;
+      return;
+    }
+
+    const grid = document.createElement('div');
+    grid.className = 'video-grid';
+
+    list.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'video-card';
+      card.dataset.id = item.id;
+      card.innerHTML = `
+        <div class="video-card-thumbnail" onclick="window.__openPlayer('${item.id}')">
+          ${item.thumbnail ? `<img src="${item.thumbnail}" alt="${escapeHtml(item.title)}" loading="lazy">` : `<div class="video-card-placeholder"><svg width="40" height="40" viewBox="0 0 40 40" fill="none"><rect x="4" y="10" width="32" height="22" rx="3" stroke="currentColor" stroke-width="1.5"/><path d="M16 28l8-6-8-6v12z" fill="currentColor"/></svg></div>`}
+          <div class="video-card-duration">${item.duration ? formatDuration(item.duration) : ''}</div>
+          <button class="video-card-play" onclick="window.__openPlayer('${item.id}')" aria-label="Play">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/>
+              <path d="M10 8l6 4-6 4V8z" fill="currentColor"/>
+            </svg>
+          </button>
+        </div>
+        <div class="video-card-info">
+          <div class="video-card-title">${escapeHtml(item.title)}</div>
+          <div class="video-card-meta">
+            <span class="video-card-creator">${escapeHtml(item.creator?.name || t('player.unknownCreator'))}</span>
+            ${item.views ? `<span>${formatViews(item.views)} ${t('player.views')}</span>` : ''}
+            ${item.is_encrypted ? `<span class="meta-tag encrypted">${t('player.encrypted')}</span>` : ''}
+            ${item.category ? `<span class="meta-tag">${t('category.' + item.category) || item.category}</span>` : ''}
+          </div>
+          <div class="video-card-desc">${escapeHtml(item.description || '')}</div>
+          ${item.created_at ? `<div class="video-card-time">${timeAgo(item.created_at)}</div>` : ''}
+        </div>`;
+      grid.appendChild(card);
+    });
+
+    main.innerHTML = '';
+    main.appendChild(grid);
+
+    // Load more button
+    if (list.length >= 12) {
+      const loadMore = document.createElement('div');
+      loadMore.className = 'load-more';
+      loadMore.innerHTML = `<button onclick="window.__loadMore()">${t('status.loadMore')}</button>`;
+      main.appendChild(loadMore);
+    }
+  }
+
+  function renderCategoryList() {
+    const main = document.getElementById('main');
+    if (!main) return;
+
+    const categories = [
+      { code: 'short_drama', icon: '\u{1F3A5}' },
+      { code: 'tv_series', icon: '\u{1F4FA}' },
+      { code: 'movie', icon: '\u{1F3AC}' },
+      { code: 'ugc_long_video', icon: '\u{1F3A8}' },
+      { code: 'short_video', icon: '\u{1F4F1}' },
+      { code: 'music', icon: '\u{1F3B5}' },
+      { code: 'podcast', icon: '\u{1F3A4}' },
+      { code: 'novel', icon: '\u{1F4D6}' }
+    ];
+
+    main.innerHTML = `
+      <div class="category-grid">
+        ${categories.map(c => `
+          <div class="category-card" onclick="window.__selectCategory('${c.code}')">
+            <div class="category-card-icon">${c.icon}</div>
+            <div class="category-card-name">${t('category.' + c.code) || c.code}</div>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+
+  function renderSearchResults(query) {
+    state.searchQuery = query;
+    state.currentPage = 1;
+    state.videos = [];
+    fetchVideos(1);
+  }
+
+  // ── Upload ─────────────────────────────────────────────────────────────────
+  function openUploadModal() {
+    if (!state.user) {
+      alert(t('status.loginFirst'));
+      return;
+    }
+    if (state.user.role === 'free') {
+      alert(t('status.freeCannotUpload'));
+      return;
+    }
+    document.getElementById('uploadModal').classList.add('show');
+  }
+
+  function closeUploadModal() {
+    document.getElementById('uploadModal').classList.remove('show');
+  }
+
+  function startUpload() {
+    const type = document.getElementById('uploadType').value;
+    const title = document.getElementById('uploadTitle').value;
+    const desc = document.getElementById('uploadDesc').value;
+    const fileInput = document.getElementById('uploadFile');
+
+    if (!type) { alert(t('status.selectType')); return; }
+    if (!title) { alert(t('status.titleRequired')); return; }
+    if (!fileInput.files[0]) { alert(t('status.selectFile')); return; }
+
+    // Role check
+    const roleAllowed = {
+      short_drama: ['content_manager', 'admin'],
+      tv_series:   ['content_manager', 'admin'],
+      movie:       ['content_manager', 'admin'],
+      ugc_long_video: ['content_manager', 'uploader', 'admin'],
+      short_video: ['content_manager', 'uploader', 'admin'],
+      music:       ['content_manager', 'uploader', 'admin'],
+      podcast:     ['content_manager', 'uploader', 'admin'],
+      novel:       ['content_manager', 'uploader', 'admin']
+    };
+    const allowed = roleAllowed[type] || ['content_manager', 'admin'];
+    if (!allowed.includes(state.user.role)) {
+      alert(t('status.permissionDenied'));
+      return;
+    }
+
+    const submitBtn = document.getElementById('uploadSubmit');
+    const spinner = submitBtn?.querySelector('.upload-spinner');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.querySelector('span:first-child').style.display = 'none'; }
+    if (spinner) spinner.style.display = 'inline';
+
+    const file = fileInput.files[0];
+    const formData = new FormData();
+    formData.append('type', type);
+    formData.append('title', title);
+    formData.append('description', desc || '');
+    formData.append('file', file);
+
+    apiFetch('/api/v1/upload', { method: 'POST', body: formData, headers: {} })
+      .then(async res => {
+        if (!res) return;
+        const data = await res.json();
+        if (data.data?.presignedUrl) {
+          return uploadToB2(data.data.presignedUrl, file);
+        }
+      })
+      .then(() => {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.querySelector('span:first-child').style.display = 'inline'; }
+        if (spinner) spinner.style.display = 'none';
+        alert(t('status.uploadSuccess'));
+        closeUploadModal();
+        fetchVideos(1);
+      })
+      .catch(err => {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.querySelector('span:first-child').style.display = 'inline'; }
+        if (spinner) spinner.style.display = 'none';
+        alert(t('status.uploadFailed'));
+        console.error(err);
+      });
+  }
+
+  async function uploadToB2(presignedUrl, file) {
+    const res = await fetch(presignedUrl, { method: 'PUT', body: file });
+    if (!res.ok) throw new Error(t('status.fileUploadFailed'));
+    // Complete upload
+    await apiFetch(`/api/v1/upload/complete?upload_id=${presignedUrl.split('?')[1].match(/upload_id=([^&]+)/)?.[1]}`, { method: 'POST' });
+  }
+
+  // ── Player ─────────────────────────────────────────────────────────────────
+  function openPlayer(id) {
+    const main = document.getElementById('main');
+    if (!main) return;
+
+    main.innerHTML = `
+      <div class="player-page">
+        <div class="player-container">
+          <button class="player-back" onclick="window.__backToList()">&larr; ${t('status.backToList')}</button>
+          <div class="player-content">
+            <div class="player-video-wrapper">
+              <div class="player-video" id="playerContainer">
+                <div class="player-loading">${t('status.loading')}</div>
+              </div>
+              <div class="player-controls" id="playerControls">
+                <button class="ctrl-btn" id="playPauseBtn" onclick="window.__togglePlay()">&#x25B6;</button>
+                <span class="ctrl-time" id="currentTime">0:00</span>
+                <input type="range" class="ctrl-seek" id="seekBar" min="0" max="100" value="0" oninput="window.__seek(this.value)">
+                <span class="ctrl-time" id="duration">0:00</span>
+                <button class="ctrl-btn" onclick="window.__toggleMute()">&#x1F50A;</button>
+                <input type="range" class="ctrl-volume" id="volumeBar" min="0" max="100" value="80" oninput="window.__setVolume(this.value)">
+                <button class="ctrl-btn" onclick="window.__toggleFullscreen()">&#x26F6;</button>
+              </div>
+            </div>
+            <div class="player-details">
+              <h1 class="player-title" id="playerTitle">${t('player.loadingTitle')}</h1>
+              <div class="player-meta" id="playerMeta"></div>
+              <div class="player-description" id="playerDesc"></div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+
+    loadPlayerContent(id);
+  }
+
+  function loadPlayerContent(id) {
+    const token = localStorage.getItem('zenglance_token');
+    const apiUrl = `https://video.valcorner.qzz.io/api/v1/content/${id}`;
+
+    fetch(apiUrl, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    })
+      .then(res => res.json())
+      .then(data => {
+        renderPlayer(data);
+      })
+      .catch(err => {
+        console.error('Failed to load player content:', err);
+        document.getElementById('playerContainer').innerHTML =
+          `<div class="player-error"><p>${t('status.loadFailed')}</p></div>`;
+      });
+  }
+
+  function renderPlayer(data) {
+    const { id, title, description, duration, category, creator, views, is_encrypted, file_url, thumbnail } = data.data;
+
+    document.getElementById('playerTitle').textContent = title || t('player.unknownTitle');
+    document.getElementById('playerMeta').innerHTML = `
+      <span class="meta-tag">${t('category.' + category) || category || ''}</span>
+      <span class="meta-tag">${creator?.name || t('player.unknownCreator')}</span>
+      ${views ? `<span class="meta-tag">${formatViews(views)} ${t('player.views')}</span>` : ''}
+      ${is_encrypted ? `<span class="meta-tag encrypted">${t('player.encrypted')}</span>` : ''}
+    `;
+    document.getElementById('playerDesc').textContent = description || '';
+
+    const playerContainer = document.getElementById('playerContainer');
+    if (is_encrypted) {
+      playerContainer.innerHTML = `<div class="player-encrypted"><div class="encrypted-icon">&#x{1F512};</div><h3>${t('player.encrypted')}</h3><p>${t('player.encryptedDesc')}</p><a href="/auth/login" class="btn btn-primary">${t('meta.login')}</a></div>`;
+    } else if (file_url) {
+      const ext = file_url.split('.').pop().toLowerCase();
+      const isVideo = ['mp4', 'webm', 'ogg'].includes(ext);
+      const isAudio = ['mp3', 'wav', 'ogg', 'flac', 'aac'].includes(ext);
+
+      if (isVideo) {
+        playerContainer.innerHTML = `
+          <video id="mainVideo" src="${file_url}" controls crossorigin="anonymous"></video>
+          <div class="player-download">
+            <a href="${file_url}" download class="btn btn-secondary" onclick="event.stopPropagation()">${t('player.download')}</a>
+          </div>`;
+      } else if (isAudio) {
+        playerContainer.innerHTML = `
+          <audio id="mainVideo" src="${file_url}" controls crossorigin="anonymous"></audio>
+          <div class="player-download">
+            <a href="${file_url}" download class="btn btn-secondary" onclick="event.stopPropagation()">${t('player.download')}</a>
+          </div>`;
+      } else {
+        playerContainer.innerHTML = `<div class="player-no-preview"><p>${t('player.noPreview')}</p><a href="${file_url}" download class="btn btn-primary">${t('player.download')}</a></div>`;
+      }
+
+      // Init player controls
+      setTimeout(initPlayerControls, 100);
+    } else {
+      playerContainer.innerHTML = `<div class="player-no-preview"><p>${t('player.noPreview')}</p></div>`;
+    }
+  }
+
+  function initPlayerControls() {
+    const video = document.getElementById('mainVideo');
+    if (!video) return;
+
+    const playPauseBtn = document.getElementById('playPauseBtn');
+    const seekBar = document.getElementById('seekBar');
+    const currentTimeEl = document.getElementById('currentTime');
+    const durationEl = document.getElementById('duration');
+    const volumeBar = document.getElementById('volumeBar');
+
+    if (playPauseBtn) playPauseBtn.onclick = () => togglePlay();
+    if (seekBar) seekBar.oninput = (e) => { video.currentTime = (e.target.value / 100) * video.duration; };
+    if (volumeBar) volumeBar.oninput = (e) => { video.volume = e.target.value / 100; };
+
+    video.addEventListener('timeupdate', () => {
+      if (video.duration) {
+        const pct = (video.currentTime / video.duration) * 100;
+        if (seekBar) seekBar.value = pct;
+        if (currentTimeEl) currentTimeEl.textContent = formatTime(video.currentTime);
+      }
+    });
+
+    video.addEventListener('loadedmetadata', () => {
+      if (durationEl) durationEl.textContent = formatTime(video.duration);
+    });
+
+    video.addEventListener('play', () => {
+      if (playPauseBtn) playPauseBtn.innerHTML = '&#x23F8;';
+    });
+
+    video.addEventListener('pause', () => {
+      if (playPauseBtn) playPauseBtn.innerHTML = '&#x25B6;';
+    });
+  }
+
+  function togglePlay() {
+    const video = document.getElementById('mainVideo');
+    if (video) video.paused ? video.play() : video.pause();
+  }
+
+  function seek(value) {
+    const video = document.getElementById('mainVideo');
+    if (video) video.currentTime = (value / 100) * video.duration;
+  }
+
+  function toggleMute() {
+    const video = document.getElementById('mainVideo');
+    if (video) video.muted = !video.muted;
+  }
+
+  function setVolume(value) {
+    const video = document.getElementById('mainVideo');
+    if (video) video.volume = value / 100;
+  }
+
+  function toggleFullscreen() {
+    const container = document.getElementById('playerContainer');
+    if (container) container.requestFullscreen?.();
+  }
+
+  function backToList() {
+    const video = document.getElementById('mainVideo');
+    if (video) video.pause();
+    if (state.currentPlaylist) {
+      showPlaylist(state.currentPlaylist);
+    } else {
+      renderCategoryList();
+    }
+  }
+
+  // ── Helper functions ───────────────────────────────────────────────────────
+  function formatDuration(seconds) {
+    if (!seconds) return '';
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function showCategory(category) {
+    state.currentCategory = category;
+    state.currentPlaylist = null;
+    state.currentPage = 1;
+    state.videos = [];
+    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+    const item = document.querySelector(`.sidebar-item[data-category="${category}"]`);
+    if (item) item.classList.add('active');
+    fetchVideos(1);
+  }
+
+  function showPlaylist(playlist) {
+    state.currentPlaylist = playlist;
+    state.currentCategory = null;
+    state.currentPage = 1;
+    state.videos = [];
+    document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+    renderPlaylist(playlist);
+  }
+
+  function renderPlaylist(playlist) {
+    const main = document.getElementById('main');
+    if (!main) return;
+
+    main.innerHTML = `
+      <div class="playlist-header">
+        <h1>${escapeHtml(playlist.name)}</h1>
+        <p>${escapeHtml(playlist.description || '')}</p>
+        <div class="playlist-meta">
+          <span>${playlist.videos?.length || 0} ${t('player.videos')}</span>
+          <span>${t('player.creator')}: ${escapeHtml(playlist.creator?.name || t('player.unknownCreator'))}</span>
+        </div>
+      </div>`;
+
+    if (playlist.videos && playlist.videos.length > 0) {
+      const list = document.createElement('div');
+      list.className = 'playlist-list';
+      playlist.videos.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'playlist-item';
+        row.onclick = () => window.__openPlayer(item.id);
+        row.innerHTML = `
+          <div class="playlist-item-thumb">
+            ${item.thumbnail ? `<img src="${item.thumbnail}" alt="${escapeHtml(item.title)}" loading="lazy">` : `<div class="playlist-item-placeholder"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 3l14 9-14 9V3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></div>`}
+            <div class="playlist-item-duration">${formatDuration(item.duration)}</div>
+          </div>
+          <div class="playlist-item-info">
+            <div class="playlist-item-title">${escapeHtml(item.title)}</div>
+            <div class="playlist-item-desc">${escapeHtml(item.description || '')}</div>
+            <div class="playlist-item-meta">
+              <span>${escapeHtml(item.creator?.name || t('player.unknownCreator'))}</span>
+              ${item.views ? `<span>${formatViews(item.views)} ${t('player.views')}</span>` : ''}
+              ${item.duration ? `<span>${formatDuration(item.duration)}</span>` : ''}
+              ${item.is_encrypted ? `<span class="meta-tag encrypted">${t('player.encrypted')}</span>` : ''}
+            </div>
+          </div>`;
+        list.appendChild(row);
+      });
+      main.appendChild(list);
+    } else {
+      main.innerHTML += `<div class="empty-state"><p>${t('status.empty')}</p></div>`;
+    }
+  }
+
+  // ── Search ─────────────────────────────────────────────────────────────────
+  function handleSearch(e) {
+    const query = e.target.value.trim();
+    if (e.key === 'Enter' && query) {
+      state.currentCategory = null;
+      state.currentPlaylist = null;
+      renderSearchResults(query);
+    }
+  }
+
+  // ── Event listeners ────────────────────────────────────────────────────────
+  function initEventListeners() {
     // Sidebar toggle
-    menuToggle.addEventListener('click', toggleSidebar);
-
-    // Click outside sidebar / dropdown
-    document.addEventListener('click', (e) => {
-        if (sidebarOpen && !sidebar.contains(e.target) && !menuToggle.contains(e.target)) toggleSidebar();
-        if (userDropdown.classList.contains('show') && !e.target.closest('.user-menu')) userDropdown.classList.remove('show');
+    document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+      document.body.classList.toggle('sidebar-open');
     });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeAllModals(); });
 
-    // User avatar dropdown
-    userAvatar.addEventListener('click', (e) => { e.stopPropagation(); userDropdown.classList.toggle('show'); });
-
-    // Login / logout
-    dropdownLogin.addEventListener('click', () => { window.location.href = '/auth/login'; });
-    dropdownLogout.addEventListener('click', handleLogout);
-
-    // Theme toggle
-    themeToggle.addEventListener('click', toggleTheme);
-
-    // Upload modal
-    uploadBtn.addEventListener('click', openUploadModal);
-    closeUploadModal.addEventListener('click', closeUploadModalHandler);
-    uploadModal.addEventListener('click', (e) => { if (e.target === uploadModal) closeUploadModalHandler(); });
-
-    // File upload
-    dropZone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', handleFileSelect);
-    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-    dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files.length) { fileInput.files = e.dataTransfer.files; handleFileSelect(); } });
-
-    // Form submit
-    uploadForm.addEventListener('submit', handleSubmit);
-
-    // Category pills (both bar and sidebar)
-    categoryBar.addEventListener('click', (e) => {
-        const pill = e.target.closest('.category-pill');
-        if (!pill) return;
-        const cat = pill.dataset.type;
-        setActiveCategory(cat);
-        loadVideos(cat);
-        // Sync sidebar
-        document.querySelectorAll('.sidebar-item').forEach(si => si.classList.toggle('active', si.dataset.category === cat));
+    // Upload button
+    document.getElementById('uploadBtn')?.addEventListener('click', openUploadModal);
+    document.getElementById('uploadModalClose')?.addEventListener('click', closeUploadModal);
+    document.getElementById('uploadModal')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeUploadModal();
     });
-    sidebar.addEventListener('click', (e) => {
-        const item = e.target.closest('.sidebar-item');
-        if (!item) return;
-        const cat = item.dataset.category;
-        setActiveCategory(cat);
-        loadVideos(cat);
-        // Sync pills
-        document.querySelectorAll('.category-pill').forEach(p => p.classList.toggle('active', p.dataset.type === cat));
-        if (window.innerWidth < 769) toggleSidebar();
+    document.getElementById('uploadSubmit')?.addEventListener('click', startUpload);
+
+    // File input
+    document.getElementById('uploadFile')?.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        const fileInfo = document.getElementById('fileInfo');
+        if (fileInfo) {
+          fileInfo.innerHTML = `<span>${escapeHtml(file.name)}</span><span>${(file.size / 1024 / 1024).toFixed(2)} MB</span>`;
+          fileInfo.style.display = 'flex';
+        }
+      }
     });
+
+    // File drag & drop
+    const fileArea = document.getElementById('fileUploadArea');
+    if (fileArea) {
+      fileArea.addEventListener('dragover', (e) => { e.preventDefault(); fileArea.classList.add('dragover'); });
+      fileArea.addEventListener('dragleave', () => { fileArea.classList.remove('dragover'); });
+      fileArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        fileArea.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        if (file) {
+          document.getElementById('uploadFile').files = e.dataTransfer.files;
+          document.getElementById('uploadFile').dispatchEvent(new Event('change'));
+        }
+      });
+    }
 
     // Search
-    searchBtn.addEventListener('click', performSearch);
-    searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearch(); });
-    searchInputMobile.addEventListener('keydown', (e) => { if (e.key === 'Enter') performSearchMobile(); });
-    searchInput.addEventListener('input', () => { clearTimeout(searchDebounce); searchDebounce = setTimeout(performSearch, 400); });
-    searchInputMobile.addEventListener('input', () => { clearTimeout(searchDebounce); searchDebounce = setTimeout(performSearchMobile, 400); });
+    document.getElementById('searchInput')?.addEventListener('keyup', handleSearch);
 
-    // Player modal close
-    playerModal.addEventListener('click', (e) => { if (e.target === playerModal) closePlayerModal(); });
-}
-
-function setActiveCategory(cat) { currentCategory = cat; }
-
-function toggleSidebar() {
-    sidebarOpen = !sidebarOpen;
-    sidebar.classList.toggle('open', sidebarOpen);
-    mainContent.classList.toggle('sidebar-open', sidebarOpen);
-}
-
-function closeAllModals() {
-    uploadModal.classList.remove('active');
-    playerModal.classList.remove('active');
-    if (playerContainer.querySelector('video, audio, iframe')) {
-        playerContainer.innerHTML = '';
-    }
-}
-
-// ── Auth ─────────────────────────────────────────────────────────────────────
-async function loadCurrentUser() {
-    const sessionId = getSessionId();
-    if (!sessionId) { updateUIForUser(null); return; }
-    try {
-        const res = await fetch('/auth/me', { headers: { ...authHeaders(), Accept: 'application/json' } });
-        if (res.ok) { currentUser = await res.json(); updateUIForUser(currentUser); }
-        else if (res.status === 401) { setSessionId(null); updateUIForUser(null); }
-    } catch { updateUIForUser(null); }
-}
-
-async function handleLogout() {
-    const sessionId = getSessionId();
-    if (sessionId) {
-        try { await fetch('/auth/logout', { method: 'POST', headers: { ...authHeaders() } }); } catch {}
-    }
-    setSessionId(null);
-    currentUser = null;
-    updateUIForUser(null);
-    userDropdown.classList.remove('show');
-    loadVideos();
-}
-
-function updateUIForUser(user) {
-    if (user) {
-        const initial = (user.name || 'U').charAt(0).toUpperCase();
-        userAvatar.textContent = initial;
-        userAvatar.title = `${user.name} (${user.role})`;
-        userAvatar.style.background = user.avatar
-            ? 'transparent' : '';
-        if (user.avatar) userAvatar.innerHTML = `<img src="${user.avatar}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-        else userAvatar.textContent = initial;
-
-        // Dropdown
-        dropdownHeader.style.display = 'block';
-        dropdownName.textContent = user.name;
-        dropdownEmail.textContent = user.email;
-        dropdownRole.textContent = user.role.toUpperCase();
-        dropdownRole.className = 'dropdown-role ' + user.role;
-        dropdownLogin.style.display = 'none';
-        dropdownLogout.style.display = 'flex';
-
-        // Upload button
-        if (user.role === 'free') {
-            uploadBtn.disabled = true;
-            uploadBtn.title = '免费用户无法上传';
-        } else {
-            uploadBtn.disabled = false;
-            uploadBtn.title = '上传内容';
-        }
-    } else {
-        userAvatar.textContent = 'U';
-        userAvatar.style.background = '';
-        userAvatar.innerHTML = '';
-        userAvatar.title = '未登录';
-        dropdownHeader.style.display = 'none';
-        dropdownLogin.style.display = 'flex';
-        dropdownLogout.style.display = 'none';
-        uploadBtn.disabled = false;
-        uploadBtn.title = '登录后可上传';
-    }
-}
-
-// ── Videos ───────────────────────────────────────────────────────────────────
-async function loadVideos(category = '全部') {
-    showSkeletons();
-    try {
-        let url = '/api/content';
-        const type = typeMap[category];
-        if (type) url += `?type=${encodeURIComponent(type)}`;
-
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        allVideos = await res.json();
-        renderVideos(allVideos);
-    } catch (error) {
-        console.error('Error loading videos:', error);
-        showErrorState('加载失败，请刷新重试');
-    }
-}
-
-function renderVideos(videos) {
-    const query = getSearchQuery().toLowerCase();
-    const filtered = query
-        ? videos.filter(v => v.title?.toLowerCase().includes(query) || v.uploader?.name?.toLowerCase().includes(query))
-        : videos;
-
-    if (!filtered.length) {
-        videoGrid.innerHTML = query
-            ? `<div class="empty-state">
-                <svg viewBox="0 0 24 24" width="80" height="80"><path fill="currentColor" d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                <h3>未找到相关内容</h3><p>试试其他关键词或分类</p></div>`
-            : `<div class="empty-state">
-                <svg viewBox="0 0 24 24" width="80" height="80"><path fill="currentColor" d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z"/></svg>
-                <h3>暂无内容</h3><p>成为第一个上传者吧</p></div>`;
-        return;
-    }
-
-    videoGrid.innerHTML = filtered.map(video => {
-        const duration  = formatDuration(video.duration);
-        const views     = video.views || 0;
-        const uploadDate= video.createdAt ? timeAgo(video.createdAt) : '';
-        const uploader  = video.uploader || {};
-        const initials  = (uploader.name || 'U').charAt(0).toUpperCase();
-        const typeLabel = typeNameMap[video.contentType] || '';
-
-        return `
-        <div class="video-card" data-id="${video.id}">
-            <div class="thumbnail-container">
-                <div class="thumbnail">${typeLabel ? `<span class="type-badge">${typeLabel}</span>` : ''}</div>
-                ${video.isPremium ? '<span class="premium-badge">PREMIUM</span>' : ''}
-                ${video.isEncrypted ? '<span class="encrypted-badge">🔒 加密</span>' : ''}
-                ${duration !== '0:00' ? `<span class="duration-badge">${duration}</span>` : ''}
-            </div>
-            <div class="video-info">
-                <div class="channel-avatar">${uploader.avatar
-                    ? `<img src="${escapeHtml(uploader.avatar)}" alt="">`
-                    : initials}</div>
-                <div class="video-details">
-                    <h3 class="video-title">${escapeHtml(video.title)}</h3>
-                    <p class="channel-name">${escapeHtml(uploader.name || '未知创作者')}</p>
-                    <p class="video-meta">${formatViews(views)} 次观看${uploadDate ? ` · ${uploadDate}` : ''}</p>
-                </div>
-            </div>
-        </div>`;
-    }).join('');
-
-    videoGrid.querySelectorAll('.video-card').forEach(card => {
-        card.addEventListener('click', () => openPlayerModal(card.dataset.id));
+    // Sidebar category clicks
+    document.querySelectorAll('.sidebar-item[data-category]').forEach(item => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        const category = item.dataset.category;
+        showCategory(category);
+        document.body.classList.remove('sidebar-open');
+      });
     });
-}
 
-function getSearchQuery() {
-    return (searchInput.value || searchInputMobile.value || '').trim();
-}
-function performSearch()  { renderFiltered(); }
-function performSearchMobile() {
-    searchInput.value = searchInputMobile.value;
-    renderFiltered();
-}
-function renderFiltered() {
-    const query = getSearchQuery().toLowerCase();
-    const filtered = query
-        ? allVideos.filter(v => v.title?.toLowerCase().includes(query) || v.uploader?.name?.toLowerCase().includes(query))
-        : allVideos;
-    renderVideoList(filtered);
-}
-function renderVideoList(videos) {
-    if (!videos.length) {
-        videoGrid.innerHTML = `<div class="empty-state"><h3>未找到相关内容</h3><p>试试其他关键词或分类</p></div>`;
-        return;
-    }
-    videoGrid.innerHTML = videos.map(video => {
-        const duration  = formatDuration(video.duration);
-        const views     = video.views || 0;
-        const uploadDate= video.createdAt ? timeAgo(video.createdAt) : '';
-        const uploader  = video.uploader || {};
-        const initials  = (uploader.name || 'U').charAt(0).toUpperCase();
-        const typeLabel = typeNameMap[video.contentType] || '';
-        return `
-        <div class="video-card" data-id="${video.id}">
-            <div class="thumbnail-container">
-                <div class="thumbnail">${typeLabel ? `<span class="type-badge">${typeLabel}</span>` : ''}</div>
-                ${video.isPremium ? '<span class="premium-badge">PREMIUM</span>' : ''}
-                ${video.isEncrypted ? '<span class="encrypted-badge">🔒 加密</span>' : ''}
-                ${duration !== '0:00' ? `<span class="duration-badge">${duration}</span>` : ''}
-            </div>
-            <div class="video-info">
-                <div class="channel-avatar">${uploader.avatar ? `<img src="${escapeHtml(uploader.avatar)}" alt="">` : initials}</div>
-                <div class="video-details">
-                    <h3 class="video-title">${escapeHtml(video.title)}</h3>
-                    <p class="channel-name">${escapeHtml(uploader.name || '未知创作者')}</p>
-                    <p class="video-meta">${formatViews(views)} 次观看${uploadDate ? ` · ${uploadDate}` : ''}</p>
-                </div>
-            </div>
-        </div>`;
-    }).join('');
-    videoGrid.querySelectorAll('.video-card').forEach(card => {
-        card.addEventListener('click', () => openPlayerModal(card.dataset.id));
+    // Home click
+    document.querySelector('.sidebar-item[href="/"]')?.addEventListener('click', (e) => {
+      e.preventDefault();
+      state.currentCategory = null;
+      state.currentPlaylist = null;
+      document.querySelectorAll('.sidebar-item').forEach(el => el.classList.remove('active'));
+      e.currentTarget.classList.add('active');
+      renderCategoryList();
+      document.body.classList.remove('sidebar-open');
     });
-}
 
-function showSkeletons() {
-    videoGrid.innerHTML = Array.from({ length: 8 }, (_, i) => `
-        <div class="skeleton-card">
-            <div class="skeleton skeleton-thumb"></div>
-            <div style="display:flex;gap:12px;padding:12px 4px;">
-                <div class="skeleton skeleton-avatar"></div>
-                <div style="flex:1;">
-                    <div class="skeleton skeleton-line w-75"></div>
-                    <div class="skeleton skeleton-line w-50"></div>
-                    <div class="skeleton skeleton-line w-30" style="margin-top:8px;"></div>
-                </div>
-            </div>
-        </div>`).join('');
-}
-
-function showErrorState(msg) {
-    videoGrid.innerHTML = `<div class="error-state"><svg viewBox="0 0 24 24" width="48" height="48"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg><h3>出错了</h3><p>${escapeHtml(msg)}</p></div>`;
-}
-
-// ── Player ───────────────────────────────────────────────────────────────────
-async function openPlayerModal(contentId) {
-    playerModal.classList.add('active');
-    playerContainer.innerHTML = '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#aaa;">加载中...</div>';
-
-    try {
-        const res = await fetch(`/api/content/${encodeURIComponent(contentId)}`);
-        if (!res.ok) throw new Error('Content not found');
-        const item = await res.json();
-        renderPlayer(item);
-    } catch (error) {
-        playerContainer.innerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#aaa;flex-direction:column;gap:12px;">
-            <svg viewBox="0 0 24 24" width="48" height="48"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>
-            <span>加载失败</span></div>`;
-    }
-}
-
-function renderPlayer(item) {
-    // Player
-    const isVideo = item.contentType?.startsWith('video') || ['short_drama','tv_series','movie','ugc_long_video','short_video'].includes(item.contentType);
-    const isAudio = item.contentType === 'music' || item.contentType === 'podcast';
-    const isDoc   = ['novel'].includes(item.contentType);
-
-    let playerHTML = '';
-    if (isVideo) {
-        playerHTML = `<video controls autoplay style="position:absolute;inset:0;width:100%;height:100%;background:#000;">
-            <source src="${escapeHtml(item.cdn?.playUrl || '')}" type="${escapeHtml(item.mimeType || 'video/mp4')}">
-            您的浏览器不支持视频播放
-        </video>`;
-    } else if (isAudio) {
-        playerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1a1a2e,#16213e);flex-direction:column;gap:24px;">
-            <div style="font-size:80px;">🎵</div>
-            <audio controls autoplay style="width:80%;max-width:500px;">
-                <source src="${escapeHtml(item.cdn?.playUrl || '')}" type="${escapeHtml(item.mimeType || 'audio/mpeg')}">
-            </audio>
-        </div>`;
-    } else if (isDoc) {
-        playerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#f5f5f5;flex-direction:column;gap:16px;">
-            <div style="font-size:80px;">📄</div>
-            <a href="${escapeHtml(item.cdn?.playUrl || '')}" download style="padding:12px 24px;background:#065fd4;color:white;border-radius:8px;text-decoration:none;font-weight:500;">下载文件</a>
-        </div>`;
-    } else {
-        playerHTML = `<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#f5f5f5;"><span style="color:#999;">暂无预览</span></div>`;
-    }
-    playerContainer.innerHTML = playerHTML;
-
-    // Info
-    $('playerTitle').textContent  = item.title || '未知标题';
-    $('playerViews').textContent  = `${(item.views || 0).toLocaleString()} 次观看`;
-    $('playerDate').textContent   = item.createdAt ? new Date(item.createdAt).toLocaleDateString('zh-CN') : '';
-    $('playerTypeBadge').textContent = typeNameMap[item.contentType] || item.contentType || '';
-    $('playerDesc').textContent   = item.description || '';
-    $('playerPremiumBadge').style.display = item.isPremium ? 'inline' : 'none';
-    $('playerEncryptedBadge').style.display = item.isEncrypted ? 'inline' : 'none';
-
-    const uploader = item.uploader || {};
-    const initials = (uploader.name || 'U').charAt(0).toUpperCase();
-    const avatarEl = $('playerAvatar');
-    if (uploader.avatar) {
-        avatarEl.innerHTML = `<img src="${escapeHtml(uploader.avatar)}" alt="" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">`;
-    } else {
-        avatarEl.textContent = initials;
-    }
-    $('playerUploaderName').textContent  = uploader.name || '未知创作者';
-    $('playerUploaderRole').textContent  = uploader.role ? uploader.role.toUpperCase() : '';
-}
-
-function closePlayerModal() {
-    playerModal.classList.remove('active');
-    playerContainer.innerHTML = '';
-}
-
-// ── Upload ───────────────────────────────────────────────────────────────────
-function openUploadModal() {
-    if (!currentUser) { showStatus('请先登录', 'error'); return; }
-    if (currentUser.role === 'free') { showStatus('免费用户无法上传内容', 'error'); return; }
-    uploadModal.classList.add('active');
-}
-
-function closeUploadModalHandler() {
-    uploadModal.classList.remove('active');
-    resetForm();
-}
-
-function handleFileSelect() {
-    const file = fileInput.files[0];
-    if (!file) return;
-    selectedFile = file;
-    fileName.textContent = file.name;
-    fileSize.textContent = formatFileSize(file.size);
-    fileInfo.style.display = 'flex';
-}
-
-async function handleSubmit(e) {
-    e.preventDefault();
-    if (!selectedFile) { showStatus('请选择文件', 'error'); return; }
-
-    const contentType = $('contentType').value;
-    const title       = $('contentTitle').value.trim();
-    const description = $('contentDescription').value.trim();
-
-    const allowedTypes = getAllowedContentTypes(currentUser?.role);
-    if (!allowedTypes.includes(contentType)) { showStatus('您的角色无法上传此类型的内容', 'error'); return; }
-
-    try {
-        submitBtn.disabled = true;
-        submitBtn.textContent = '上传中...';
-        progressBar.style.display = 'block';
-
-        const uploadSession = await requestUploadUrl({ contentType, title, description, slug: slugify(title), fileSize: selectedFile.size, mimeType: selectedFile.type || 'application/octet-stream' });
-        await uploadToB2(selectedFile, uploadSession.uploadUrl, uploadSession.uploadAuth);
-        await completeUpload(uploadSession.sessionId);
-
-        showStatus('上传成功！', 'success');
-        setTimeout(() => { closeUploadModalHandler(); loadVideos(currentCategory); }, 1500);
-    } catch (error) {
-        console.error('Upload error:', error);
-        showStatus(error.message || '上传失败，请重试', 'error');
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = '开始上传';
-        progressBar.style.display = 'none';
-        progressFill.style.width = '0%';
-    }
-}
-
-async function requestUploadUrl(data) {
-    const res = await fetch('/api/upload/request', { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() }, body: JSON.stringify(data) });
-    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || err.details || '获取上传地址失败'); }
-    return res.json();
-}
-
-function uploadToB2(file, uploadUrl, uploadAuth) {
-    return new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.upload.addEventListener('progress', (e) => {
-            if (e.lengthComputable) progressFill.style.width = `${(e.loaded / e.total) * 100}%`;
-        });
-        xhr.addEventListener('load', () => xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`上传失败 (HTTP ${xhr.status})`)));
-        xhr.addEventListener('error', () => reject(new Error('网络错误，请重试')));
-        xhr.open('PUT', uploadUrl);
-        xhr.setRequestHeader('Authorization', `Bearer ${uploadAuth}`);
-        xhr.send(file);
+    // User dropdown
+    document.querySelector('.user-menu')?.addEventListener('click', (e) => {
+      const menu = e.currentTarget;
+      const dropdown = menu.querySelector('.user-dropdown');
+      if (dropdown) dropdown.classList.toggle('show');
     });
-}
 
-async function completeUpload(sessionId) {
-    const res = await fetch(`/api/upload/complete/${encodeURIComponent(sessionId)}`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...authHeaders() } });
-    if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err.error || err.details || '完成上传失败'); }
-    return res.json();
-}
+    // Close dropdowns on outside click
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.user-menu')) {
+        document.querySelectorAll('.user-dropdown').forEach(d => d.classList.remove('show'));
+      }
+    });
+  }
 
-function resetForm() {
-    uploadForm.reset(); selectedFile = null;
-    fileInfo.style.display = 'none';
-    progressBar.style.display = 'none';
-    progressFill.style.width = '0%';
-    statusMessage.innerHTML = '';
-}
+  // ── Initialize ─────────────────────────────────────────────────────────────
+  async function init() {
+    await fetchUser();
+    await fetchPlaylists();
+    initEventListeners();
+    renderCategoryList();
+  }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-function showStatus(message, type) {
-    statusMessage.innerHTML = `<div class="status-message ${type}">${escapeHtml(message)}</div>`;
-    setTimeout(() => { statusMessage.innerHTML = ''; }, 5000);
-}
+  // ── Expose global functions ────────────────────────────────────────────────
+  window.__openPlayer = openPlayer;
+  window.__loadMore = () => fetchVideos(state.currentPage + 1);
+  window.__selectCategory = showCategory;
+  window.__backToList = backToList;
+  window.__togglePlay = togglePlay;
+  window.__seek = seek;
+  window.__toggleMute = toggleMute;
+  window.__setVolume = setVolume;
+  window.__toggleFullscreen = toggleFullscreen;
 
-function formatFileSize(bytes) {
-    if (!bytes) return '0 B';
-    const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-}
-
-function formatDuration(seconds) {
-    if (!seconds || typeof seconds !== 'number' || seconds <= 0) return '';
-    const total = Math.floor(seconds);
-    const h = Math.floor(total / 3600), m = Math.floor((total % 3600) / 60), s = total % 60;
-    const pad = n => String(n).padStart(2, '0');
-    return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
-}
-
-function formatViews(n) {
-    if (!n) return '0';
-    if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-    if (n >= 10000)   return (n / 10000).toFixed(1) + '万';
-    if (n >= 1000)    return (n / 1000).toFixed(1) + 'K';
-    return String(n);
-}
-
-function timeAgo(ts) {
-    const diff = Date.now() - new Date(ts).getTime();
-    const sec  = Math.floor(diff / 1000);
-    if (sec < 60)   return '刚刚';
-    if (sec < 3600) return `${Math.floor(sec / 60)} 分钟前`;
-    if (sec < 86400) return `${Math.floor(sec / 3600)} 小时前`;
-    if (sec < 2592000) return `${Math.floor(sec / 86400)} 天前`;
-    if (sec < 31536000) return `${Math.floor(sec / 2592000)} 个月前`;
-    return `${Math.floor(sec / 31536000)} 年前`;
-}
-
-function slugify(text) {
-    return String(text || '').toLowerCase().trim()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/[\s_-]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        || `content-${Date.now()}`;
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function getAllowedContentTypes(role) {
-    const map = {
-        official: ['short_drama','tv_series','movie','ugc_long_video','short_video','music','podcast','novel'],
-        premium:  ['ugc_long_video','short_video','music','podcast','novel'],
-        free:     []
-    };
-    return map[role] || [];
-}
+  document.addEventListener('DOMContentLoaded', init);
+})();

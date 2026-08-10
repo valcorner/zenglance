@@ -39,7 +39,7 @@ export function createAuthRoutes() {
       });
     } catch (error) {
       console.error('Failed to store OAuth state:', error);
-      return c.json({ error: 'Failed to initialize authentication' }, 500);
+      return c.json({ error: 'Failed to initialize authentication', details: error.message }, 500);
     }
 
     const authorizeUrl = new URL(c.env.VALCORNER_AUTHORIZE_URL || 'https://auth.valcorner.qzz.io/oauth/authorize');
