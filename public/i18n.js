@@ -579,6 +579,10 @@
         es: 'Vista previa no disponible',
         ar: '\u0644\u0627 \u062A\u062C\u0648\u064A\u062F \u0645\u0639\u0627\u064A\u0646\u0629',
       },
+      season: { en: 'Season', fr: 'Saison', de: 'Staffel', it: 'Stagione', es: 'Temporada', ar: '\u0645\u0648\u0633\u0645' },
+      episodes: { en: 'Episodes', fr: '\u00C9pisodes', de: 'Folgen', it: 'Episodi', es: 'Episodios', ar: '\u0623\u062D\u0648\u0627\u0644' },
+      rating: { en: 'Rating', fr: 'Note', de: 'Bewertung', it: 'Valutazione', es: 'Clasificaci\u00F3n', ar: '\u062A\u0635\u0646\u064A\u0641' },
+      status: { ongoing: { en: 'Ongoing', fr: 'En cours', de: 'L\u00E4uft', it: 'In corso', es: 'En curso', ar: '\u0645\u0633\u062A\u0645\u0631' }, completed: { en: 'Completed', fr: 'Termin\u00E9', de: 'Beendet', it: 'Completato', es: 'Completado', ar: '\u0645\u062A\u0645' }, hiatus: { en: 'Hiatus', fr: 'Pause', de: 'Pause', it: 'Pausa', es: 'Pausa', ar: '\u0645\u0639\u0644\u0642' } },
     },
 
     timeAgo: {
@@ -613,13 +617,6 @@
       cancel: { en: 'Cancel', fr: 'Annuler', de: 'Abbrechen', it: 'Annulla', es: 'Annulla', ar: '\u0625\u0644\u063A\u0627\u0621' },
       loadMore: { en: 'Load More', fr: 'Charger plus', de: 'Mehr laden', it: 'Carica altro', es: 'Cargar más', ar: '\u062A\u062D\u0645\u064A\u0644 \u0627\u0644\u0645\u0632\u064A\u062F' },
       followers: { en: 'Followers', fr: 'Abonn\u00E9s', de: 'Follower', it: 'Follower', es: 'Seguidores', ar: '\u0627\u0644\u062C\u0645\u064A\u0639' },
-    },
-
-    player: {
-      season: { en: 'Season', fr: 'Saison', de: 'Staffel', it: 'Stagione', es: 'Temporada', ar: '\u0645\u0648\u0633\u0645' },
-      episodes: { en: 'Episodes', fr: '\u00C9pisodes', de: 'Folgen', it: 'Episodi', es: 'Episodios', ar: '\u0623\u062D\u0648\u0627\u0644' },
-      rating: { en: 'Rating', fr: 'Note', de: 'Bewertung', it: 'Valutazione', es: 'Clasificaci\u00F3n', ar: '\u062A\u0635\u0646\u064A\u0641' },
-      status: { ongoing: { en: 'Ongoing', fr: 'En cours', de: 'L\u00E4uft', it: 'In corso', es: 'En curso', ar: '\u0645\u0633\u062A\u0645\u0631' }, completed: { en: 'Completed', fr: 'Termin\u00E9', de: 'Beendet', it: 'Completato', es: 'Completado', ar: '\u0645\u062A\u0645' }, hiatus: { en: 'Hiatus', fr: 'Pause', de: 'Pause', it: 'Pausa', es: 'Pausa', ar: '\u0645\u0639\u0644\u0642' } },
     },
 
     collection: {
