@@ -18,7 +18,7 @@
     "directory": "public",
     "binding": "ASSETS"
   },
-  
+
   "d1_databases": [
     {
       "binding": "DB",
@@ -27,22 +27,20 @@
     }
   ],
   "vars": {
-    "B2_APPLICATION_KEY_ID": "BLAbc1234567890abcdef",
-    "B2_APPLICATION_KEY": "BLAbc1234567890abcdef",
     "B2_API_URL": "https://api.backblazeb2.com",
     "B2_BUCKET_NAME": "zenglance-media",
-    "VALCORNER_CLIENT_ID": "val_xxxxx",
-    "VALCORNER_CLIENT_SECRET": "xxxxxx",
-    "VALCORNER_REDIRECT_URI": "http://localhost:8787/auth/callback",
     "VALCORNER_SCOPE": "openid email profile",
     "VALCORNER_AUTHORIZE_URL": "https://auth.valcorner.qzz.io/oauth/authorize",
-    "VALCORNER_TOKEN_URL": "https://auth.valcorner.qzz.io/oauth/token",
+    "VALCORNER_TOKEN_URL": "https://auth.valcorner.qzz.io/oauth2/token",
     "VALCORNER_USERINFO_URL": "https://auth.valcorner.qzz.io/oauth/userinfo",
-    "FRONTEND_URL": "http://localhost:8787",
-     "B2_APPLICATION_KEY_ID":"",
-     "B2_APPLICATION_KEY":"",
-     "VALCORNER_CLIENT_ID":"",
-     "VALCORNER_CLIENT_SECRET":"",
-     "ADS_API_KEY":""
-  }
+    "FRONTEND_URL": "https://video.valcorner.qzz.io",
+    "VALCORNER_REDIRECT_URI": "https://video.valcorner.qzz.io/login.html"
+  },
+  "secrets": [
+    { "name": "VALCORNER_CLIENT_ID",    "value": "REPLACE_WITH_REAL_VALUE" },
+    { "name": "VALCORNER_CLIENT_SECRET", "value": "REPLACE_WITH_REAL_VALUE" },
+    { "name": "B2_APPLICATION_KEY_ID",  "value": "REPLACE_WITH_REAL_VALUE" },
+    { "name": "B2_APPLICATION_KEY",     "value": "REPLACE_WITH_REAL_VALUE" },
+    { "name": "ADS_API_KEY",            "value": "REPLACE_WITH_REAL_VALUE" }
+  ]
 }

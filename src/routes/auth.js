@@ -91,7 +91,7 @@ export function createAuthRoutes() {
 
       const codeVerifier = stateData.codeVerifier;
 
-      const tokenResponse = await fetch(c.env.VALCORNER_TOKEN_URL || 'https://auth.valcorner.qzz.io/oauth/token', {
+      const tokenResponse = await fetch(c.env.VALCORNER_TOKEN_URL || 'https://auth.valcorner.qzz.io/oauth2/token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -100,6 +100,8 @@ export function createAuthRoutes() {
         body: new URLSearchParams({
           grant_type: 'authorization_code',
           code,
+          client_id: c.env.VALCORNER_CLIENT_ID,
+          client_secret: c.env.VALCORNER_CLIENT_SECRET,
           redirect_uri: c.env.VALCORNER_REDIRECT_URI,
           code_verifier: codeVerifier
         })
