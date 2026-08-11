@@ -222,15 +222,14 @@
       }
       try {
         var res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
-        console.log('[admin] /auth/me status:', res.status, 'ok:', res.ok);
-        if (!res.ok) { console.log('[admin] /auth/me response:', await res.text()); localStorage.removeItem('zenglance_token'); return null; }
+        if (!res.ok) { localStorage.removeItem('zenglance_token'); return null; }
         var data = await res.json();
-        console.log('[admin] /auth/me data.user:', data && data.user ? data.user : data);
+        var user = data.data;
         headerRight.innerHTML =
           '<div class="user-menu" style="position:relative">' +
             '<button class="user-menu-btn" onclick="toggleMenu(event)">' +
-              '<div class="user-avatar" style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;">' + (data.user.name || 'U').charAt(0).toUpperCase() + '</div>' +
-              '<span class="user-name">' + escapeHtml(data.user.name) + '</span>' +
+              '<div class="user-avatar" style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;">' + (user.name || 'U').charAt(0).toUpperCase() + '</div>' +
+              '<span class="user-name">' + escapeHtml(user.name) + '</span>' +
               '<svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8L2 4h8z"/></svg>' +
             '</button>' +
             '<div class="user-dropdown" id="userDropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-md);min-width:160px;z-index:100;overflow:hidden;">' +
@@ -239,7 +238,7 @@
               '<a href="#" class="dropdown-item" onclick="logout();return false;">' + t('meta.logout') + '</a>' +
             '</div>' +
           '</div>';
-        return data.user;
+        return user;
       } catch (e) { return null; }
     }
 
@@ -263,8 +262,6 @@
     window.logout = logout;
 
     loadUser().then(function(user) {
-      console.log('[admin] loadUser result:', user);
-      console.log('[admin] token present:', !!ADMIN_TOKEN);
       if (!user) {
         document.getElementById('adminContent').innerHTML =
           '<div class="admin-error-card"><p>' + t('profile.loginRequired') + '</p>' +
@@ -272,7 +269,6 @@
         return;
       }
       if (user.role !== 'admin') {
-        console.log('[admin] user.role =', user.role, 'expected admin');
         document.getElementById('adminContent').innerHTML =
           '<div class="admin-error-card"><p>' + t('admin.accessDenied') + '</p>' +
           '<a href="/" class="admin-error-btn">' + t('meta.back') + '</a></div>';
