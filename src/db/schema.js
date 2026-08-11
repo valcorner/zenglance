@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, unique } from 'drizzle-orm/sqlite-core';
 import { relations } from 'drizzle-orm';
 
 // User roles enum
@@ -186,7 +186,7 @@ export const likes = sqliteTable('likes', {
   contentId: text('content_id').notNull().references(() => contents.id),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 }, (table) => [
-  { name: 'likes_user_content_unique', constraints: table.unique().on(table.userId, table.contentId) }
+  { name: 'likes_user_content_unique', constraints: unique('likes_user_content_unique').on(table.userId, table.contentId) }
 ]);
 
 // ---------------------------------------------------------------------------
@@ -197,7 +197,7 @@ export const favorites = sqliteTable('favorites', {
   contentId: text('content_id').notNull().references(() => contents.id),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 }, (table) => [
-  { name: 'favorites_user_content_unique', constraints: table.unique().on(table.userId, table.contentId) }
+  { name: 'favorites_user_content_unique', constraints: unique('favorites_user_content_unique').on(table.userId, table.contentId) }
 ]);
 
 // ---------------------------------------------------------------------------
@@ -224,7 +224,7 @@ export const follows = sqliteTable('follows', {
   followingId: text('following_id').notNull().references(() => users.id),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
 }, (table) => [
-  { name: 'follows_unique', constraints: table.unique().on(table.followerId, table.followingId) }
+  { name: 'follows_unique', constraints: unique('follows_unique').on(table.followerId, table.followingId) }
 ]);
 
 // ---------------------------------------------------------------------------
@@ -248,7 +248,7 @@ export const collectionItems = sqliteTable('collection_items', {
   contentId: text('content_id').notNull().references(() => contents.id),
   addedAt: integer('added_at', { mode: 'timestamp' }).notNull()
 }, (table) => [
-  { name: 'collection_items_unique', constraints: table.unique().on(table.collectionId, table.contentId) },
+  { name: 'collection_items_unique', constraints: unique('collection_items_unique').on(table.collectionId, table.contentId) },
   index('collection_items_content_idx').on(table.contentId)
 ]);
 
@@ -260,7 +260,7 @@ export const watchHistory = sqliteTable('watch_history', {
   contentId: text('content_id').notNull().references(() => contents.id),
   watchedAt: integer('watched_at', { mode: 'timestamp' }).notNull()
 }, (table) => [
-  { name: 'watch_history_unique', constraints: table.unique().on(table.userId, table.contentId) },
+  { name: 'watch_history_unique', constraints: unique('watch_history_unique').on(table.userId, table.contentId) },
   index('watch_history_user_idx').on(table.userId),
   index('watch_history_content_idx').on(table.contentId)
 ]);
