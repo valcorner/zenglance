@@ -23,6 +23,9 @@ export function createAuthRoutes() {
     if (!clientId || !redirectUri) {
       return c.json({ error: 'OAuth not configured', code: 'OAUTH_CONFIG_MISSING' }, 500);
     }
+    if (clientId === 'REPLACE_WITH_REAL_VALUE') {
+      return c.json({ error: 'VALCORNER_CLIENT_ID not configured — set it via wrangler secret', code: 'OAUTH_CONFIG_MISSING' }, 500);
+    }
 
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = await generateCodeChallenge(codeVerifier);
@@ -103,7 +106,9 @@ export function createAuthRoutes() {
       });
 
       if (!tokenResponse.ok) {
-        throw new Error(`Token exchange failed: ${tokenResponse.status}`);
+        const errBody = await tokenResponse.text();
+        console.error('Valcorner token exchange error:', tokenResponse.status, errBody);
+        throw new Error(`Token exchange failed: ${tokenResponse.status} - ${errBody}`);
       }
 
       const tokens = await tokenResponse.json();

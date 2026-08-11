@@ -49,7 +49,7 @@
               localStorage.setItem('zenglance_token', data.token);
               location.href = '/';
             } else if (data.error) {
-              document.getElementById('status').textContent = 'Login failed: ' + data.details;
+              document.getElementById('status').textContent = 'Login failed: ' + (data.details || data.error);
             }
           })
           .catch(function () {
@@ -65,7 +65,7 @@
           if (data.url) {
             location.href = data.url;
           } else {
-            document.getElementById('status').textContent = 'Failed to start login. Please try again.';
+            document.getElementById('status').textContent = 'Login failed: ' + (data.details || data.error || 'OAuth not configured');
           }
         })
         .catch(function () {
