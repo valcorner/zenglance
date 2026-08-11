@@ -26,7 +26,7 @@
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(url, { ...options, headers });
     if (res.status === 401) {
-      window.location.href = '/auth/login';
+      window.location.href = '/login.html';
       return null;
     }
     return res;

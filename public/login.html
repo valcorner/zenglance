@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Logging in...</title>
+  <style>
+    body { display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0d0d0d; color: #eee; font-family: system-ui, sans-serif; }
+    .spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: #888; border-radius: 50%; animation: spin .8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    p { margin-top: 16px; color: #888; }
+  </style>
+</head>
+<body>
+  <div style="text-align:center">
+    <div class="spinner"></div>
+    <p id="status">Signing in…</p>
+  </div>
+  <script>
+    (function () {
+      const params = new URLSearchParams(location.search);
+      const token = params.get('token');
+
+      // Case 1: callback returned with token → store and go home
+      if (token) {
+        localStorage.setItem('zenglance_token', token);
+        history.replaceState(null, '', '/');
+        location.href = '/';
+        return;
+      }
+
+      // Case 2: callback returned with error
+      if (params.get('error')) {
+        document.getElementById('status').textContent = 'Login failed. Please try again.';
+        return;
+      }
+
+      // Case 3: no token and no error → call /auth/authorize and redirect to OAuth
+      fetch('/auth/authorize')
+        .then(function (res) { return res.json(); })
+        .then(function (data) {
+          if (data.url) {
+            location.href = data.url;
+          } else {
+            document.getElementById('status').textContent = 'Failed to start login. Please try again.';
+          }
+        })
+        .catch(function () {
+          document.getElementById('status').textContent = 'Network error. Please try again.';
+        });
+    })();
+  </script>
+</body>
+</html>

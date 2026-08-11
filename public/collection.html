@@ -347,7 +347,7 @@
       var token = localStorage.getItem('zenglance_token');
       var headerRight = document.getElementById('headerRight');
       if (!token) {
-        headerRight.innerHTML = '<a href="/auth/login" class="login-btn" data-i18n="meta.login">Login</a>';
+        headerRight.innerHTML = '<a href="/login.html" class="login-btn" data-i18n="meta.login">Login</a>';
         return;
       }
       try {
@@ -363,7 +363,7 @@
               '<svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8L2 4h8z"/></svg>' +
             '</button>' +
             '<div class="user-dropdown" id="userDropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-md);min-width:160px;z-index:100;overflow:hidden;">' +
-              '<a href="/auth/login" class="dropdown-item" data-i18n="meta.profile">Profile</a>' +
+              '<a href="/login.html" class="dropdown-item" data-i18n="meta.profile">Profile</a>' +
               '<div class="dropdown-divider"></div>' +
               '<a href="#" class="dropdown-item" onclick="logout();return false;" data-i18n="meta.logout">Logout</a>' +
             '</div>' +

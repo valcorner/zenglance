@@ -136,7 +136,7 @@
       var token = localStorage.getItem('zenglance_token');
       var headerRight = document.getElementById('headerRight');
       if (!token) {
-        headerRight.innerHTML = '<a href="/auth/login" class="login-btn">Login</a>';
+        headerRight.innerHTML = '<a href="/login.html" class="login-btn">Login</a>';
         return null;
       }
       try {
@@ -315,7 +315,7 @@
       loadUser().then(function(user) {
         if (!user) {
           document.getElementById('profileContent').innerHTML =
-            '<div class="profile-empty"><p>Please <a href="/auth/login">login</a> to view this profile.</p></div>';
+            '<div class="profile-empty"><p>Please <a href="/login.html">login</a> to view this profile.</p></div>';
           return;
         }
         loadProfile(user);
