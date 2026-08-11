@@ -21,7 +21,7 @@
       const params = new URLSearchParams(location.search);
       const token = params.get('token');
 
-      // Case 1: callback returned with token → store and go home
+      // Case 1: token already present → store and go home
       if (token) {
         localStorage.setItem('zenglance_token', token);
         history.replaceState(null, '', '/');
@@ -29,13 +29,36 @@
         return;
       }
 
-      // Case 2: callback returned with error
+      // Case 2: OAuth error from provider
       if (params.get('error')) {
         document.getElementById('status').textContent = 'Login failed. Please try again.';
         return;
       }
 
-      // Case 3: no token and no error → call /auth/authorize and redirect to OAuth
+      // Case 3: Valcorner redirected back with code+state → exchange for session token
+      const code = params.get('code');
+      const state = params.get('state');
+      if (code || state) {
+        const callbackUrl = new URL('/auth/callback', location.origin);
+        if (code) callbackUrl.searchParams.set('code', code);
+        if (state) callbackUrl.searchParams.set('state', state);
+        fetch(callbackUrl.toString())
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            if (data.token) {
+              localStorage.setItem('zenglance_token', data.token);
+              location.href = '/';
+            } else if (data.error) {
+              document.getElementById('status').textContent = 'Login failed: ' + data.details;
+            }
+          })
+          .catch(function () {
+            document.getElementById('status').textContent = 'Network error. Please try again.';
+          });
+        return;
+      }
+
+      // Case 4: first visit → start OAuth flow
       fetch('/auth/authorize')
         .then(function (res) { return res.json(); })
         .then(function (data) {
