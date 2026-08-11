@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>User Profile — ZenGlance</title>
   <link rel="stylesheet" href="style.css?v=4" />
-  <script src="i18n.js?v=12"></script>
+  <script src="i18n.js?v=13"></script>
   <style>
     .profile-page { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
     .profile-back { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 13px; cursor: pointer; margin-bottom: 1.5rem; text-decoration: none; }
@@ -183,8 +183,15 @@
       }
       try {
         var res = await apiFetch('/auth/me');
-        if (!res.ok) { localStorage.removeItem('zenglance_token'); return null; }
+        console.log('[profile] /auth/me status:', res.status, 'ok:', res.ok);
+        if (!res.ok) {
+          var errBody = await res.text();
+          console.log('[profile] /auth/me error:', errBody);
+          localStorage.removeItem('zenglance_token');
+          return null;
+        }
         var data = await res.json();
+        console.log('[profile] /auth/me user:', data.data);
         currentUser = data.data;
         headerRight.innerHTML =
           '<div class="user-menu" style="position:relative">' +
@@ -424,7 +431,9 @@
 
     function init() {
       if (window.i18n) window.i18n.init();
+      console.log('[profile] init called, token:', localStorage.getItem('zenglance_token') ? 'present' : 'missing');
       loadUser().then(function(user) {
+        console.log('[profile] loadUser result:', user);
         if (!user) {
           document.getElementById('profileContent').innerHTML =
             '<div class="profile-error-card">' +
@@ -434,6 +443,8 @@
           return;
         }
         loadProfile(user);
+      }).catch(function(e) {
+        console.error('[profile] init error:', e);
       });
     }
 
