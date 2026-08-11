@@ -169,6 +169,7 @@
     }
 
     async function apiFetch(url, options) {
+      options = options || {};
       var token = localStorage.getItem('zenglance_token');
       var headers = { 'Content-Type': 'application/json', ...(options.headers || {}), ...(token ? { 'Authorization': 'Bearer ' + token } : {}) };
       return fetch(url, { ...options, headers });
@@ -183,16 +184,18 @@
       }
       try {
         var res = await apiFetch('/auth/me');
-        console.log('[profile] /auth/me status:', res.status, 'ok:', res.ok);
-        if (!res.ok) {
-          var errBody = await res.text();
-          console.log('[profile] /auth/me error:', errBody);
-          localStorage.removeItem('zenglance_token');
+        if (!res || !res.ok) {
+          // Only clear token on 401 (invalid/expired session); keep it on other errors
+          if (res && res.status === 401) {
+            localStorage.removeItem('zenglance_token');
+          }
           return null;
         }
         var data = await res.json();
-        console.log('[profile] /auth/me user:', data.data);
         currentUser = data.data;
+        if (!currentUser) {
+          return null;
+        }
         headerRight.innerHTML =
           '<div class="user-menu" style="position:relative">' +
             '<button class="user-menu-btn" onclick="toggleMenu(event)">' +
@@ -207,7 +210,7 @@
             '</div>' +
           '</div>';
         return currentUser;
-      } catch (e) { return null; }
+      } catch (e) { console.error('[profile] loadUser exception:', e); return null; }
     }
 
     function toggleMenu(e) {
@@ -431,9 +434,7 @@
 
     function init() {
       if (window.i18n) window.i18n.init();
-      console.log('[profile] init called, token:', localStorage.getItem('zenglance_token') ? 'present' : 'missing');
       loadUser().then(function(user) {
-        console.log('[profile] loadUser result:', user);
         if (!user) {
           document.getElementById('profileContent').innerHTML =
             '<div class="profile-error-card">' +
@@ -443,8 +444,6 @@
           return;
         }
         loadProfile(user);
-      }).catch(function(e) {
-        console.error('[profile] init error:', e);
       });
     }
 
