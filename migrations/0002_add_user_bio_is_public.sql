@@ -1,0 +1,4 @@
+-- Migration to add missing columns to users table
+-- Run: wrangler d1 execute zenglance-db --command="ALTER TABLE users ADD COLUMN bio TEXT;"
+-- Run: wrangler d1 execute zenglance-db --command="ALTER TABLE users ADD COLUMN is_public INTEGER NOT NULL DEFAULT 1;"
+-- Note: is_public must be added with DEFAULT since the table may already have rows

@@ -4,7 +4,9 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT NOT NULL UNIQUE,
   name TEXT,
   avatar TEXT,
+  bio TEXT,
   role TEXT NOT NULL DEFAULT 'free' CHECK(role IN ('free', 'senior', 'admin')),
+  is_public INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER NOT NULL,
   updated_at INTEGER NOT NULL
 );
