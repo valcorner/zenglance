@@ -748,6 +748,7 @@
     t, setLang, getLang, currentLang: () => currentLang, categoryNames, LANGUAGES,
     onLangChange: (fn) => _langChangeCallbacks.push(fn),
   };
+  window.t = t;
 
   // ── Boot ─────────────────────────────────────────────────────────────────
   document.addEventListener('DOMContentLoaded', () => {

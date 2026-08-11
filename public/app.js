@@ -62,7 +62,7 @@
   async function logout() {
     const token = localStorage.getItem('zenglance_token');
     if (token) {
-      try { await apiFetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }); } catch (e) { /* ignore */ }
+      try { await apiFetch('/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }); } catch (e) { /* ignore */ }
     }
     localStorage.removeItem('zenglance_token');
     state.user = null;
@@ -73,7 +73,7 @@
 
   // ── User helpers ───────────────────────────────────────────────────────────
   async function fetchUser() {
-    const res = await apiFetch('/api/auth/me');
+    const res = await apiFetch('/auth/me');
     if (!res) return;
     const data = await res.json();
     if (data.data) {

@@ -351,7 +351,7 @@
         return;
       }
       try {
-        var res = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        var res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
         if (!res.ok) { localStorage.removeItem('zenglance_token'); loadUser(); return; }
         var data = await res.json();
         var user = data.user;
