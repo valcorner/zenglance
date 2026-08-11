@@ -58,6 +58,19 @@
     } catch (e) { console.error(e); }
   }
 
+  // ── Logout ─────────────────────────────────────────────────────────────────
+  async function logout() {
+    const token = localStorage.getItem('zenglance_token');
+    if (token) {
+      try { await apiFetch('/api/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }); } catch (e) { /* ignore */ }
+    }
+    localStorage.removeItem('zenglance_token');
+    state.user = null;
+    updateUserInfo();
+    location.href = '/';
+  }
+  window.logout = logout;
+
   // ── User helpers ───────────────────────────────────────────────────────────
   async function fetchUser() {
     const res = await apiFetch('/api/auth/me');
