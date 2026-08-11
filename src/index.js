@@ -26,6 +26,9 @@ const app = new Hono();
 app.use('*', logger());
 app.use('/api/*', prettyJSON());
 
+// Auth middleware (must be defined before routes that use it)
+const auth = createAuthMiddleware();
+
 // Health check
 app.get('/health', (c) => {
   return c.json({
@@ -123,7 +126,6 @@ app.get('/api/users/:id', async (c) => {
 });
 
 // Admin: Upgrade user role (requires admin role)
-const auth = createAuthMiddleware();
 app.post('/api/admin/users/:id/role', auth, requireRole('admin'), async (c) => {
   const { id } = c.req.param();
   const body = await c.req.json().catch(() => ({}));
