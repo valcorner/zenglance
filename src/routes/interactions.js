@@ -52,7 +52,7 @@ interaction.post('/content/:id/like', auth, async (c) => {
     await d.insert(likes).values({
       userId: user.id,
       contentId,
-      createdAt: new Date()
+      createdAt: Date.now()
     });
     return c.json({ liked: true });
   }
@@ -95,7 +95,7 @@ interaction.post('/content/:id/favorite', auth, async (c) => {
     await d.insert(favorites).values({
       userId: user.id,
       contentId,
-      createdAt: new Date()
+      createdAt: Date.now()
     });
     return c.json({ favorited: true });
   }
@@ -145,7 +145,7 @@ interaction.get('/content/:id/comments', async (c) => {
 interaction.post('/content/:id/comments', auth, async (c) => {
   const user = c.get('user');
   const contentId = c.req.param('id');
-  const now = new Date();
+  const now = Date.now();
   const d = db(c);
 
   const { body, parentId } = await c.req.json();
@@ -252,7 +252,7 @@ interaction.post('/users/:id/follow', auth, async (c) => {
     await d.insert(follows).values({
       followerId: user.id,
       followingId: targetId,
-      createdAt: new Date()
+      createdAt: Date.now()
     });
     return c.json({ following: true });
   }
@@ -303,13 +303,13 @@ interaction.post('/history', auth, async (c) => {
 
   if (existing.length > 0) {
     await d.update(watchHistory)
-      .set({ watchedAt: new Date() })
+      .set({ watchedAt: Date.now() })
       .where(eq(watchHistory.userId, user.id)).and(eq(watchHistory.contentId, contentId));
   } else {
     await d.insert(watchHistory).values({
       userId: user.id,
       contentId,
-      watchedAt: new Date()
+      watchedAt: Date.now()
     });
   }
 
@@ -374,7 +374,7 @@ interaction.post('/collections', auth, async (c) => {
   }
 
   const id = generateId();
-  const now = new Date();
+  const now = Date.now();
   await d.insert(collections).values({ id, userId: user.id, name: name.trim(), createdAt: now, updatedAt: now });
   return c.json({ id, userId: user.id, name: name.trim(), createdAt: now, updatedAt: now });
 });
@@ -392,8 +392,8 @@ interaction.put('/collections/:id', auth, async (c) => {
   const col = await d.select().from(collections).where(eq(collections.id, id)).and(eq(collections.userId, user.id)).limit(1);
   if (col.length === 0) return c.json({ error: 'Not found' }, 404);
 
-  await d.update(collections).set({ name: name.trim(), updatedAt: new Date() }).where(eq(collections.id, id));
-  return c.json({ id, userId: user.id, name: name.trim(), updatedAt: new Date() });
+  await d.update(collections).set({ name: name.trim(), updatedAt: Date.now() }).where(eq(collections.id, id));
+  return c.json({ id, userId: user.id, name: name.trim(), updatedAt: Date.now() });
 });
 
 interaction.delete('/collections/:id', auth, async (c) => {
@@ -456,8 +456,8 @@ interaction.post('/collections/:id/items', auth, async (c) => {
 
   if (existing.length > 0) return c.json({ added: false });
 
-  await d.insert(collectionItems).values({ collectionId: id, contentId, addedAt: new Date() });
-  await d.update(collections).set({ updatedAt: new Date() }).where(eq(collections.id, id));
+  await d.insert(collectionItems).values({ collectionId: id, contentId, addedAt: Date.now() });
+  await d.update(collections).set({ updatedAt: Date.now() }).where(eq(collections.id, id));
   return c.json({ added: true });
 });
 
@@ -472,7 +472,7 @@ interaction.delete('/collections/:id/items/:contentId', auth, async (c) => {
   if (col.length === 0) return c.json({ error: 'Not found' }, 404);
 
   await d.delete(collectionItems).where(eq(collectionItems.collectionId, id)).and(eq(collectionItems.contentId, contentId));
-  await d.update(collections).set({ updatedAt: new Date() }).where(eq(collections.id, id));
+  await d.update(collections).set({ updatedAt: Date.now() }).where(eq(collections.id, id));
   return c.json({ ok: true });
 });
 

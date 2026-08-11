@@ -22,8 +22,8 @@ export const users = sqliteTable('users', {
   bio: text('bio'),
   role: text('role', { enum: roles }).notNull().default('free'),
   isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(true),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+  createdAt: integer('created_at', { mode: 'number' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull()
 }, (table) => [
   index('users_email_idx').on(table.email),
   index('users_role_idx').on(table.role)
@@ -58,8 +58,8 @@ export const contents = sqliteTable('contents', {
   errorCode: text('error_code'),
   errorMessage: text('error_message'),
 
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+  createdAt: integer('created_at', { mode: 'number' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull()
 }, (table) => [
   index('contents_slug_idx').on(table.slug),
   index('contents_uploader_idx').on(table.uploaderId),
@@ -75,10 +75,10 @@ export const uploadSessions = sqliteTable('upload_sessions', {
   b2UploadUrl: text('b2_upload_url').notNull(), // B2 upload URL (from b2_get_upload_url)
   b2UploadAuth: text('b2_upload_auth').notNull(), // B2 upload Authorization token (Bearer header)
   b2Key: text('b2_key').notNull(), // Target object key
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
+  expiresAt: integer('expires_at', { mode: 'number' }).notNull(),
   status: text('status').notNull().default('pending'), // pending, completed, expired
   contentId: text('content_id'), // Linked content after upload
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+  createdAt: integer('created_at', { mode: 'number' }).notNull()
 }, (table) => [
   index('upload_sessions_user_idx').on(table.userId),
   index('upload_sessions_expires_idx').on(table.expiresAt)
@@ -88,15 +88,15 @@ export const uploadSessions = sqliteTable('upload_sessions', {
 export const viewCounts = sqliteTable('view_counts', {
   contentId: text('content_id').primaryKey().references(() => contents.id),
   count: integer('count').notNull().default(0),
-  lastSyncedAt: integer('last_synced_at', { mode: 'timestamp' })
+  lastSyncedAt: integer('last_synced_at', { mode: 'number' })
 });
 
 // OAuth states table - stores PKCE code verifiers temporarily
 export const oauthStates = sqliteTable('oauth_states', {
   id: text('id').primaryKey(), // UUID state parameter
   codeVerifier: text('code_verifier').notNull(),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => Date.now())
+  expiresAt: integer('expires_at', { mode: 'number' }).notNull(),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().$defaultFn(() => Date.now())
 }, (table) => [
   index('oauth_states_expires_idx').on(table.expiresAt)
 ]);
@@ -106,8 +106,8 @@ export const oauthStates = sqliteTable('oauth_states', {
 export const sessions = sqliteTable('sessions', {
   id: text('id').primaryKey(), // UUID session token
   userId: text('user_id').notNull().references(() => users.id),
-  expiresAt: integer('expires_at', { mode: 'timestamp' }).notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().$defaultFn(() => Date.now())
+  expiresAt: integer('expires_at', { mode: 'number' }).notNull(),
+  createdAt: integer('created_at', { mode: 'number' }).notNull().$defaultFn(() => Date.now())
 }, (table) => [
   index('sessions_user_idx').on(table.userId),
   index('sessions_expires_idx').on(table.expiresAt)
@@ -115,7 +115,7 @@ export const sessions = sqliteTable('sessions', {
 
 // ---------------------------------------------------------------------------
 // Type-specific content tables
-// Each has contents_id FK → contents.id (universal PK for all interactions)
+// Each has contents_id FK -> contents.id (universal PK for all interactions)
 // ---------------------------------------------------------------------------
 
 // Short dramas: episode info, season, studio
@@ -138,7 +138,7 @@ export const tvSeries = sqliteTable('tv_series', {
   status: text('series_status'), // 'ongoing', 'completed', 'hiatus'
   genre: text('genre'),
   network: text('network'),
-  firstAired: integer('first_aired', { mode: 'timestamp' }),
+  firstAired: integer('first_aired', { mode: 'number' }),
 }, (table) => [
   index('tv_series_content_idx').on(table.contentsId)
 ]);
@@ -184,7 +184,7 @@ export const shortVideos = sqliteTable('short_videos', {
 export const likes = sqliteTable('likes', {
   userId: text('user_id').notNull().references(() => users.id),
   contentId: text('content_id').notNull().references(() => contents.id),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+  createdAt: integer('created_at', { mode: 'number' }).notNull()
 }, (table) => [
   { name: 'likes_user_content_unique', constraints: unique('likes_user_content_unique').on(table.userId, table.contentId) }
 ]);
@@ -195,7 +195,7 @@ export const likes = sqliteTable('likes', {
 export const favorites = sqliteTable('favorites', {
   userId: text('user_id').notNull().references(() => users.id),
   contentId: text('content_id').notNull().references(() => contents.id),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+  createdAt: integer('created_at', { mode: 'number' }).notNull()
 }, (table) => [
   { name: 'favorites_user_content_unique', constraints: unique('favorites_user_content_unique').on(table.userId, table.contentId) }
 ]);
@@ -209,8 +209,8 @@ export const comments = sqliteTable('comments', {
   userId: text('user_id').notNull().references(() => users.id),
   body: text('body').notNull(),
   parentId: text('parent_id').references(() => comments.id),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+  createdAt: integer('created_at', { mode: 'number' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull()
 }, (table) => [
   index('comments_content_idx').on(table.contentId),
   index('comments_parent_idx').on(table.parentId)
@@ -222,7 +222,7 @@ export const comments = sqliteTable('comments', {
 export const follows = sqliteTable('follows', {
   followerId: text('follower_id').notNull().references(() => users.id),
   followingId: text('following_id').notNull().references(() => users.id),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull()
+  createdAt: integer('created_at', { mode: 'number' }).notNull()
 }, (table) => [
   { name: 'follows_unique', constraints: unique('follows_unique').on(table.followerId, table.followingId) }
 ]);
@@ -234,8 +234,8 @@ export const collections = sqliteTable('collections', {
   id: text('id').primaryKey(),
   userId: text('user_id').notNull().references(() => users.id),
   name: text('name').notNull(),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull()
+  createdAt: integer('created_at', { mode: 'number' }).notNull(),
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull()
 }, (table) => [
   index('collections_user_idx').on(table.userId)
 ]);
@@ -246,7 +246,7 @@ export const collections = sqliteTable('collections', {
 export const collectionItems = sqliteTable('collection_items', {
   collectionId: text('collection_id').notNull().references(() => collections.id),
   contentId: text('content_id').notNull().references(() => contents.id),
-  addedAt: integer('added_at', { mode: 'timestamp' }).notNull()
+  addedAt: integer('added_at', { mode: 'number' }).notNull()
 }, (table) => [
   { name: 'collection_items_unique', constraints: unique('collection_items_unique').on(table.collectionId, table.contentId) },
   index('collection_items_content_idx').on(table.contentId)
@@ -258,7 +258,7 @@ export const collectionItems = sqliteTable('collection_items', {
 export const watchHistory = sqliteTable('watch_history', {
   userId: text('user_id').notNull().references(() => users.id),
   contentId: text('content_id').notNull().references(() => contents.id),
-  watchedAt: integer('watched_at', { mode: 'timestamp' }).notNull()
+  watchedAt: integer('watched_at', { mode: 'number' }).notNull()
 }, (table) => [
   { name: 'watch_history_unique', constraints: unique('watch_history_unique').on(table.userId, table.contentId) },
   index('watch_history_user_idx').on(table.userId),
