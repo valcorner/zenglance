@@ -65,7 +65,7 @@
   </style>
 </head>
 <body>
-  <header class="app-header">
+  <header class="header">
     <a href="/" class="logo">
       <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
         <circle cx="14" cy="14" r="13" stroke="currentColor" stroke-width="1.5"/>
@@ -76,7 +76,7 @@
     <div class="header-right" id="headerRight"></div>
   </header>
 
-  <div class="admin-page">
+  <div class="admin-page" style="padding-top: calc(var(--header-h) + 0.5rem);">
     <h1 data-i18n="admin.title">Admin — User Management</h1>
     <div class="admin-search">
       <input type="text" id="adminSearch" data-i18n-placeholder="meta.search" placeholder="Search users…" oninput="filterUsers()" />
@@ -155,7 +155,10 @@
         '</tr></thead><tbody id="adminTableBody">' + rows + '</tbody></table>' + pagination;
 
       document.querySelectorAll('.admin-role-select').forEach(function(sel) {
-        sel.addEventListener('change', function() { this.querySelector('.admin-save-btn').click(); });
+        sel.addEventListener('change', function() {
+          var btn = sel.closest('td').querySelector('.admin-save-btn');
+          if (btn) btn.click();
+        });
       });
     }
 
@@ -222,17 +225,21 @@
       }
       try {
         var res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
-        if (!res.ok) { localStorage.removeItem('zenglance_token'); return null; }
+        if (!res.ok) {
+          if (res.status === 401) localStorage.removeItem('zenglance_token');
+          return null;
+        }
         var data = await res.json();
         var user = data.data;
+        if (!user) return null;
         headerRight.innerHTML =
-          '<div class="user-menu" style="position:relative">' +
+          '<div class="user-menu">' +
             '<button class="user-menu-btn" onclick="toggleMenu(event)">' +
-              '<div class="user-avatar" style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;">' + (user.name || 'U').charAt(0).toUpperCase() + '</div>' +
+              '<div class="user-avatar">' + (user.name || 'U').charAt(0).toUpperCase() + '</div>' +
               '<span class="user-name">' + escapeHtml(user.name) + '</span>' +
               '<svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8L2 4h8z"/></svg>' +
             '</button>' +
-            '<div class="user-dropdown" id="userDropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-md);min-width:160px;z-index:100;overflow:hidden;">' +
+            '<div class="user-dropdown" id="userDropdown">' +
               '<a href="/profile.html" class="dropdown-item">' + t('meta.profile') + '</a>' +
               '<div class="dropdown-divider"></div>' +
               '<a href="#" class="dropdown-item" onclick="logout();return false;">' + t('meta.logout') + '</a>' +
@@ -245,12 +252,14 @@
     function toggleMenu(e) {
       e.stopPropagation();
       var dd = document.getElementById('userDropdown');
-      dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+      if (dd) dd.classList.toggle('show');
     }
 
-    document.addEventListener('click', function() {
-      var dd = document.getElementById('userDropdown');
-      if (dd) dd.style.display = 'none';
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.user-menu')) {
+        var dd = document.getElementById('userDropdown');
+        if (dd) dd.classList.remove('show');
+      }
     });
 
     async function logout() {
