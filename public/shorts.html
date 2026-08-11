@@ -360,7 +360,7 @@
       async function fetchShorts(p) {
         var token = localStorage.getItem('zenglance_token');
         try {
-          var res = await fetch('/api/v1/content?category=short_video&page=' + p + '&limit=10', {
+          var res = await fetch('/api/content?category=short_video&page=' + p + '&limit=10', {
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
           });
           if (!res.ok) return [];

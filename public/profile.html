@@ -140,7 +140,7 @@
         return null;
       }
       try {
-        var res = await fetch('/api/v1/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        var res = await fetch('/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
         if (!res.ok) { localStorage.removeItem('zenglance_token'); return null; }
         var data = await res.json();
         headerRight.innerHTML =
@@ -240,7 +240,7 @@
       var token = localStorage.getItem('zenglance_token');
       var grid = document.getElementById('section-content');
       try {
-        var res = await fetch('/api/v1/content?uploader=' + targetId + '&limit=20', {
+        var res = await fetch('/api/content?uploader=' + targetId + '&limit=20', {
           headers: { 'Authorization': 'Bearer ' + token }
         });
         var data = await res.json();
@@ -254,7 +254,7 @@
       var token = localStorage.getItem('zenglance_token');
       var grid = document.getElementById('section-content');
       try {
-        var res = await fetch('/api/v1/content?limit=20', {
+        var res = await fetch('/api/content?limit=20', {
           headers: { 'Authorization': 'Bearer ' + token }
         });
         var data = await res.json();

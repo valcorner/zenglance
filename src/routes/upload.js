@@ -67,7 +67,7 @@ export function createUploadRoutes() {
       
       const { title, description, contentType, slug, fileSize, duration, mimeType } = parsed.data;
 
-      const db = createDb(c.env);
+      const db = createDb(c.env, c.req.raw, c.res);
       const b2 = new B2Service(
         c.env.B2_APPLICATION_KEY_ID,
         c.env.B2_APPLICATION_KEY,
@@ -161,8 +161,8 @@ export function createUploadRoutes() {
     const user = c.get('user');
     
     try {
-      const db = createDb(c.env);
-      
+      const db = createDb(c.env, c.req.raw, c.res);
+
       // Find upload session
       const session = await db.query.uploadSessions.findFirst({
         where: and(
@@ -226,15 +226,20 @@ export function createContentRoutes() {
    * List ready contents, optionally filtered by ?type=
    */
   content.get('/', async (c) => {
-    const type = c.req.query('type');
+    const type = c.req.query('type') || c.req.query('category');
+    const page = Math.max(parseInt(c.req.query('page') || '1', 10), 1);
     const limit = Math.min(Math.max(parseInt(c.req.query('limit') || '20', 10) || 20, 1), 50);
 
     try {
-      const db = createDb(c.env);
+      const db = createDb(c.env, c.req.raw, c.res);
 
       const conditions = [eq(contents.status, 'ready')];
       if (type) {
         conditions.push(eq(contents.contentType, type));
+      }
+      const uploaderId = c.req.query('uploader');
+      if (uploaderId) {
+        conditions.push(eq(contents.uploaderId, uploaderId));
       }
 
       const items = await db.query.contents.findMany({
@@ -249,7 +254,8 @@ export function createContentRoutes() {
           shortVideo: true
         },
         orderBy: desc(contents.createdAt),
-        limit
+        limit,
+        offset: (page - 1) * limit
       });
 
       const result = items.map((item) => {
@@ -303,7 +309,7 @@ export function createContentRoutes() {
     const { id } = c.req.param();
 
     try {
-      const db = createDb(c.env);
+      const db = createDb(c.env, c.req.raw, c.res);
       const valcorner = new ValcornerCDNService();
 
       const contentItem = await db.query.contents.findFirst({

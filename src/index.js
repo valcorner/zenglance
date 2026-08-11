@@ -16,7 +16,7 @@ import { createUploadRoutes, createContentRoutes } from './routes/upload.js';
 import { createAdsRoutes } from './routes/ads.js';
 import interactions from './routes/interactions.js';
 import { createAuthMiddleware, requireRole } from './middleware/auth.js';
-import { users, roles } from './db/schema.js';
+import { users, roles, collections, collectionItems, contents } from './db/schema.js';
 import { eq } from 'drizzle-orm';
 import { roleSchema } from './utils/validators.js';
 
@@ -50,12 +50,57 @@ app.route('/api/interaction', interactions);
 // Ads routes
 app.route('/api/ads', createAdsRoutes());
 
+// Playlists (collections mapped to playlist format)
+app.get('/api/playlists', auth, async (c) => {
+  const user = c.get('user');
+  const db = createDb(c.env, c.req.raw, c.res);
+
+  try {
+    const cols = await db.select().from(collections)
+      .where(eq(collections.userId, user.id))
+      .orderBy(collections.updatedAt);
+
+    const result = await Promise.all(cols.map(async (col) => {
+      const items = await db.select().from(collectionItems)
+        .where(eq(collectionItems.collectionId, col.id));
+
+      const contentIds = items.map(i => i.contentId);
+      const videoList = contentIds.length
+        ? await db.select().from(contents)
+            .where(inArray(contents.id, contentIds))
+            .orderBy(contents.createdAt)
+        : [];
+
+      return {
+        id: col.id,
+        name: col.name,
+        description: null,
+        createdAt: col.createdAt,
+        updatedAt: col.updatedAt,
+        videos: videoList.map(v => ({
+          id: v.id,
+          title: v.title,
+          contentType: v.contentType,
+          duration: v.duration,
+          views: 0,
+          thumbnail: null,
+          creator: null
+        }))
+      };
+    }));
+
+    return c.json({ data: result });
+  } catch (e) {
+    return c.json({ data: [] });
+  }
+});
+
 // User management routes
 app.get('/api/users/:id', async (c) => {
   const { id } = c.req.param();
 
   try {
-    const db = createDb(c.env);
+    const db = createDb(c.env, c.req.raw, c.res);
     const user = await db.query.users.findFirst({
       where: eq(users.id, id)
     });
@@ -93,7 +138,7 @@ app.post('/api/admin/users/:id/role', auth, requireRole('admin'), async (c) => {
   }
 
   try {
-    const db = createDb(c.env);
+    const db = createDb(c.env, c.req.raw, c.res);
     await db.update(users)
       .set({ role, updatedAt: Date.now() })
       .where(eq(users.id, id));

@@ -26,7 +26,7 @@ export function createAuthMiddleware() {
     }
 
     try {
-      const db = createDb(c.env);
+      const db = createDb(c.env, c.req.raw, c.res);
       const now = Date.now();
 
       // 关联查询 session + user，且 session 未过期

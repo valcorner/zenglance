@@ -18,13 +18,7 @@
     "directory": "public",
     "binding": "ASSETS"
   },
-  "secrets": [
-    "B2_APPLICATION_KEY_ID",
-    "B2_APPLICATION_KEY",
-    "VALCORNER_CLIENT_ID",
-    "VALCORNER_CLIENT_SECRET",
-    "ADS_API_KEY"
-  ],
+  
   "d1_databases": [
     {
       "binding": "DB",
@@ -44,6 +38,11 @@
     "VALCORNER_AUTHORIZE_URL": "https://auth.valcorner.qzz.io/oauth/authorize",
     "VALCORNER_TOKEN_URL": "https://auth.valcorner.qzz.io/oauth/token",
     "VALCORNER_USERINFO_URL": "https://auth.valcorner.qzz.io/oauth/userinfo",
-    "FRONTEND_URL": "http://localhost:8787"
+    "FRONTEND_URL": "http://localhost:8787",
+     "B2_APPLICATION_KEY_ID":"",
+     "B2_APPLICATION_KEY":"",
+     "VALCORNER_CLIENT_ID":"",
+     "VALCORNER_CLIENT_SECRET":"",
+     "ADS_API_KEY":""
   }
 }

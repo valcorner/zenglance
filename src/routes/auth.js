@@ -31,7 +31,7 @@ export function createAuthRoutes() {
     const expiresAt = Date.now() + 600000; // 10 minutes
 
     try {
-      const db = createDb(c.env);
+      const db = createDb(c.env, c.req.raw, c.res);
       await db.insert(oauthStates).values({
         id: state,
         codeVerifier,
@@ -73,7 +73,7 @@ export function createAuthRoutes() {
     }
 
     try {
-      const db = createDb(c.env);
+      const db = createDb(c.env, c.req.raw, c.res);
 
       // Retrieve code verifier from D1
       const stateData = await db.query.oauthStates.findFirst({
@@ -177,7 +177,7 @@ export function createAuthRoutes() {
 
     const sessionId = authHeader.substring(7).trim();
     try {
-      const db = createDb(c.env);
+      const db = createDb(c.env, c.req.raw, c.res);
       const now = Date.now();
 
       const session = await db.query.sessions.findFirst({
@@ -195,7 +195,7 @@ export function createAuthRoutes() {
       }
 
       const user = session.user;
-      return c.json({
+      return c.json({ data: {
         id: user.id,
         email: user.email,
         name: user.name,
@@ -203,7 +203,7 @@ export function createAuthRoutes() {
         avatar: user.avatar,
         role: user.role,
         createdAt: user.createdAt
-      });
+      }});
     } catch (error) {
       console.error('Auth /me failed:', error);
       return c.json({ error: 'Authentication failed', code: 'AUTH_ERROR' }, 500);
@@ -224,7 +224,7 @@ export function createAuthRoutes() {
 
     const sessionId = authHeader.substring(7).trim();
     try {
-      const db = createDb(c.env);
+      const db = createDb(c.env, c.req.raw, c.res);
       await deleteSession(db, sessionId);
       return c.json({ success: true });
     } catch (error) {

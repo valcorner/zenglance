@@ -604,7 +604,7 @@
 
       async function loadVideo(id) {
         var token = localStorage.getItem('zenglance_token');
-        var apiUrl = '/api/v1/content/' + id;
+        var apiUrl = '/api/content/' + id;
         var res = await fetch(apiUrl, {
           headers: token ? { 'Authorization': 'Bearer ' + token } : {}
         });
@@ -882,7 +882,7 @@
       async function loadRelated(category) {
         var token = localStorage.getItem('zenglance_token');
         try {
-          var url = category ? '/api/v1/content?category=' + category + '&limit=8' : '/api/v1/content?limit=8';
+          var url = category ? '/api/content?type=' + category + '&limit=8' : '/api/content?limit=8';
           var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
           var data = await res.json();
           var list = (data.data || []).filter(function(v) { return v.id !== getQueryParam('id'); });

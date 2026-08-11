@@ -7,13 +7,12 @@ import { createAuthMiddleware } from '../middleware/auth.js';
 const interaction = new Hono();
 const auth = createAuthMiddleware();
 
-// Helper
 function generateId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
 function db(c) {
-  return createDb(c.env);
+  return createDb(c.env, c.req.raw, c.res);
 }
 
 // ─── Likes ──────────────────────────────────────────────────────────────────
@@ -216,6 +215,23 @@ interaction.get('/users/:id/followers', auth, async (c) => {
     .and(eq(follows.followingId, targetId));
 
   return c.json({ following: existing.length > 0, followerCount });
+});
+
+interaction.get('/users/:id/following', auth, async (c) => {
+  const user = c.get('user');
+  const targetId = c.req.param('id');
+  const d = db(c);
+
+  if (user.id === targetId) return c.json({ following: false, followingCount: 0 });
+
+  const countResult = await d.select({ count: count() }).from(follows).where(eq(follows.followerId, targetId));
+  const followingCount = countResult[0]?.count ?? 0;
+
+  const existing = await d.select().from(follows)
+    .where(eq(follows.followerId, user.id))
+    .and(eq(follows.followingId, targetId));
+
+  return c.json({ following: existing.length > 0, followingCount });
 });
 
 interaction.post('/users/:id/follow', auth, async (c) => {

@@ -35,8 +35,8 @@
   async function fetchVideos(page = 1) {
     try {
       const url = state.currentCategory
-        ? `/api/v1/content?category=${state.currentCategory}&page=${page}&limit=12`
-        : `/api/v1/content?page=${page}&limit=12`;
+        ? `/api/content?type=${state.currentCategory}&page=${page}&limit=12`
+        : `/api/content?page=${page}&limit=12`;
       const res = await apiFetch(url);
       if (!res) return;
       const data = await res.json();
@@ -51,7 +51,7 @@
 
   async function fetchPlaylists() {
     try {
-      const res = await apiFetch('/api/v1/playlists');
+      const res = await apiFetch('/api/playlists');
       if (!res) return;
       const data = await res.json();
       state.playlists = data.data || [];
@@ -60,7 +60,7 @@
 
   // ── User helpers ───────────────────────────────────────────────────────────
   async function fetchUser() {
-    const res = await apiFetch('/api/v1/me');
+    const res = await apiFetch('/api/auth/me');
     if (!res) return;
     const data = await res.json();
     if (data.data) {
@@ -266,7 +266,7 @@
     formData.append('description', desc || '');
     formData.append('file', file);
 
-    apiFetch('/api/v1/upload', { method: 'POST', body: formData, headers: {} })
+    apiFetch('/api/upload', { method: 'POST', body: formData, headers: {} })
       .then(async res => {
         if (!res) return;
         const data = await res.json();
@@ -293,7 +293,7 @@
     const res = await fetch(presignedUrl, { method: 'PUT', body: file });
     if (!res.ok) throw new Error(t('status.fileUploadFailed'));
     // Complete upload
-    await apiFetch(`/api/v1/upload/complete?upload_id=${presignedUrl.split('?')[1].match(/upload_id=([^&]+)/)?.[1]}`, { method: 'POST' });
+    await apiFetch(`/api/upload/complete?upload_id=${presignedUrl.split('?')[1].match(/upload_id=([^&]+)/)?.[1]}`, { method: 'POST' });
   }
 
   // ── Player ─────────────────────────────────────────────────────────────────
