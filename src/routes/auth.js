@@ -203,6 +203,65 @@ export function createAuthRoutes() {
   });
 
   /**
+   * PATCH /auth/me
+   * Update the current authenticated user's profile (bio).
+   * Requires Authorization: Bearer <session_id>
+   */
+  auth.patch('/me', async (c) => {
+    const authHeader = c.req.header('Authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ error: 'Unauthorized', code: 'MISSING_AUTH' }, 401);
+    }
+
+    const sessionId = authHeader.substring(7).trim();
+    try {
+      const db = createDb(c.env, c.req.raw, c.res);
+      const now = Date.now();
+
+      const session = await db.query.sessions.findFirst({
+        where: and(
+          eq(sessions.id, sessionId),
+          gt(sessions.expiresAt, now)
+        ),
+        with: {
+          user: true
+        }
+      });
+
+      if (!session || !session.user) {
+        return c.json({ error: 'Invalid or expired session', code: 'INVALID_SESSION' }, 401);
+      }
+
+      const body = await c.req.json().catch(() => ({}));
+      const { bio } = body;
+
+      const [updatedUser] = await db.update(users)
+        .set({
+          bio: bio ?? session.user.bio,
+          updatedAt: now
+        })
+        .where(eq(users.id, session.user.id))
+        .returning();
+
+      return c.json({ data: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        username: updatedUser.name,
+        avatar: updatedUser.avatar,
+        bio: updatedUser.bio,
+        role: updatedUser.role,
+        createdAt: updatedUser.createdAt,
+        updatedAt: updatedUser.updatedAt
+      }});
+    } catch (error) {
+      console.error('Auth /me PATCH failed:', error);
+      return c.json({ error: 'Failed to update profile', code: 'UPDATE_ERROR' }, 500);
+    }
+  });
+
+  /**
    * POST /auth/logout
    * Delete the server-side session in D1. Client should also clear local session_id.
    */

@@ -5,15 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin — ZenGlance</title>
   <link rel="stylesheet" href="style.css?v=4" />
-  <script src="i18n.js?v=10"></script>
+  <script src="i18n.js?v=12"></script>
   <style>
     .admin-page { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
-    .admin-page h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
+    .admin-page h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.25rem; }
+
+    .admin-search { margin-bottom: 1rem; }
+    .admin-search input {
+      width: 100%; max-width: 400px; padding: 8px 12px;
+      border-radius: 8px; border: 1px solid var(--border-color);
+      background: var(--bg-input); color: var(--text-primary); font-size: 14px;
+    }
+    .admin-search input:focus { outline: none; border-color: var(--accent); }
 
     .admin-table { width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-color); }
-    .admin-table th { background: var(--bg-nav); color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.75rem 1rem; text-align: left; }
+    .admin-table th { background: var(--bg-nav); color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.75rem 1rem; text-align: left; white-space: nowrap; }
     .admin-table td { padding: 0.75rem 1rem; border-top: 1px solid var(--border-color); vertical-align: middle; font-size: 14px; }
     .admin-table tr:hover td { background: var(--bg-hover); }
+    .admin-table tr.hidden { display: none; }
 
     .admin-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; overflow: hidden; }
     .admin-avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -55,18 +64,28 @@
 
   <div class="admin-page">
     <h1 data-i18n="admin.title">Admin — User Management</h1>
+    <div class="admin-search">
+      <input type="text" id="adminSearch" data-i18n-placeholder="meta.search" placeholder="Search users…" oninput="filterUsers()" />
+    </div>
     <div id="adminContent">
-      <div class="admin-loading">Loading…</div>
+      <div class="admin-loading" data-i18n="admin.loading">Loading…</div>
     </div>
   </div>
 
   <script>
     var ADMIN_TOKEN = localStorage.getItem('zenglance_token');
+    var rawUsers = [];
+    var currentPage = 1;
+    var totalUsers = 0;
 
     function escapeHtml(s) {
       if (!s) return '';
       var d = document.createElement('div'); d.textContent = s;
       return d.innerHTML;
+    }
+
+    function t(key, params) {
+      return (window.i18n && window.i18n.t) ? window.i18n.t(key, params) : (params ? key.replace(/\{(\w+)\}/g, function(_, k) { return params[k] || ''; }) : key);
     }
 
     function renderAvatar(user, size) {
@@ -85,16 +104,13 @@
       return new Date(ts).toLocaleString();
     }
 
-    function t(key, params) {
-      return (window.i18n && window.i18n.t) ? window.i18n.t(key, params) : (params ? key.replace(/\{(\w+)\}/g, function(_, k) { return params[k] || ''; }) : key);
-    }
-
-    var currentPage = 1;
-
     function renderAdminTable(users, page, limit, total) {
+      totalUsers = total;
       var totalPages = Math.max(1, Math.ceil(total / limit));
+      currentPage = page;
+
       var rows = users.map(function(u) {
-        return '<tr>' +
+        return '<tr data-id="' + escapeHtml(u.id) + '">' +
           '<td>' + renderAvatar(u, 36) + '</td>' +
           '<td><div class="admin-user-name">' + escapeHtml(u.name || '—') + '</div>' +
                '<div class="admin-user-email">' + escapeHtml(u.email) + '</div></td>' +
@@ -113,24 +129,33 @@
       }).join('');
 
       var pagination = '<div class="admin-pagination">' +
-        '<button class="admin-page-btn" onclick="goPage(' + (page - 1) + ')"' + (page <= 1 ? ' disabled' : '') + '>' + t('prev') + '</button>' +
+        '<button class="admin-page-btn" onclick="goPage(' + (page - 1) + ')"' + (page <= 1 ? ' disabled' : '') + '>' + t('meta.prev') + '</button>' +
         '<span class="admin-page-info">' + t('admin.paginationInfo', { page: page, total: totalPages, count: total }) + '</span>' +
-        '<button class="admin-page-btn" onclick="goPage(' + (page + 1) + ')"' + (page >= totalPages ? ' disabled' : '') + '>' + t('next') + '</button>' +
+        '<button class="admin-page-btn" onclick="goPage(' + (page + 1) + ')"' + (page >= totalPages ? ' disabled' : '') + '>' + t('meta.next') + '</button>' +
       '</div>';
 
+      rawUsers = users;
       document.getElementById('adminContent').innerHTML =
         '<table class="admin-table"><thead><tr>' +
           '<th></th><th>' + t('admin.colUser') + '</th><th>' + t('admin.colRole') + '</th><th>' + t('admin.colJoined') + '</th><th>' + t('admin.colUpdated') + '</th><th>' + t('admin.colChangeRole') + '</th>' +
-        '</tr></thead><tbody>' + rows + '</tbody></table>' + pagination;
+        '</tr></thead><tbody id="adminTableBody">' + rows + '</tbody></table>' + pagination;
 
       document.querySelectorAll('.admin-role-select').forEach(function(sel) {
         sel.addEventListener('change', function() { this.querySelector('.admin-save-btn').click(); });
       });
     }
 
+    function filterUsers() {
+      var q = document.getElementById('adminSearch').value.toLowerCase();
+      var rows = document.querySelectorAll('#adminTableBody tr');
+      rows.forEach(function(row) {
+        var text = row.textContent.toLowerCase();
+        row.classList.toggle('hidden', q && !text.includes(q));
+      });
+    }
+
     async function loadUsers(page) {
       page = page || 1;
-      currentPage = page;
       document.getElementById('adminContent').innerHTML = '<div class="admin-loading">' + t('admin.loading') + '</div>';
       try {
         var res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN } });
@@ -144,6 +169,7 @@
         if (!r.ok) { document.getElementById('adminContent').innerHTML = '<div class="admin-error">' + t('admin.error') + '</div>'; return; }
         var data = await r.json();
         renderAdminTable(data.data, data.page, data.limit, data.total);
+        if (document.getElementById('adminSearch')) document.getElementById('adminSearch').value = '';
       } catch (e) {
         document.getElementById('adminContent').innerHTML = '<div class="admin-error">' + escapeHtml(e.message) + '</div>';
       }
@@ -176,7 +202,7 @@
       var token = localStorage.getItem('zenglance_token');
       var headerRight = document.getElementById('headerRight');
       if (!token) {
-        headerRight.innerHTML = '<a href="/login.html" class="login-btn">Login</a>';
+        headerRight.innerHTML = '<a href="/login.html" class="login-btn">' + t('meta.login') + '</a>';
         return null;
       }
       try {
@@ -191,9 +217,9 @@
               '<svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8L2 4h8z"/></svg>' +
             '</button>' +
             '<div class="user-dropdown" id="userDropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-md);min-width:160px;z-index:100;overflow:hidden;">' +
-              '<a href="/profile.html" class="dropdown-item">Profile</a>' +
+              '<a href="/profile.html" class="dropdown-item">' + t('meta.profile') + '</a>' +
               '<div class="dropdown-divider"></div>' +
-              '<a href="#" class="dropdown-item" onclick="logout();return false;">Logout</a>' +
+              '<a href="#" class="dropdown-item" onclick="logout();return false;">' + t('meta.logout') + '</a>' +
             '</div>' +
           '</div>';
         return data.user;
@@ -229,7 +255,9 @@
     });
 
     if (window.i18n && window.i18n.onLangChange) {
-      window.i18n.onLangChange(function() { loadUsers(currentPage); });
+      window.i18n.onLangChange(function() {
+        if (rawUsers.length) renderAdminTable(rawUsers, currentPage, 20, totalUsers);
+      });
     }
   </script>
 </body>

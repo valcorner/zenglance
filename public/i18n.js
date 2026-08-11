@@ -111,6 +111,8 @@
       },
       prev: { en: 'Prev', fr: 'Préc.', de: 'Zurück', it: 'Prec', es: 'Ant.', ar: '\u0627\u0644\u0633\u0627\u0628\u0642' },
       next: { en: 'Next', fr: 'Suiv.', de: 'Weiter', it: 'Succ', es: 'Sig.', ar: '\u0627\u0644\u062A\u0627\u0644\u064A' },
+      back: { en: 'Back', fr: 'Retour', de: 'Zurück', it: 'Indietro', es: 'Atrás', ar: '\u0639\u0648\u062F\u0629' },
+      search: { en: 'Search users…', fr: 'Rechercher…', de: 'Suchen…', it: 'Cerca…', es: 'Buscar…', ar: '\u0628\u062D\u062B \u0641\u064A \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646…' },
       categories: {
         en: 'Categories',
         fr: 'Cat\u00E9gories',
@@ -637,6 +639,27 @@
     ads: {
       sponsored: { en: 'Sponsored', fr: 'Publipostage', de: 'Gesponsert', it: 'Sponsorizzato', es: 'Patrocinado', ar: '\u0631\u0639\u0627\u064A\u0629' },
       learnMore: { en: 'Learn More', fr: 'En savoir plus', de: 'Mehr erfahren', it: 'Scopri di pi\u00F9', es: 'Saber m\u00E1s', ar: '\u0627\u0644\u0645\u0632\u064A\u062F \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A' },
+    },
+
+    profile: {
+      pageTitle:     { en: 'User Profile', fr: 'Profil Utilisateur', de: 'Benutzerprofil', it: 'Profilo Utente', es: 'Perfil de Usuario', ar: '\u0645\u0644\u0641 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645' },
+      pageTitleShort:{ en: 'Profile', fr: 'Profil', de: 'Profil', it: 'Profilo', es: 'Perfil', ar: '\u0627\u0644\u0645\u0648\u0636\u0648\u0639' },
+      notFound:      { en: 'User not found', fr: 'Utilisateur introuvable', de: 'Benutzer nicht gefunden', it: 'Utente non trovato', es: 'Usuario no encontrado', ar: '\u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F' },
+      loginRequired: { en: 'Please login to view this profile.', fr: 'Connectez-vous pour voir ce profil.', de: 'Bitte anmelden.', it: 'Effettua l\'accesso.', es: 'Inicia sesión.', ar: '\u0633\u062C\u0644 \u0627\u0644\u062F\u062E\u0648\u0644 \u0644\u0639\u0631\u0636 \u0647\u0630\u0627 \u0627\u0644\u0645\u0644\u0641.' },
+      noContent:     { en: 'No content yet', fr: 'Pas encore de contenu', de: 'Noch kein Inhalt', it: 'Nessun contenuto', es: 'Sin contenido', ar: '\u0644\u0627 \u064A\u0648\u062C\u062F \u0645\u062D\u062A\u0648\u0649' },
+      noHistory:     { en: 'No watch history yet', fr: 'Pas d\'historique', de: 'Noch kein Verlauf', it: 'Nessuna cronologia', es: 'Sin historial', ar: '\u0644\u0627 \u064A\u0648\u062C\u062F \u0633\u062C\u0644' },
+      loadFailed:    { en: 'Failed to load', fr: 'Échec du chargement', de: 'Laden fehlgeschlagen', it: 'Caricamento fallito', es: 'Error al cargar', ar: '\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0645\u064A\u0644' },
+      contentTab:    { en: 'Content', fr: 'Contenu', de: 'Inhalt', it: 'Contenuto', es: 'Contenido', ar: '\u0627\u0644\u0645\u062D\u062A\u0648\u0649' },
+      historyTab:    { en: 'History', fr: 'Historique', de: 'Verlauf', it: 'Cronologia', es: 'Historial', ar: '\u0627\u0644\u0633\u062C\u0644' },
+      followers:     { en: 'Followers', fr: 'Abonnés', de: 'Follower', it: 'Follower', es: 'Seguidores', ar: '\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0648\u0646' },
+      following:     { en: 'Following', fr: 'Abonnements', de: 'Folge ich', it: 'Seguiti', es: 'Siguiendo', ar: '\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629' },
+      joined:        { en: 'Joined', fr: 'Inscrit', de: 'Beigetreten', it: 'Iscritto', es: 'Se unió', ar: '\u0627\u0646\u0636\u0645' },
+      follow:        { en: 'Follow', fr: 'Suivre', de: 'Folgen', it: 'Segui', es: 'Seguir', ar: '\u062A\u0628\u0639' },
+      followed:      { en: 'Following', fr: 'Abonné', de: 'Folge ich', it: 'Seguito', es: 'Siguiendo', ar: '\u064A\u062A\u0628\u0639' },
+      editBio:       { en: 'Edit bio', fr: 'Modifier bio', de: 'Bio bearbeiten', it: 'Modifica bio', es: 'Editar bio', ar: '\u062A\u062D\u0631\u064A\u0631 \u0627\u0644\u0646\u0628\u0630\u0629' },
+      saveBio:       { en: 'Save', fr: 'Enregistrer', de: 'Speichern', it: 'Salva', es: 'Guardar', ar: '\u062D\u0641\u0638' },
+      cancelBio:     { en: 'Cancel', fr: 'Annuler', de: 'Abbrechen', it: 'Annulla', es: 'Cancelar', ar: '\u0625\u0644\u063A\u0627\u0621' },
+      bioSaved:      { en: 'Bio saved!', fr: 'Bio enregistrée !', de: 'Bio gespeichert!', it: 'Bio salvata!', es: '¡Bio guardada!', ar: '\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0646\u0628\u0630\u0629!' },
     },
   };
 

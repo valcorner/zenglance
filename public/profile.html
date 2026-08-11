@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>User Profile - ZenGlance</title>
+  <title>User Profile — ZenGlance</title>
   <link rel="stylesheet" href="style.css?v=4" />
-  <script src="i18n.js?v=9"></script>
+  <script src="i18n.js?v=12"></script>
   <style>
     .profile-page { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
     .profile-back { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 13px; cursor: pointer; margin-bottom: 1.5rem; text-decoration: none; }
@@ -20,12 +20,28 @@
       width: 80px; height: 80px; border-radius: 50%;
       background: var(--accent); color: #fff;
       display: flex; align-items: center; justify-content: center;
-      font-size: 28px; font-weight: 700; flex-shrink: 0;
+      font-size: 28px; font-weight: 700; flex-shrink: 0; overflow: hidden;
     }
     .profile-avatar img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; }
     .profile-info { flex: 1; }
-    .profile-name { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.25rem; }
-    .profile-bio { font-size: 14px; color: var(--text-secondary); margin-bottom: 0.75rem; }
+    .profile-name-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+    .profile-name { font-size: 1.5rem; font-weight: 700; }
+    .profile-bio { font-size: 14px; color: var(--text-secondary); margin-bottom: 0.75rem; min-height: 1.4em; }
+    .profile-bio-edit { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .profile-bio-edit textarea {
+      flex: 1; padding: 6px 10px; border-radius: 8px;
+      border: 1px solid var(--border-color); background: var(--bg-input);
+      color: var(--text-primary); font-size: 14px; resize: vertical; min-height: 60px;
+    }
+    .profile-bio-edit textarea:focus { outline: none; border-color: var(--accent); }
+    .profile-bio-actions { display: flex; gap: 0.5rem; }
+    .profile-bio-save, .profile-bio-cancel {
+      padding: 4px 12px; border-radius: 8px; font-size: 12px; cursor: pointer; border: 1px solid var(--border-color);
+      background: none; color: var(--text-secondary); transition: background 0.2s, color 0.2s;
+    }
+    .profile-bio-save:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .profile-bio-cancel:hover { background: var(--bg-hover); }
+
     .profile-stats { display: flex; gap: 1.5rem; }
     .profile-stat { text-align: center; }
     .profile-stat-value { font-size: 1.25rem; font-weight: 700; }
@@ -68,29 +84,40 @@
     .profile-content-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
     .profile-content-link { text-decoration: none; color: inherit; display: block; }
 
+    .watch-follow-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 18px; border-radius: 20px; border: 1px solid var(--border-color);
+      background: none; color: var(--text-primary); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: background 0.2s, color 0.2s, border-color 0.2s;
+      margin-top: 1rem;
+    }
+    .watch-follow-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .watch-follow-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
     .profile-empty { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
     .profile-loading { text-align: center; padding: 2rem; color: var(--text-muted); }
   </style>
 </head>
 <body>
-  <header class="header">
-    <div class="header-left">
-      <a href="/" class="logo">
-        <span class="logo-icon">Z</span>
-        <span class="logo-text">ZenGlance</span>
-      </a>
-    </div>
+  <header class="app-header">
+    <a href="/" class="logo">
+      <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="13" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M10 9l8 5-8 5V9z" fill="currentColor"/>
+      </svg>
+      <span class="logo-text">ZenGlance</span>
+    </a>
     <div class="header-right" id="headerRight"></div>
   </header>
 
   <div class="profile-page">
     <a href="/" class="profile-back">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Back
+      <span data-i18n="meta.back">Back</span>
     </a>
 
     <div id="profileContent">
-      <div class="profile-loading">Loading...</div>
+      <div class="profile-loading" data-i18n="admin.loading">Loading...</div>
     </div>
   </div>
 
@@ -98,6 +125,8 @@
     var userId = new URLSearchParams(window.location.search).get('id');
     var currentTab = 'content';
     var followState = false;
+    var currentUser = null;
+    var profileData = null;
 
     function escapeHtml(str) {
       if (!str) return '';
@@ -105,13 +134,8 @@
       return d.innerHTML;
     }
 
-    function timeAgo(iso) {
-      if (!iso) return '';
-      var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-      if (diff < 60) return 'just now';
-      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-      return Math.floor(diff / 86400) + 'd ago';
+    function t(key, params) {
+      return (window.i18n && window.i18n.t) ? window.i18n.t(key, params) : (params ? key.replace(/\{(\w+)\}/g, function(_, k) { return params[k] || ''; }) : key);
     }
 
     function formatViews(n) {
@@ -121,9 +145,13 @@
       return String(n);
     }
 
-    function t(key) {
-      if (!window.i18n) return key;
-      return window.i18n.t(key);
+    function timeAgo(ts) {
+      if (!ts) return '';
+      var diff = Math.floor((Date.now() - ts) / 1000);
+      if (diff < 60) return t('timeAgo.justNow');
+      if (diff < 3600) return t('timeAgo.minutesAgo', { n: Math.floor(diff / 60) });
+      if (diff < 86400) return t('timeAgo.hoursAgo', { n: Math.floor(diff / 3600) });
+      return t('timeAgo.daysAgo', { n: Math.floor(diff / 86400) });
     }
 
     async function apiFetch(url, options) {
@@ -136,27 +164,28 @@
       var token = localStorage.getItem('zenglance_token');
       var headerRight = document.getElementById('headerRight');
       if (!token) {
-        headerRight.innerHTML = '<a href="/login.html" class="login-btn">Login</a>';
+        headerRight.innerHTML = '<a href="/login.html" class="login-btn">' + t('meta.login') + '</a>';
         return null;
       }
       try {
-        var res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        var res = await apiFetch('/auth/me');
         if (!res.ok) { localStorage.removeItem('zenglance_token'); return null; }
         var data = await res.json();
+        currentUser = data.data;
         headerRight.innerHTML =
           '<div class="user-menu" style="position:relative">' +
             '<button class="user-menu-btn" onclick="toggleMenu(event)">' +
-              '<div class="user-avatar" style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;">' + (data.user.name || 'U').charAt(0).toUpperCase() + '</div>' +
-              '<span class="user-name">' + escapeHtml(data.user.name) + '</span>' +
+              '<div class="user-avatar" style="background:var(--accent);color:#fff;font-size:12px;font-weight:700;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;">' + (currentUser.name || 'U').charAt(0).toUpperCase() + '</div>' +
+              '<span class="user-name">' + escapeHtml(currentUser.name) + '</span>' +
               '<svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><path d="M6 8L2 4h8z"/></svg>' +
             '</button>' +
             '<div class="user-dropdown" id="userDropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;background:var(--bg-card);border:1px solid var(--border-color);border-radius:var(--radius-md);min-width:160px;z-index:100;overflow:hidden;">' +
-              '<a href="#" class="dropdown-item" onclick="window.location.href=\'' + (userId || '/profile.html') + '\'">Profile</a>' +
+              '<a href="/profile.html?id=' + currentUser.id + '" class="dropdown-item">' + t('meta.profile') + '</a>' +
               '<div class="dropdown-divider"></div>' +
-              '<a href="#" class="dropdown-item" onclick="logout();return false;">Logout</a>' +
+              '<a href="#" class="dropdown-item" onclick="logout();return false;">' + t('meta.logout') + '</a>' +
             '</div>' +
           '</div>';
-        return data.user;
+        return currentUser;
       } catch (e) { return null; }
     }
 
@@ -166,15 +195,18 @@
       dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
     }
 
-    function logout() {
-      localStorage.removeItem('zenglance_token');
-      window.location.href = '/';
-    }
-
     document.addEventListener('click', function() {
       var dd = document.getElementById('userDropdown');
       if (dd) dd.style.display = 'none';
     });
+
+    async function logout() {
+      var token = localStorage.getItem('zenglance_token');
+      if (token) { try { await fetch('/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }); } catch (e) {} }
+      localStorage.removeItem('zenglance_token');
+      location.href = '/';
+    }
+    window.logout = logout;
 
     async function loadProfile(user) {
       var isSelf = !userId || userId === user.id;
@@ -183,8 +215,9 @@
 
       try {
         var profileRes = await apiFetch('/api/interaction/users/' + targetId);
-        var profile = await profileRes.json();
-        if (profile.error) { container.innerHTML = '<div class="profile-empty">User not found</div>'; return; }
+        if (!profileRes.ok) { container.innerHTML = '<div class="profile-empty">' + t('profile.notFound') + '</div>'; return; }
+        profileData = await profileRes.json();
+        if (profileData.error) { container.innerHTML = '<div class="profile-empty">' + t('profile.notFound') + '</div>'; return; }
 
         if (!isSelf) {
           var followRes = await apiFetch('/api/interaction/users/' + targetId + '/followers');
@@ -192,36 +225,71 @@
           followState = followData.following || false;
         }
 
-        var roleClass = profile.role || 'free';
-        var avatarHtml = profile.avatar
-          ? '<img src="' + escapeHtml(profile.avatar) + '" alt=""/>'
-          : (profile.name || 'U').charAt(0).toUpperCase();
+        var roleClass = profileData.role || 'free';
+        var avatarHtml = profileData.avatar
+          ? '<img src="' + escapeHtml(profileData.avatar) + '" alt=""/>'
+          : (profileData.name || 'U').charAt(0).toUpperCase();
+
+        var bioHtml = '';
+        if (isSelf) {
+          bioHtml = '<div class="profile-bio" id="profileBioDisplay">' +
+            (profileData.bio ? escapeHtml(profileData.bio) : '') +
+            (profileData.bio ? '' : '<span style="color:var(--text-muted)">' + t('profile.editBio') + '</span>') +
+            '</div>' +
+            '<div class="profile-bio-edit" id="profileBioEdit" style="display:none">' +
+              '<textarea id="profileBioTextarea" maxlength="500" placeholder="' + t('profile.editBio') + '">' + escapeHtml(profileData.bio || '') + '</textarea>' +
+              '<div class="profile-bio-actions">' +
+                '<button class="profile-bio-save" onclick="saveBio()">' + t('profile.saveBio') + '</button>' +
+                '<button class="profile-bio-cancel" onclick="cancelBio()">' + t('profile.cancelBio') + '</button>' +
+              '</div>' +
+            '</div>';
+        } else {
+          bioHtml = profileData.bio
+            ? '<div class="profile-bio">' + escapeHtml(profileData.bio) + '</div>'
+            : '';
+        }
+
+        var followBtnHtml = !isSelf
+          ? '<button class="watch-follow-btn' + (followState ? ' active' : '') + '" id="profileFollowBtn" onclick="toggleProfileFollow(\'' + targetId + '\')">' + (followState ? t('profile.followed') : t('profile.follow')) + '</button>'
+          : '';
 
         container.innerHTML =
           '<div class="profile-header">' +
             '<div class="profile-avatar">' + avatarHtml + '</div>' +
             '<div class="profile-info">' +
-              '<div class="profile-name">' + escapeHtml(profile.name || 'Unknown') +
-                '<span class="profile-role ' + roleClass + '">' + profile.role + '</span>' +
+              '<div class="profile-name-row">' +
+                '<span class="profile-name">' + escapeHtml(profileData.name || 'Unknown') + '</span>' +
+                '<span class="profile-role ' + roleClass + '">' + roleClass + '</span>' +
               '</div>' +
-              (profile.bio ? '<div class="profile-bio">' + escapeHtml(profile.bio) + '</div>' : '') +
+              bioHtml +
               '<div class="profile-stats">' +
-                '<div class="profile-stat"><div class="profile-stat-value">' + (profile.followerCount || 0) + '</div><div class="profile-stat-label">Followers</div></div>' +
-                '<div class="profile-stat"><div class="profile-stat-value">' + (profile.followingCount || 0) + '</div><div class="profile-stat-label">Following</div></div>' +
-                '<div class="profile-stat"><div class="profile-stat-value">' + timeAgo(profile.createdAt) + '</div><div class="profile-stat-label">Joined</div></div>' +
+                '<div class="profile-stat"><div class="profile-stat-value">' + (profileData.followerCount || 0) + '</div><div class="profile-stat-label">' + t('profile.followers') + '</div></div>' +
+                '<div class="profile-stat"><div class="profile-stat-value">' + (profileData.followingCount || 0) + '</div><div class="profile-stat-label">' + t('profile.following') + '</div></div>' +
+                '<div class="profile-stat"><div class="profile-stat-value">' + timeAgo(profileData.createdAt) + '</div><div class="profile-stat-label">' + t('profile.joined') + '</div></div>' +
               '</div>' +
-              (!isSelf ? '<button class="watch-follow-btn" id="profileFollowBtn" style="margin-top:1rem" onclick="toggleProfileFollow(\'' + targetId + '\')">' + (followState ? 'Following' : 'Follow') + '</button>' : '') +
+              followBtnHtml +
             '</div>' +
           '</div>' +
           '<div class="profile-tabs">' +
-            '<div class="profile-tab active" data-tab="content">Content</div>' +
-            '<div class="profile-tab" data-tab="history">' + (isSelf ? 'History' : '') + '</div>' +
+            '<div class="profile-tab active" data-tab="content">' + t('profile.contentTab') + '</div>' +
+            (isSelf ? '<div class="profile-tab" data-tab="history">' + t('profile.historyTab') + '</div>' : '') +
           '</div>' +
           '<div class="profile-section active" id="section-content"></div>' +
           '<div class="profile-section" id="section-history"></div>';
 
-        if (isSelf) loadMyContent();
-        else loadUserContent(targetId);
+        if (isSelf) {
+          loadMyContent();
+          var bioDisplay = document.getElementById('profileBioDisplay');
+          if (bioDisplay) bioDisplay.addEventListener('click', function() {
+            if (isSelf) {
+              document.getElementById('profileBioDisplay').style.display = 'none';
+              document.getElementById('profileBioEdit').style.display = 'flex';
+              document.getElementById('profileBioTextarea').focus();
+            }
+          });
+        } else {
+          loadUserContent(targetId);
+        }
 
         document.querySelectorAll('.profile-tab').forEach(function(tab) {
           tab.addEventListener('click', function() {
@@ -233,7 +301,10 @@
             if (tab.dataset.tab === 'history' && isSelf) loadHistory();
           });
         });
-      } catch (e) { console.error(e); }
+      } catch (e) {
+        console.error(e);
+        container.innerHTML = '<div class="profile-empty">' + t('profile.loadFailed') + '</div>';
+      }
     }
 
     async function loadUserContent(targetId) {
@@ -245,9 +316,9 @@
         });
         var data = await res.json();
         var items = data.data || [];
-        if (!items.length) { grid.innerHTML = '<div class="profile-empty">No content yet</div>'; return; }
+        if (!items.length) { grid.innerHTML = '<div class="profile-empty">' + t('profile.noContent') + '</div>'; return; }
         renderContentGrid(grid, items);
-      } catch (e) { grid.innerHTML = '<div class="profile-empty">Failed to load</div>'; }
+      } catch (e) { grid.innerHTML = '<div class="profile-empty">' + t('profile.loadFailed') + '</div>'; }
     }
 
     async function loadMyContent() {
@@ -259,22 +330,22 @@
         });
         var data = await res.json();
         var items = data.data || [];
-        if (!items.length) { grid.innerHTML = '<div class="profile-empty">No content yet</div>'; return; }
+        if (!items.length) { grid.innerHTML = '<div class="profile-empty">' + t('profile.noContent') + '</div>'; return; }
         renderContentGrid(grid, items);
-      } catch (e) { grid.innerHTML = '<div class="profile-empty">Failed to load</div>'; }
+      } catch (e) { grid.innerHTML = '<div class="profile-empty">' + t('profile.loadFailed') + '</div>'; }
     }
 
     async function loadHistory() {
       var token = localStorage.getItem('zenglance_token');
       var grid = document.getElementById('section-history');
-      grid.innerHTML = '<div class="profile-loading">Loading...</div>';
+      grid.innerHTML = '<div class="profile-loading">' + t('admin.loading') + '</div>';
       try {
         var res = await apiFetch('/api/interaction/history?limit=30');
         var data = await res.json();
         var items = data.history || [];
-        if (!items.length) { grid.innerHTML = '<div class="profile-empty">No watch history yet</div>'; return; }
+        if (!items.length) { grid.innerHTML = '<div class="profile-empty">' + t('profile.noHistory') + '</div>'; return; }
         renderContentGrid(grid, items);
-      } catch (e) { grid.innerHTML = '<div class="profile-empty">Failed to load</div>'; }
+      } catch (e) { grid.innerHTML = '<div class="profile-empty">' + t('profile.loadFailed') + '</div>'; }
     }
 
     function renderContentGrid(container, items) {
@@ -290,7 +361,7 @@
           '<div class="profile-content-info">' +
             '<div class="profile-content-title">' + escapeHtml(item.title) + '</div>' +
             '<div class="profile-content-meta">' +
-              (item.views ? formatViews(item.views) + ' views' : '') +
+              (item.views ? formatViews(item.views) + ' ' + t('player.views') : '') +
               (item.duration ? '  \u00B7  ' + Math.floor(item.duration / 60) + ':' + String(item.duration % 60).padStart(2, '0') : '') +
             '</div>' +
           '</div>';
@@ -299,23 +370,45 @@
       container.innerHTML += '</div>';
     }
 
-    async function toggleProfileFollow(userId) {
+    async function toggleProfileFollow(targetId) {
       var token = localStorage.getItem('zenglance_token');
-      if (!token) { alert('Please login first'); return; }
+      if (!token) { alert(t('profile.loginRequired')); return; }
       followState = !followState;
       var btn = document.getElementById('profileFollowBtn');
-      btn.textContent = followState ? 'Following' : 'Follow';
+      btn.textContent = followState ? t('profile.followed') : t('profile.follow');
       btn.classList.toggle('active', followState);
-      apiFetch('/api/interaction/users/' + userId + '/follow', { method: 'POST' })
-        .catch(function() { followState = !followState; btn.textContent = followState ? 'Following' : 'Follow'; btn.classList.toggle('active', followState); });
+      apiFetch('/api/interaction/users/' + targetId + '/follow', { method: 'POST' })
+        .catch(function() { followState = !followState; btn.textContent = followState ? t('profile.followed') : t('profile.follow'); btn.classList.toggle('active', followState); });
     }
+
+    window.saveBio = async function() {
+      var val = document.getElementById('profileBioTextarea').value;
+      try {
+        var res = await apiFetch('/auth/me', { method: 'PATCH', body: JSON.stringify({ bio: val }) });
+        if (!res.ok) throw new Error('Failed');
+        var data = await res.json();
+        if (data.data && data.data.bio !== undefined) {
+          profileData.bio = data.data.bio;
+          document.getElementById('profileBioDisplay').innerHTML = escapeHtml(data.data.bio) || '<span style="color:var(--text-muted)">' + t('profile.editBio') + '</span>';
+          document.getElementById('profileBioEdit').style.display = 'none';
+          document.getElementById('profileBioDisplay').style.display = 'block';
+        }
+      } catch (e) {
+        alert(t('profile.loadFailed'));
+      }
+    };
+
+    window.cancelBio = function() {
+      document.getElementById('profileBioEdit').style.display = 'none';
+      document.getElementById('profileBioDisplay').style.display = 'block';
+    };
 
     function init() {
       if (window.i18n) window.i18n.init();
       loadUser().then(function(user) {
         if (!user) {
           document.getElementById('profileContent').innerHTML =
-            '<div class="profile-empty"><p>Please <a href="/login.html">login</a> to view this profile.</p></div>';
+            '<div class="profile-empty"><p>' + t('profile.loginRequired') + '</p></div>';
           return;
         }
         loadProfile(user);
