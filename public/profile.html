@@ -96,6 +96,20 @@
 
     .profile-empty { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
     .profile-loading { text-align: center; padding: 2rem; color: var(--text-muted); }
+    .profile-error-card {
+      text-align: center; padding: 3rem 1.5rem;
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg); max-width: 400px; margin: 2rem auto;
+    }
+    .profile-error-card p { font-size: 15px; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.6; }
+    .profile-error-card .profile-error-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 20px; border-radius: 20px;
+      background: var(--accent); color: #fff;
+      font-size: 14px; font-weight: 600; text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .profile-error-card .profile-error-btn:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
@@ -215,9 +229,14 @@
 
       try {
         var profileRes = await apiFetch('/api/interaction/users/' + targetId);
-        if (!profileRes.ok) { container.innerHTML = '<div class="profile-empty">' + t('profile.notFound') + '</div>'; return; }
+        if (!profileRes.ok) {
+          var msg = profileRes.status === 404 ? t('profile.notFound') : t('profile.loadFailed');
+          container.innerHTML = '<div class="profile-error-card"><p>' + msg + '</p></div>'; return;
+        }
         profileData = await profileRes.json();
-        if (profileData.error) { container.innerHTML = '<div class="profile-empty">' + t('profile.notFound') + '</div>'; return; }
+        if (profileData.error) {
+          container.innerHTML = '<div class="profile-error-card"><p>' + t('profile.notFound') + '</p></div>'; return;
+        }
 
         if (!isSelf) {
           var followRes = await apiFetch('/api/interaction/users/' + targetId + '/followers');
@@ -303,7 +322,7 @@
         });
       } catch (e) {
         console.error(e);
-        container.innerHTML = '<div class="profile-empty">' + t('profile.loadFailed') + '</div>';
+        container.innerHTML = '<div class="profile-error-card"><p>' + t('profile.loadFailed') + '</p></div>';
       }
     }
 
@@ -408,7 +427,10 @@
       loadUser().then(function(user) {
         if (!user) {
           document.getElementById('profileContent').innerHTML =
-            '<div class="profile-empty"><p>' + t('profile.loginRequired') + '</p></div>';
+            '<div class="profile-error-card">' +
+              '<p>' + t('profile.loginRequired') + '</p>' +
+              '<a href="/login.html" class="profile-error-btn">' + t('meta.login') + '</a>' +
+            '</div>';
           return;
         }
         loadProfile(user);

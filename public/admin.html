@@ -48,6 +48,20 @@
 
     .admin-loading, .admin-empty, .admin-error { text-align: center; padding: 3rem 1rem; color: var(--text-muted); }
     .admin-error { color: #ff6b6b; }
+    .admin-error-card {
+      text-align: center; padding: 3rem 1.5rem;
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg); max-width: 400px; margin: 2rem auto;
+    }
+    .admin-error-card p { font-size: 15px; color: var(--text-secondary); margin-bottom: 1.25rem; line-height: 1.6; }
+    .admin-error-card .admin-error-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 8px 20px; border-radius: 20px;
+      background: var(--accent); color: #fff;
+      font-size: 14px; font-weight: 600; text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .admin-error-card .admin-error-btn:hover { opacity: 0.85; }
   </style>
 </head>
 <body>
@@ -158,24 +172,25 @@
       page = page || 1;
       document.getElementById('adminContent').innerHTML = '<div class="admin-loading">' + t('admin.loading') + '</div>';
       try {
-        var res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN } });
-        if (!res.ok) { localStorage.removeItem('zenglance_token'); location.href = '/login.html'; return; }
-        var me = await res.json();
-        if (me.data.role !== 'admin') { location.href = '/'; return; }
-
         var r = await fetch('/api/admin/users?page=' + page + '&limit=20', {
           headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN }
         });
-        if (!r.ok) { document.getElementById('adminContent').innerHTML = '<div class="admin-error">' + t('admin.error') + '</div>'; return; }
+        if (!r.ok) {
+          var errText = await r.text().catch(function() { return ''; });
+          document.getElementById('adminContent').innerHTML =
+            '<div class="admin-error-card"><p>' + escapeHtml(r.status + ' ' + (errText || t('admin.error'))) + '</p>' +
+            '<a href="/" class="admin-error-btn">' + t('meta.back') + '</a></div>';
+          return;
+        }
         var data = await r.json();
         renderAdminTable(data.data, data.page, data.limit, data.total);
-        if (document.getElementById('adminSearch')) document.getElementById('adminSearch').value = '';
       } catch (e) {
         document.getElementById('adminContent').innerHTML = '<div class="admin-error">' + escapeHtml(e.message) + '</div>';
       }
     }
 
     window.goPage = function(page) { loadUsers(page); };
+
     window.saveRole = async function(userId) {
       var sel = document.querySelector('.admin-role-select[data-user-id="' + userId + '"]');
       if (!sel) return;
@@ -207,8 +222,10 @@
       }
       try {
         var res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
-        if (!res.ok) { localStorage.removeItem('zenglance_token'); return null; }
+        console.log('[admin] /auth/me status:', res.status, 'ok:', res.ok);
+        if (!res.ok) { console.log('[admin] /auth/me response:', await res.text()); localStorage.removeItem('zenglance_token'); return null; }
         var data = await res.json();
+        console.log('[admin] /auth/me data.user:', data && data.user ? data.user : data);
         headerRight.innerHTML =
           '<div class="user-menu" style="position:relative">' +
             '<button class="user-menu-btn" onclick="toggleMenu(event)">' +
@@ -246,9 +263,19 @@
     window.logout = logout;
 
     loadUser().then(function(user) {
-      if (!user || user.role !== 'admin') {
+      console.log('[admin] loadUser result:', user);
+      console.log('[admin] token present:', !!ADMIN_TOKEN);
+      if (!user) {
         document.getElementById('adminContent').innerHTML =
-          '<div class="admin-error" style="padding-top:2rem">' + t('admin.accessDenied') + '</div>';
+          '<div class="admin-error-card"><p>' + t('profile.loginRequired') + '</p>' +
+          '<a href="/login.html" class="admin-error-btn">' + t('meta.login') + '</a></div>';
+        return;
+      }
+      if (user.role !== 'admin') {
+        console.log('[admin] user.role =', user.role, 'expected admin');
+        document.getElementById('adminContent').innerHTML =
+          '<div class="admin-error-card"><p>' + t('admin.accessDenied') + '</p>' +
+          '<a href="/" class="admin-error-btn">' + t('meta.back') + '</a></div>';
         return;
       }
       loadUsers(1);
