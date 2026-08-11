@@ -17,7 +17,7 @@ import { createAdsRoutes } from './routes/ads.js';
 import interactions from './routes/interactions.js';
 import { createAuthMiddleware, requireRole } from './middleware/auth.js';
 import { users, roles, collections, collectionItems, contents } from './db/schema.js';
-import { eq } from 'drizzle-orm';
+import { eq, count } from 'drizzle-orm';
 import { roleSchema } from './utils/validators.js';
 
 const app = new Hono();
@@ -120,6 +120,28 @@ app.get('/api/users/:id', async (c) => {
       role: user.role,
       createdAt: user.createdAt
     });
+  } catch (error) {
+    return c.json({ error: error.message }, 500);
+  }
+});
+
+// Admin: List all users (requires admin role)
+app.get('/api/admin/users', auth, requireRole('admin'), async (c) => {
+  const page = Math.max(1, parseInt(c.req.query('page') || '1'));
+  const limit = Math.min(100, Math.max(1, parseInt(c.req.query('limit') || '20')));
+  const offset = (page - 1) * limit;
+
+  try {
+    const db = createDb(c.env, c.req.raw, c.res);
+    const [items, totalResult] = await Promise.all([
+        db.select({ id: users.id, email: users.email, name: users.name, avatar: users.avatar, role: users.role, createdAt: users.createdAt, updatedAt: users.updatedAt })
+          .from(users)
+          .limit(limit)
+          .offset(offset)
+          .orderBy(users.createdAt),
+        db.select({ total: count() }).from(users)
+      ]);
+    return c.json({ data: items, page, limit, total: totalResult[0]?.total ?? 0 });
   } catch (error) {
     return c.json({ error: error.message }, 500);
   }

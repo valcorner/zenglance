@@ -98,12 +98,16 @@
       if (uploadBtn) uploadBtn.style.display = 'inline-flex';
       const profileLink = document.getElementById('profileLink');
       if (profileLink) profileLink.href = '/profile.html?id=' + state.user.id;
+      const adminLink = document.getElementById('adminLink');
+      if (adminLink) adminLink.style.display = state.user.role === 'admin' ? 'flex' : 'none';
     } else {
       if (userMenu) userMenu.style.display = 'none';
       if (loginBtn) loginBtn.style.display = 'inline-flex';
       if (uploadBtn) uploadBtn.style.display = 'none';
       const profileLink = document.getElementById('profileLink');
       if (profileLink) { profileLink.style.display = 'none'; }
+      const adminLink = document.getElementById('adminLink');
+      if (adminLink) { adminLink.style.display = 'none'; }
     }
   }
 

@@ -744,9 +744,13 @@
   }
 
   // ── Expose ────────────────────────────────────────────────────────────────
+  function init() {
+    setLang(getLang());
+  }
   window.i18n = {
     t, setLang, getLang, currentLang: () => currentLang, categoryNames, LANGUAGES,
     onLangChange: (fn) => _langChangeCallbacks.push(fn),
+    init,
   };
   window.t = t;
 
