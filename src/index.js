@@ -13,6 +13,7 @@ import { prettyJSON } from 'hono/pretty-json';
 import { createDb } from './db/index.js';
 import { createAuthRoutes } from './routes/auth.js';
 import { createUploadRoutes, createContentRoutes } from './routes/upload.js';
+import { createAdsRoutes } from './routes/ads.js';
 import interactions from './routes/interactions.js';
 import { createAuthMiddleware, requireRole } from './middleware/auth.js';
 import { users, roles } from './db/schema.js';
@@ -45,6 +46,9 @@ app.route('/api/content', createContentRoutes());
 
 // Interaction routes
 app.route('/api/interaction', interactions);
+
+// Ads routes
+app.route('/api/ads', createAdsRoutes());
 
 // User management routes
 app.get('/api/users/:id', async (c) => {

@@ -192,6 +192,40 @@
     }
     .shorts-empty svg { width: 48px; height: 48px; opacity: 0.3; }
 
+    /* ── Ad ─────────────────────────────────────────────────────── */
+    .shorts-ad {
+      background: rgba(20,20,30,0.95);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin: 0.75rem 0.5rem;
+      overflow: hidden;
+    }
+    .shorts-ad-link {
+      display: block; text-decoration: none; color: inherit; padding: 0.5rem;
+    }
+    .shorts-ad-link:hover { opacity: 0.9; }
+    .shorts-ad-label {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: rgba(255,255,255,0.35);
+      margin-bottom: 6px;
+    }
+    .shorts-ad-body { display: flex; gap: 0.6rem; align-items: center; }
+    .shorts-ad-media {
+      width: 72px; height: 48px; border-radius: 6px; overflow: hidden;
+      background: rgba(255,255,255,0.08); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,0.2); font-size: 16px;
+    }
+    .shorts-ad-media img { width: 100%; height: 100%; object-fit: cover; }
+    .shorts-ad-text { flex: 1; min-width: 0; }
+    .shorts-ad-title { font-size: 12px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .shorts-ad-desc { font-size: 10px; color: rgba(255,255,255,0.55); margin-top: 1px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .shorts-ad-cta {
+      display: inline-block; margin-top: 3px; padding: 2px 8px;
+      background: var(--accent); color: #fff; border-radius: 10px;
+      font-size: 9px; font-weight: 700;
+    }
+
     @media (min-width: 769px) {
       .shorts-container { max-width: 420px; margin: 0 auto; border-left: 1px solid #222; border-right: 1px solid #222; }
       .shorts-bottom-nav { max-width: 420px; left: 50%; transform: translateX(-50%); }
@@ -256,7 +290,7 @@
     </button>
   </nav>
 
-  <script src="i18n.js?v=4"></script>
+  <script src="i18n.js?v=5"></script>
   <script>
     (function() {
       'use strict';
@@ -557,14 +591,46 @@
         }
       });
 
+      // ── Ad serving ──────────────────────────────────────────────────
+      async function loadShortsAd() {
+        try {
+          var res = await fetch('/api/ads/serve?type=short_video&device_id=client-' + Date.now());
+          if (!res.ok) return;
+          var data = await res.json();
+          var ad = data.ad;
+          if (!ad) return;
+          var mediaHtml = ad.image_url
+            ? '<img src="' + escapeHtml(ad.image_url) + '" alt="">'
+            : '<span>\u25B6</span>';
+          var adEl = document.createElement('div');
+          adEl.className = 'shorts-ad';
+          adEl.innerHTML =
+            '<a class="shorts-ad-link" href="' + escapeHtml(ad.target_url || '#') + '" target="_blank" rel="noopener" onclick="recordShortsAdClick(' + ad.id + ')">' +
+              '<span class="shorts-ad-label">Sponsored</span>' +
+              '<div class="shorts-ad-body">' +
+                '<div class="shorts-ad-media">' + mediaHtml + '</div>' +
+                '<div class="shorts-ad-text">' +
+                  '<div class="shorts-ad-title">' + escapeHtml(ad.title) + '</div>' +
+                  (ad.description ? '<div class="shorts-ad-desc">' + escapeHtml(ad.description) + '</div>' : '') +
+                  '<span class="shorts-ad-cta">' + t('ads.learnMore') + '</span>' +
+                '</div>' +
+              '</div>' +
+            '</a>';
+          document.querySelector('.shorts-container')?.appendChild(adEl);
+        } catch (e) { console.error('Shorts ad failed:', e); }
+      }
+
+      function recordShortsAdClick(adId) {
+        fetch('/api/ads/click?ad_id=' + adId + '&device_id=client-' + Date.now()).catch(function() {});
+      }
+      window.recordShortsAdClick = recordShortsAdClick;
+
       // Init
       function init() {
         buildLangSelector();
         if (window.i18n && window.i18n.onLangChange) {
           window.i18n.onLangChange(function() {
-            // Re-render visible card info on lang change
             var activeCard = container.querySelector('.shorts-card[style*=""], .shorts-card:nth-child(' + (currentIndex + 2) + ')');
-            // Force re-apply translations for static elements
             document.querySelectorAll('[data-i18n]').forEach(function(el) {
               el.textContent = window.i18n.t(el.dataset.i18n);
             });
@@ -572,6 +638,7 @@
         }
         loadMore().then(function() {
           setupObserver();
+          loadShortsAd();
         });
       }
 

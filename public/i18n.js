@@ -635,6 +635,10 @@
       loading: { en: 'Loading...', fr: 'Chargement...', de: 'Laden...', it: 'Caricamento...', es: 'Cargando...', ar: '\u062C\u0627\u0631\u064A \u0627\u0644\u062A\u062D\u0645\u064A\u0644...' },
     },
 
+    ads: {
+      sponsored: { en: 'Sponsored', fr: 'Publipostage', de: 'Gesponsert', it: 'Sponsorizzato', es: 'Patrocinado', ar: '\u0631\u0639\u0627\u064A\u0629' },
+      learnMore: { en: 'Learn More', fr: 'En savoir plus', de: 'Mehr erfahren', it: 'Scopri di pi\u00F9', es: 'Saber m\u00E1s', ar: '\u0627\u0644\u0645\u0632\u064A\u062F \u0627\u0644\u0645\u0639\u0644\u0648\u0645\u0627\u062A' },
+    },
   };
 
   // ── Category names ────────────────────────────────────────────────────────

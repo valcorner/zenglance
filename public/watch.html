@@ -367,6 +367,7 @@
         <button class="watch-follow-btn" id="watchFollowBtn" onclick="toggleFollow()">Follow</button>
       </div>
       <div class="watch-description" id="watchDescription"></div>
+      <div id="watchAdContainer"></div>
 
       <!-- Comments section -->
       <div class="watch-comments" id="watchComments">
@@ -392,7 +393,7 @@
     </aside>
   </div>
 
-  <script src="i18n.js?v=4"></script>
+  <script src="i18n.js?v=5"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
   <script>
@@ -669,6 +670,7 @@
         loadRelated(contentType);
         loadInteractions(contentId, creator && creator.id ? creator.id : null);
         loadComments(contentId);
+        loadAd(contentType);
       }
 
       function loadInteractions(contentId, creatorId) {
@@ -833,6 +835,42 @@
         }).catch(function(e) { console.error(e); });
       }
       window.postComment = postComment;
+
+      // ── Ad serving ──────────────────────────────────────────────────
+      async function loadAd(contentType) {
+        var container = document.getElementById('watchAdContainer');
+        if (!container) return;
+        var token = localStorage.getItem('zenglance_token');
+        var userId = token ? '' : '';
+        try {
+          var res = await fetch('/api/ads/serve?type=' + encodeURIComponent(contentType) + '&device_id=client-' + Date.now());
+          if (!res.ok) return;
+          var data = await res.json();
+          var ad = data.ad;
+          if (!ad) { container.innerHTML = ''; return; }
+          var mediaHtml = ad.image_url
+            ? '<img src="' + escapeHtml(ad.image_url) + '" alt="">'
+            : '<span>\u25B6</span>';
+          container.innerHTML =
+            '<a class="watch-ad" href="' + escapeHtml(ad.target_url || '#') + '" target="_blank" rel="noopener" onclick="recordAdClick(' + ad.id + ')">' +
+              '<div class="watch-ad-label">Sponsored</div>' +
+              '<div class="watch-ad-body">' +
+                '<div class="watch-ad-media">' + mediaHtml + '</div>' +
+                '<div class="watch-ad-text">' +
+                  '<div class="watch-ad-title">' + escapeHtml(ad.title) + '</div>' +
+                  (ad.description ? '<div class="watch-ad-desc">' + escapeHtml(ad.description) + '</div>' : '') +
+                  '<span class="watch-ad-cta">Learn More</span>' +
+                '</div>' +
+              '</div>' +
+            '</a>';
+        } catch (e) { console.error('Ad load failed:', e); }
+      }
+
+      function recordAdClick(adId) {
+        var deviceId = 'client-' + Date.now();
+        fetch('/api/ads/click?ad_id=' + adId + '&device_id=' + encodeURIComponent(deviceId)).catch(function() {});
+      }
+      window.recordAdClick = recordAdClick;
 
       function formatTime(seconds) {
         var m = Math.floor(seconds / 60);

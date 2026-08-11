@@ -22,7 +22,8 @@
     "B2_APPLICATION_KEY_ID",
     "B2_APPLICATION_KEY",
     "VALCORNER_CLIENT_ID",
-    "VALCORNER_CLIENT_SECRET"
+    "VALCORNER_CLIENT_SECRET",
+    "ADS_API_KEY"
   ],
   "d1_databases": [
     {
