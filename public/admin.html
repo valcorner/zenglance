@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Admin — ZenGlance</title>
   <link rel="stylesheet" href="style.css?v=4" />
-  <script src="i18n.js?v=9"></script>
+  <script src="i18n.js?v=10"></script>
   <style>
     .admin-page { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
     .admin-page h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.5rem; }
@@ -15,7 +15,6 @@
     .admin-table td { padding: 0.75rem 1rem; border-top: 1px solid var(--border-color); vertical-align: middle; font-size: 14px; }
     .admin-table tr:hover td { background: var(--bg-hover); }
 
-    .admin-user-cell { display: flex; align-items: center; gap: 0.75rem; }
     .admin-avatar { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; flex-shrink: 0; overflow: hidden; }
     .admin-avatar img { width: 100%; height: 100%; object-fit: cover; }
     .admin-user-name { font-weight: 600; }
@@ -55,7 +54,7 @@
   </header>
 
   <div class="admin-page">
-    <h1>Admin — User Management</h1>
+    <h1 data-i18n="admin.title">Admin — User Management</h1>
     <div id="adminContent">
       <div class="admin-loading">Loading…</div>
     </div>
@@ -82,17 +81,15 @@
       return '<span class="admin-role-badge ' + role + '">' + role + '</span>';
     }
 
-    function timeAgo(ts) {
-      var diff = Math.floor((Date.now() - ts) / 1000);
-      if (diff < 60) return 'just now';
-      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
-      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
-      return Math.floor(diff / 86400) + 'd ago';
-    }
-
     function formatDatetime(ts) {
       return new Date(ts).toLocaleString();
     }
+
+    function t(key, params) {
+      return (window.i18n && window.i18n.t) ? window.i18n.t(key, params) : (params ? key.replace(/\{(\w+)\}/g, function(_, k) { return params[k] || ''; }) : key);
+    }
+
+    var currentPage = 1;
 
     function renderAdminTable(users, page, limit, total) {
       var totalPages = Math.max(1, Math.ceil(total / limit));
@@ -110,20 +107,20 @@
               '<option value="senior"' + (u.role === 'senior' ? ' selected' : '') + '>senior</option>' +
               '<option value="admin"'  + (u.role === 'admin'  ? ' selected' : '') + '>admin</option>' +
             '</select>' +
-            '<button class="admin-save-btn" onclick="saveRole(\'' + escapeHtml(u.id) + '\')">Save</button>' +
+            '<button class="admin-save-btn" onclick="saveRole(\'' + escapeHtml(u.id) + '\')">' + t('admin.save') + '</button>' +
           '</td>' +
         '</tr>';
       }).join('');
 
       var pagination = '<div class="admin-pagination">' +
-        '<button class="admin-page-btn" onclick="goPage(' + (page - 1) + ')"' + (page <= 1 ? ' disabled' : '') + '>Prev</button>' +
-        '<span class="admin-page-info">Page ' + page + ' / ' + totalPages + '  (' + total + ' users)</span>' +
-        '<button class="admin-page-btn" onclick="goPage(' + (page + 1) + ')"' + (page >= totalPages ? ' disabled' : '') + '>Next</button>' +
+        '<button class="admin-page-btn" onclick="goPage(' + (page - 1) + ')"' + (page <= 1 ? ' disabled' : '') + '>' + t('prev') + '</button>' +
+        '<span class="admin-page-info">' + t('admin.paginationInfo', { page: page, total: totalPages, count: total }) + '</span>' +
+        '<button class="admin-page-btn" onclick="goPage(' + (page + 1) + ')"' + (page >= totalPages ? ' disabled' : '') + '>' + t('next') + '</button>' +
       '</div>';
 
       document.getElementById('adminContent').innerHTML =
         '<table class="admin-table"><thead><tr>' +
-          '<th></th><th>User</th><th>Role</th><th>Joined</th><th>Updated</th><th>Change Role</th>' +
+          '<th></th><th>' + t('admin.colUser') + '</th><th>' + t('admin.colRole') + '</th><th>' + t('admin.colJoined') + '</th><th>' + t('admin.colUpdated') + '</th><th>' + t('admin.colChangeRole') + '</th>' +
         '</tr></thead><tbody>' + rows + '</tbody></table>' + pagination;
 
       document.querySelectorAll('.admin-role-select').forEach(function(sel) {
@@ -133,7 +130,8 @@
 
     async function loadUsers(page) {
       page = page || 1;
-      document.getElementById('adminContent').innerHTML = '<div class="admin-loading">Loading…</div>';
+      currentPage = page;
+      document.getElementById('adminContent').innerHTML = '<div class="admin-loading">' + t('admin.loading') + '</div>';
       try {
         var res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN } });
         if (!res.ok) { localStorage.removeItem('zenglance_token'); location.href = '/login.html'; return; }
@@ -141,7 +139,7 @@
         if (me.data.role !== 'admin') { location.href = '/'; return; }
 
         var r = await fetch('/api/admin/users?page=' + page + '&limit=20');
-        if (!r.ok) { document.getElementById('adminContent').innerHTML = '<div class="admin-error">Failed to load users</div>'; return; }
+        if (!r.ok) { document.getElementById('adminContent').innerHTML = '<div class="admin-error">' + t('admin.error') + '</div>'; return; }
         var data = await r.json();
         renderAdminTable(data.data, data.page, data.limit, data.total);
       } catch (e) {
@@ -155,7 +153,7 @@
       if (!sel) return;
       var role = sel.value;
       var btn = sel.closest('td').querySelector('.admin-save-btn');
-      btn.textContent = 'Saving…'; btn.disabled = true;
+      btn.textContent = t('admin.saving'); btn.disabled = true;
       try {
         var r = await fetch('/api/admin/users/' + userId + '/role', {
           method: 'POST',
@@ -164,11 +162,11 @@
         });
         var json = await r.json().catch(function() { return null; });
         if (!r.ok || !json || !json.success) throw new Error(json && json.error ? json.error : 'Failed');
-        btn.textContent = 'Saved';
-        setTimeout(function() { btn.textContent = 'Save'; btn.disabled = false; }, 1500);
+        btn.textContent = t('admin.saved');
+        setTimeout(function() { btn.textContent = t('admin.save'); btn.disabled = false; }, 1500);
       } catch (e) {
-        btn.textContent = 'Save'; btn.disabled = false;
-        alert('Failed to update role: ' + (e.message || 'unknown error'));
+        btn.textContent = t('admin.save'); btn.disabled = false;
+        alert(t('admin.roleSaveFailed', { error: e.message || '' }));
       }
     };
 
@@ -222,11 +220,15 @@
     loadUser().then(function(user) {
       if (!user || user.role !== 'admin') {
         document.getElementById('adminContent').innerHTML =
-          '<div class="admin-error" style="padding-top:2rem">Access denied. Admins only.</div>';
+          '<div class="admin-error" style="padding-top:2rem">' + t('admin.accessDenied') + '</div>';
         return;
       }
       loadUsers(1);
     });
+
+    if (window.i18n && window.i18n.onLangChange) {
+      window.i18n.onLangChange(function() { loadUsers(currentPage); });
+    }
   </script>
 </body>
 </html>

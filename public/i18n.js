@@ -109,6 +109,8 @@
         es: 'Perfil',
         ar: '\u0627\u0644\u0645\u0648\u0636\u0648\u0639 \u0627\u0644\u0634\u062E\u0635\u064A',
       },
+      prev: { en: 'Prev', fr: 'Préc.', de: 'Zurück', it: 'Prec', es: 'Ant.', ar: '\u0627\u0644\u0633\u0627\u0628\u0642' },
+      next: { en: 'Next', fr: 'Suiv.', de: 'Weiter', it: 'Succ', es: 'Sig.', ar: '\u0627\u0644\u062A\u0627\u0644\u064A' },
       categories: {
         en: 'Categories',
         fr: 'Cat\u00E9gories',
@@ -650,6 +652,27 @@
     short_video: { en: 'Short Videos', fr: 'Courtes vid\u00E9os', de: 'Kurzvideos',  it: 'Video brevi', es: 'Videos cortos', ar: '\u0641\u064A\u062F\u064A\u0648\u0647\u0627\u062A' },
   };
   TRANSLATIONS.category = categoryNames;
+
+  TRANSLATIONS.admin = {
+    pageTitle:      { en: 'Admin — ZenGlance', fr: 'Admin — ZenGlance', de: 'Admin — ZenGlance', it: 'Admin — ZenGlance', es: 'Admin — ZenGlance', ar: 'الإدارة — ZenGlance' },
+    pageTitleShort: { en: 'Admin', fr: 'Admin', de: 'Admin', it: 'Admin', es: 'Admin', ar: 'الإدارة' },
+    title:          { en: 'Admin — User Management', fr: 'Admin — Gestion des Utilisateurs', de: 'Admin — Benutzerverwaltung', it: 'Admin — Gestione Utenti', es: 'Admin — Gestión de Usuarios', ar: 'الإدارة — إدارة المستخدمين' },
+    colAvatar:      { en: '', fr: '', de: '', it: '', es: '', ar: '' },
+    colUser:        { en: 'User', fr: 'Utilisateur', de: 'Benutzer', it: 'Utente', es: 'Usuario', ar: 'المستخدم' },
+    colRole:        { en: 'Role', fr: 'Rôle', de: 'Rolle', it: 'Ruolo', es: 'Rol', ar: 'الدور' },
+    colJoined:      { en: 'Joined', fr: 'Inscrit', de: 'Beigetreten', it: 'Iscritto', es: 'Se unió', ar: 'انضم' },
+    colUpdated:     { en: 'Updated', fr: 'Modifié', de: 'Aktualisiert', it: 'Aggiornato', es: 'Actualizado', ar: 'مُحدَّث' },
+    colChangeRole:  { en: 'Change Role', fr: 'Changer le Rôle', de: 'Rolle ändern', it: 'Cambia Ruolo', es: 'Cambiar Rol', ar: 'تغيير الدور' },
+    save:           { en: 'Save', fr: 'Enregistrer', de: 'Speichern', it: 'Salva', es: 'Guardar', ar: 'حفظ' },
+    saving:         { en: 'Saving…', fr: 'Enregistrement…', de: 'Speichern…', it: 'Salvataggio…', es: 'Guardando…', ar: 'جارٍ الحفظ…' },
+    saved:          { en: 'Saved', fr: 'Enregistré', de: 'Gespeichert', it: 'Salvato', es: 'Guardado', ar: 'تم الحفظ' },
+    loading:        { en: 'Loading…', fr: 'Chargement…', de: 'Laden…', it: 'Caricamento…', es: 'Cargando…', ar: 'جارٍ التحميل…' },
+    empty:          { en: 'No users found.', fr: 'Aucun utilisateur trouvé.', de: 'Keine Benutzer gefunden.', it: 'Nessun utente trovato.', es: 'Ningún usuario encontrado.', ar: 'لم يتم العثور على مستخدمين.' },
+    error:          { en: 'Failed to load users', fr: 'Échec du chargement', de: 'Laden fehlgeschlagen', it: 'Caricamento fallito', es: 'Error al cargar', ar: 'فشل التحميل' },
+    accessDenied:   { en: 'Access denied. Admins only.', fr: 'Accès refusé. Administrateurs uniquement.', de: 'Zugriff verweigert. Nur Admins.', it: 'Accesso negato. Solo amministratori.', es: 'Acceso denegado. Solo administradores.', ar: 'وصول مرفوض. للمسؤولين فقط.' },
+    roleSaveFailed: { en: 'Failed to update role: {error}', fr: 'Échec de la mise à jour du rôle : {error}', de: 'Rollenaktualisierung fehlgeschlagen: {error}', it: 'Aggiornamento ruolo fallito: {error}', es: 'Error al actualizar el rol: {error}', ar: 'فشل تحديث الدور: {error}' },
+    paginationInfo: { en: 'Page {page} / {total}  ({count} users)', fr: 'Page {page} / {total}  ({count} utilisateurs)', de: 'Seite {page} / {total}  ({count} Benutzer)', it: 'Pagina {page} / {total}  ({count} utenti)', es: 'Página {page} / {total}  ({count} usuarios)', ar: 'صفحة {page} / {total}  ({count} مستخدمين)' },
+  };
 
   let currentLang = 'en';
   const _langChangeCallbacks = [];
