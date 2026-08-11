@@ -138,7 +138,9 @@
         var me = await res.json();
         if (me.data.role !== 'admin') { location.href = '/'; return; }
 
-        var r = await fetch('/api/admin/users?page=' + page + '&limit=20');
+        var r = await fetch('/api/admin/users?page=' + page + '&limit=20', {
+          headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN }
+        });
         if (!r.ok) { document.getElementById('adminContent').innerHTML = '<div class="admin-error">' + t('admin.error') + '</div>'; return; }
         var data = await r.json();
         renderAdminTable(data.data, data.page, data.limit, data.total);
