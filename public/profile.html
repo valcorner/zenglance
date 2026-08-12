@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>User Profile — ZenGlance</title>
+  <title>User Profile — Video</title>
   <link rel="stylesheet" href="style.css?v=4" />
   <script src="i18n.js?v=13"></script>
   <style>
@@ -160,7 +160,7 @@
       </button>
       <a href="/" class="logo">
         <span class="logo-icon">Z</span>
-        <span class="logo-text" data-i18n="meta.title">ZenGlance</span>
+        <span class="logo-text" data-i18n="meta.title">Video</span>
       </a>
     </div>
 
@@ -339,13 +339,13 @@
 
     async function apiFetch(url, options) {
       options = options || {};
-      var token = localStorage.getItem('zenglance_token');
+      var token = localStorage.getItem('video_token');
       var headers = { 'Content-Type': 'application/json', ...(options.headers || {}), ...(token ? { 'Authorization': 'Bearer ' + token } : {}) };
       return fetch(url, { ...options, headers });
     }
 
     async function loadUser() {
-      var token = localStorage.getItem('zenglance_token');
+      var token = localStorage.getItem('video_token');
       var userMenu = document.getElementById('userMenu');
       var loginBtn = document.getElementById('loginBtn');
       var uploadBtn = document.getElementById('uploadBtn');
@@ -359,7 +359,7 @@
       try {
         var res = await apiFetch('/auth/me');
         if (!res || !res.ok) {
-          if (res && res.status === 401) localStorage.removeItem('zenglance_token');
+          if (res && res.status === 401) localStorage.removeItem('video_token');
           if (userMenu) userMenu.style.display = 'none';
           if (loginBtn) loginBtn.style.display = 'inline-flex';
           if (uploadBtn) uploadBtn.style.display = 'none';
@@ -415,9 +415,9 @@
     });
 
     async function logout() {
-      var token = localStorage.getItem('zenglance_token');
+      var token = localStorage.getItem('video_token');
       if (token) { try { await fetch('/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }); } catch (e) {} }
-      localStorage.removeItem('zenglance_token');
+      localStorage.removeItem('video_token');
       location.href = '/';
     }
     window.logout = logout;
@@ -527,7 +527,7 @@
     }
 
     async function loadUserContent(targetId) {
-      var token = localStorage.getItem('zenglance_token');
+      var token = localStorage.getItem('video_token');
       var grid = document.getElementById('section-content');
       try {
         var res = await fetch('/api/content?uploader=' + targetId + '&limit=20', {
@@ -541,7 +541,7 @@
     }
 
     async function loadMyContent() {
-      var token = localStorage.getItem('zenglance_token');
+      var token = localStorage.getItem('video_token');
       var grid = document.getElementById('section-content');
       try {
         var res = await fetch('/api/content?limit=20', {
@@ -555,7 +555,7 @@
     }
 
     async function loadHistory() {
-      var token = localStorage.getItem('zenglance_token');
+      var token = localStorage.getItem('video_token');
       var grid = document.getElementById('section-history');
       grid.innerHTML = '<div class="profile-loading">' + t('admin.loading') + '</div>';
       try {
@@ -590,7 +590,7 @@
     }
 
     async function toggleProfileFollow(targetId) {
-      var token = localStorage.getItem('zenglance_token');
+      var token = localStorage.getItem('video_token');
       if (!token) { alert(t('profile.loginRequired')); return; }
       followState = !followState;
       var btn = document.getElementById('profileFollowBtn');

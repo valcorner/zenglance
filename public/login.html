@@ -23,7 +23,7 @@
 
       // Case 1: token already present → store and go home
       if (token) {
-        localStorage.setItem('zenglance_token', token);
+        localStorage.setItem('video_token', token);
         history.replaceState(null, '', '/');
         location.href = '/';
         return;
@@ -46,7 +46,7 @@
           .then(function (res) { return res.json(); })
           .then(function (data) {
             if (data.token) {
-              localStorage.setItem('zenglance_token', data.token);
+              localStorage.setItem('video_token', data.token);
               location.href = '/';
             } else if (data.error) {
               document.getElementById('status').textContent = 'Login failed: ' + (data.details || data.error);

@@ -26,29 +26,29 @@ export class ValcornerCDNService {
 
   /**
    * Construct HLS manifest URL
-   * Format: https://cdn.valcorner.qzz.io/zenglance/{content_type}/{content_id}/{manifest_index}.m3u8?ticket={ticket}
+   * Format: https://cdn.valcorner.qzz.io/video/{content_type}/{content_id}/{manifest_index}.m3u8?ticket={ticket}
    */
   buildManifestUrl(contentType, contentId, manifestIndex, ticket) {
     const cdnType = this.mapContentTypeToCdnType(contentType);
-    return `${this.baseUrl}/zenglance/${cdnType}/${contentId}/${manifestIndex}?ticket=${ticket}`;
+    return `${this.baseUrl}/video/${cdnType}/${contentId}/${manifestIndex}?ticket=${ticket}`;
   }
 
   /**
    * Construct DASH manifest URL
-   * Format: https://cdn.valcorner.qzz.io/zenglance/{content_type}/{content_id}/{manifest_index}.mpd?ticket={ticket}
+   * Format: https://cdn.valcorner.qzz.io/video/{content_type}/{content_id}/{manifest_index}.mpd?ticket={ticket}
    */
   buildDashManifestUrl(contentType, contentId, manifestIndex, ticket) {
     const cdnType = this.mapContentTypeToCdnType(contentType);
-    return `${this.baseUrl}/zenglance/${cdnType}/${contentId}/${manifestIndex}?ticket=${ticket}`;
+    return `${this.baseUrl}/video/${cdnType}/${contentId}/${manifestIndex}?ticket=${ticket}`;
   }
 
   /**
    * Construct direct file URL for non-manifest content
-   * Format: https://cdn.valcorner.qzz.io/zenglance/{content_type}/{content_id}/{filename}?ticket={ticket}
+   * Format: https://cdn.valcorner.qzz.io/video/{content_type}/{content_id}/{filename}?ticket={ticket}
    */
   buildDirectUrl(contentType, contentId, filename, ticket) {
     const cdnType = this.mapContentTypeToCdnType(contentType);
-    return `${this.baseUrl}/zenglance/${cdnType}/${contentId}/${filename}?ticket=${ticket}`;
+    return `${this.baseUrl}/video/${cdnType}/${contentId}/${filename}?ticket=${ticket}`;
   }
 
   /**

@@ -1,5 +1,5 @@
 /**
- * ZenGlance - Self-hosted Multi-modal Content Platform
+ * Video - Self-hosted Multi-modal Content Platform
  * 
  * Architecture:
  * - Write: Client → Backblaze B2 (native REST API presigned upload URL)
@@ -14,6 +14,7 @@ import { createDb } from './db/index.js';
 import { createAuthRoutes } from './routes/auth.js';
 import { createUploadRoutes, createContentRoutes } from './routes/upload.js';
 import { createAdsRoutes } from './routes/ads.js';
+import { createActivityPubRoutes } from './routes/activitypub.js';
 import interactions from './routes/interactions.js';
 import { createAuthMiddleware, requireRole } from './middleware/auth.js';
 import { users, roles, collections, collectionItems, contents, shortDramas, tvSeries, movies, ugcLongVideos, shortVideos } from './db/schema.js';
@@ -32,7 +33,7 @@ const auth = createAuthMiddleware();
 // Health check
 app.get('/health', (c) => {
   return c.json({
-    name: 'ZenGlance API',
+    name: 'Video API',
     version: '0.1.0',
     status: 'healthy'
   });
@@ -52,6 +53,9 @@ app.route('/api/interaction', interactions);
 
 // Ads routes
 app.route('/api/ads', createAdsRoutes());
+
+// ActivityPub routes (federation: WebFinger, NodeInfo, Actor, Inbox, Outbox, etc.)
+app.route('/', createActivityPubRoutes());
 
 // Playlists (collections mapped to playlist format)
 app.get('/api/playlists', auth, async (c) => {
@@ -358,7 +362,7 @@ app.post('/api/admin/content', auth, requireRole('admin'), async (c) => {
     const contentId = crypto.randomUUID();
     const now = Date.now();
     const cdnType = getCdnType(body.contentType);
-    const bucket = body.b2Bucket || c.env.B2_BUCKET_NAME || 'zenglance-media';
+    const bucket = body.b2Bucket || c.env.B2_BUCKET_NAME || 'video-media';
     const b2Key = body.b2Key || `${body.contentType}/${contentId}/source`;
 
     await db.insert(contents).values({

@@ -266,10 +266,77 @@ export const watchHistory = sqliteTable('watch_history', {
 ]);
 
 // ---------------------------------------------------------------------------
-// Relations
+// ActivityPub: Remote actors cache (federated users from other instances)
 // ---------------------------------------------------------------------------
+export const remoteActors = sqliteTable('ap_remote_actors', {
+  id: text('id').primaryKey(), // ActivityPub Actor URI
+  type: text('type').notNull(), // Person, Group, Application, etc.
+  preferredUsername: text('preferred_username'),
+  domain: text('domain').notNull(),
+  inboxUrl: text('inbox_url').notNull(),
+  sharedInboxUrl: text('shared_inbox_url'),
+  followersUrl: text('followers_url'),
+  followingUrl: text('following_url'),
+  publicKeyId: text('public_key_id'),
+  publicKeyPem: text('public_key_pem'),
+  iconUrl: text('icon_url'),
+  name: text('name'),
+  summary: text('summary'),
+  rawJson: text('raw_json'), // Full actor document
+  fetchedAt: integer('fetched_at', { mode: 'number' }).notNull()
+}, (table) => [
+  index('ap_remote_actors_domain_idx').on(table.domain)
+]);
 
-export const usersRelations = relations(users, ({ many }) => ({
+// ---------------------------------------------------------------------------
+// ActivityPub: Activities log (both incoming and outgoing)
+// ---------------------------------------------------------------------------
+export const apActivities = sqliteTable('ap_activities', {
+  id: text('id').primaryKey(), // Activity URI
+  type: text('type').notNull(), // Create, Follow, Like, Announce, Undo, etc.
+  actorId: text('actor_id').notNull(), // Who performed the activity
+  objectId: text('object_id'), // Target object URI
+  rawJson: text('raw_json').notNull(), // Full activity JSON
+  direction: text('direction').notNull(), // 'incoming' or 'outgoing'
+  to: text('to_audience'), // JSON array of recipients
+  cc: text('cc_audience'),
+  createdAt: integer('created_at', { mode: 'number' }).notNull()
+}, (table) => [
+  index('ap_activities_actor_idx').on(table.actorId),
+  index('ap_activities_type_idx').on(table.type),
+  index('ap_activities_direction_idx').on(table.direction)
+]);
+
+// ---------------------------------------------------------------------------
+// ActivityPub: Delivery queue (outgoing activities to remote inboxes)
+// ---------------------------------------------------------------------------
+export const apDeliveryQueue = sqliteTable('ap_delivery_queue', {
+  id: text('id').primaryKey(),
+  activityId: text('activity_id').notNull(), // References ap_activities.id
+  targetInbox: text('target_inbox').notNull(), // Remote inbox URL
+  targetDomain: text('target_domain').notNull(),
+  status: text('status').notNull().default('pending'), // pending, delivered, failed
+  attempts: integer('attempts', { mode: 'number' }).notNull().default(0),
+  lastError: text('last_error'),
+  createdAt: integer('created_at', { mode: 'number' }).notNull(),
+  nextAttemptAt: integer('next_attempt_at', { mode: 'number' }).notNull()
+}, (table) => [
+  index('ap_delivery_status_idx').on(table.status),
+  index('ap_delivery_next_idx').on(table.nextAttemptAt)
+]);
+
+// ---------------------------------------------------------------------------
+// ActivityPub: Local actor key pairs (RSA for HTTP Signatures)
+// ---------------------------------------------------------------------------
+export const apActorKeys = sqliteTable('ap_actor_keys', {
+  userId: text('user_id').primaryKey().references(() => users.id),
+  publicKeyPem: text('public_key_pem').notNull(),
+  privateKeyPem: text('private_key_pem').notNull(),
+  keyId: text('key_id').notNull(), // e.g., https://domain/users/:id#main-key
+  createdAt: integer('created_at', { mode: 'number' }).notNull()
+});
+
+export const usersRelations = relations(users, ({ many, one }) => ({
   uploadedContents: many(contents),
   uploadSessions: many(uploadSessions),
   sessions: many(sessions),
@@ -278,7 +345,8 @@ export const usersRelations = relations(users, ({ many }) => ({
   comments: many(comments),
   follows: many(follows),
   followedBy: many(follows, { relationName: 'follows' }),
-  collections: many(collections)
+  collections: many(collections),
+  apActorKey: one(apActorKeys)
 }));
 
 export const contentsRelations = relations(contents, ({ one, many }) => ({

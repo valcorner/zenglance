@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title data-i18n="meta.titleWatch">Watch — ZenGlance</title>
+  <title data-i18n="meta.titleWatch">Watch — Video</title>
   <link rel="stylesheet" href="style.css" />
   <style>
     .watch-page {
@@ -271,7 +271,7 @@
     <div class="header-left">
       <a href="/" class="logo">
         <span class="logo-icon">Z</span>
-        <span class="logo-text">ZenGlance</span>
+        <span class="logo-text">Video</span>
       </a>
     </div>
     <div class="header-center">
@@ -610,7 +610,7 @@
       }
 
       async function loadVideo(id) {
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         var apiUrl = '/api/content/' + id;
         var res = await fetch(apiUrl, {
           headers: token ? { 'Authorization': 'Bearer ' + token } : {}
@@ -683,7 +683,7 @@
       function loadInteractions(contentId, creatorId) {
         currentVideoId = contentId;
         currentCreatorId = creatorId;
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         if (token) {
           Promise.all([
             fetch('/api/interaction/content/' + contentId + '/likes', { headers: { 'Authorization': 'Bearer ' + token } }).then(function(r){ return r.json(); }),
@@ -744,7 +744,7 @@
       }
 
       async function toggleLike() {
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         if (!token) { alert(t('status.loginFirst')); return; }
         if (!currentVideoId) return;
         isLiked = !isLiked;
@@ -756,7 +756,7 @@
       }
 
       async function toggleSave() {
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         if (!token) { alert(t('status.loginFirst')); return; }
         if (!currentVideoId) return;
         isSaved = !isSaved;
@@ -768,7 +768,7 @@
       }
 
       async function toggleFollow() {
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         if (!token) { alert(t('status.loginFirst')); return; }
         if (!currentCreatorId) return;
         isFollowing = !isFollowing;
@@ -782,7 +782,7 @@
       async function loadComments(contentId, append) {
         if (!contentId || loadingComments) return;
         loadingComments = true;
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         var listEl = document.getElementById('watchCommentsList');
         var loadMoreBtn = document.getElementById('watchCommentsLoadMore');
         if (!append) listEl.innerHTML = '<p style="color:var(--text-muted);padding:.5rem 0">' + t('collection.loading') + '</p>';
@@ -825,7 +825,7 @@
       window.loadMoreComments = loadMoreComments;
 
       function postComment() {
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         if (!token) { alert(t('status.loginFirst')); return; }
         var input = document.getElementById('watchCommentInput');
         if (!input || !input.value.trim()) return;
@@ -847,7 +847,7 @@
       async function loadAd(contentType) {
         var container = document.getElementById('watchAdContainer');
         if (!container) return;
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         var userId = token ? '' : '';
         try {
           var res = await fetch('/api/ads/serve?type=' + encodeURIComponent(contentType) + '&device_id=client-' + Date.now());
@@ -887,7 +887,7 @@
 
       // ── Related videos ────────────────────────────────────────────
       async function loadRelated(category) {
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         try {
           var url = category ? '/api/content?type=' + category + '&limit=8' : '/api/content?limit=8';
           var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });

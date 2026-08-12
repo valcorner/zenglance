@@ -1,4 +1,4 @@
-/* ZenGlance Frontend Application */
+/* Video Frontend Application */
 
 (function() {
   'use strict';
@@ -18,7 +18,7 @@
 
   // ── API ────────────────────────────────────────────────────────────────────
   async function apiFetch(url, options = {}) {
-    const token = localStorage.getItem('zenglance_token');
+    const token = localStorage.getItem('video_token');
     const headers = {
       'Content-Type': 'application/json',
       ...options.headers
@@ -56,7 +56,7 @@
   async function fetchPlaylists() {
     // Playlists are per-user. No token means anonymous user → no playlists, skip API
     // to avoid triggering 401 auto-redirect to login on a public page.
-    const token = localStorage.getItem('zenglance_token');
+    const token = localStorage.getItem('video_token');
     if (!token) {
       state.playlists = [];
       return;
@@ -71,11 +71,11 @@
 
   // ── Logout ─────────────────────────────────────────────────────────────────
   async function logout() {
-    const token = localStorage.getItem('zenglance_token');
+    const token = localStorage.getItem('video_token');
     if (token) {
       try { await apiFetch('/auth/logout', { method: 'POST', headers: { 'Authorization': 'Bearer ' + token } }); } catch (e) { /* ignore */ }
     }
-    localStorage.removeItem('zenglance_token');
+    localStorage.removeItem('video_token');
     state.user = null;
     updateUserInfo();
     location.href = '/';

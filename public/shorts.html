@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
-  <title data-i18n="meta.titleShorts">Shorts — ZenGlance</title>
+  <title data-i18n="meta.titleShorts">Shorts — Video</title>
   <link rel="stylesheet" href="style.css?v=4" />
   <style>
     body { overflow: hidden; }
@@ -277,7 +277,7 @@
       <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="2" width="16" height="20" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M9 10l3 2-3 2V10z" fill="currentColor"/></svg>
       <span data-i18n="menu.short_video">Shorts</span>
     </button>
-    <button class="shorts-nav-btn" onclick="if(!localStorage.getItem('zenglance_token')){window.location.href='/login.html';}else{window.location.href='/'}">
+    <button class="shorts-nav-btn" onclick="if(!localStorage.getItem('video_token')){window.location.href='/login.html';}else{window.location.href='/'}">
       <div class="shorts-upload-btn"><div class="shorts-upload-btn-inner">+</div></div>
     </button>
     <button class="shorts-nav-btn">
@@ -358,7 +358,7 @@
       }
 
       async function fetchShorts(p) {
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         try {
           var res = await fetch('/api/content?category=short_video&page=' + p + '&limit=10', {
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
@@ -373,7 +373,7 @@
       }
 
       async function toggleLike(id, btnEl) {
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         if (!token) { alert(t('status.loginFirst')); return; }
         likeState[id] = !likeState[id];
         var countEl = btnEl.querySelector('span');
@@ -403,7 +403,7 @@
       }
 
       async function toggleSave(id, btnEl) {
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         if (!token) { alert(t('status.loginFirst')); return; }
         saveState[id] = !saveState[id];
         var circleEl = btnEl.querySelector('.icon-circle');
@@ -423,7 +423,7 @@
       }
 
       async function toggleFollow(userId, btnEl) {
-        var token = localStorage.getItem('zenglance_token');
+        var token = localStorage.getItem('video_token');
         if (!token) { alert(t('status.loginFirst')); return; }
         followState[userId] = !followState[userId];
         if (followState[userId]) {
@@ -503,7 +503,7 @@
             if (videoEl.paused) {
               videoEl.play();
               if (overlay) overlay.classList.remove('show');
-              var token = localStorage.getItem('zenglance_token');
+              var token = localStorage.getItem('video_token');
               if (token && video.id) {
                 fetch('/api/interaction/history', {
                   method: 'POST',

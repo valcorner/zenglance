@@ -7,7 +7,7 @@ import {
 import { describe, it, expect } from "vitest";
 import worker from "../src";
 
-describe("ZenGlance API root", () => {
+describe("Video API root", () => {
 	it("returns health-check JSON at /health", async () => {
 		const request = new Request("http://example.com/health");
 		const ctx = createExecutionContext();
@@ -15,7 +15,7 @@ describe("ZenGlance API root", () => {
 		await waitOnExecutionContext(ctx);
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({
-			name: "ZenGlance API",
+			name: "Video API",
 			version: "0.1.0",
 			status: "healthy",
 		});
@@ -25,7 +25,7 @@ describe("ZenGlance API root", () => {
 		const response = await SELF.fetch("http://example.com/health");
 		expect(response.status).toBe(200);
 		expect(await response.json()).toEqual({
-			name: "ZenGlance API",
+			name: "Video API",
 			version: "0.1.0",
 			status: "healthy",
 		});

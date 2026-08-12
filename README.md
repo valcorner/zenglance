@@ -1,4 +1,4 @@
-# ZenGlance
+# Video
 
 A self-hosted multi-modal content platform built on Cloudflare Workers with Backblaze B2 storage and Valcorner CDN.
 
@@ -28,8 +28,8 @@ A self-hosted multi-modal content platform built on Cloudflare Workers with Back
 
 2. **Valcorner CDN URL Format**:
    - Token: `GET https://cdn.valcorner.qzz.io/api/token` → `{"ticket":"uuid"}`
-   - Manifest: `https://cdn.valcorner.qzz.io/zenglance/{content_type}/{content_id}/{manifest_index}.{m3u8|mpd}?ticket={ticket}`
-   - Direct: `https://cdn.valcorner.qzz.io/zenglance/{content_type}/{content_id}/{filename}?ticket={ticket}`
+   - Manifest: `https://cdn.valcorner.qzz.io/video/{content_type}/{content_id}/{manifest_index}.{m3u8|mpd}?ticket={ticket}`
+   - Direct: `https://cdn.valcorner.qzz.io/video/{content_type}/{content_id}/{filename}?ticket={ticket}`
 
 3. **Role-Based Upload Permissions**:
    | Role   | Allowed Content Types |
@@ -107,13 +107,13 @@ Non-secret runtime configuration, already set with local-dev defaults:
 
 ```bash
 # Create D1 database
-wrangler d1 create zenglance-db
+wrangler d1 create video-db
 
 # Update wrangler.jsonc with the database_id
 
 # Run migrations
-wrangler d1 execute zenglance-db --local --file=migrations/0001_initial.sql
-wrangler d1 execute zenglance-db --remote --file=migrations/0001_initial.sql
+wrangler d1 execute video-db --local --file=migrations/0001_initial.sql
+wrangler d1 execute video-db --remote --file=migrations/0001_initial.sql
 ```
 
 ## Development
@@ -154,12 +154,12 @@ A deploy workflow is provided at [`.github/workflows/deploy.yml`](.github/workfl
 |--------|-----|------|
 | `CLOUDFLARE_API_TOKEN` | `cff_xxxxxxxx` | Cloudflare → My Profile → API Tokens |
 | `CLOUDFLARE_ACCOUNT_ID` | `xxxxxxxxxxxxxxxx` | Cloudflare Dashboard 右侧边栏 |
-| `D1_DATABASE_ID` | `xxxxxxxx-xxxx-...` | `wrangler d1 create zenglance-db` 输出 |
-| `D1_DATABASE_NAME` | `zenglance-db` | 与 wrangler.jsonc 保持一致 |
+| `D1_DATABASE_ID` | `xxxxxxxx-xxxx-...` | `wrangler d1 create video-db` 输出 |
+| `D1_DATABASE_NAME` | `video-db` | 与 wrangler.jsonc 保持一致 |
 | `B2_APPLICATION_KEY_ID` | `BLAbc123...` | B2 Console → Account Keys |
 | `B2_APPLICATION_KEY` | `BLAbc123...` | B2 Console → Account Keys（创建时显示） |
 | `B2_API_URL` | `https://api.backblazeb2.com` | 通常无需修改 |
-| `B2_BUCKET_NAME` | `zenglance-media` | 你的 B2 桶名 |
+| `B2_BUCKET_NAME` | `video-media` | 你的 B2 桶名 |
 | `VALCORNER_CLIENT_ID` | `val_xxxxx` | Valcorner admin |
 | `VALCORNER_CLIENT_SECRET` | `xxxxxx` | Valcorner admin |
 | `VALCORNER_REDIRECT_URI` | `https://你的域名/auth/callback` | 生产环境回调地址 |
@@ -175,7 +175,7 @@ A deploy workflow is provided at [`.github/workflows/deploy.yml`](.github/workfl
 
 ```bash
 # 1. 本地创建 D1 数据库，记下 database_id
-npx wrangler d1 create zenglance-db
+npx wrangler d1 create video-db
 # Output: database_id = "<UUID>"
 
 # 2. 推送仓库到 GitHub，然后在仓库 Settings → Secrets and variables → Actions 配置以下所有 Secrets：
@@ -197,7 +197,7 @@ npx wrangler d1 create zenglance-db
 #      FRONTEND_URL
 
 # 3. 手动执行 D1 数据库迁移（只需执行一次）
-npx wrangler d1 execute zenglance-db --remote --file=migrations/0001_initial.sql
+npx wrangler d1 execute video-db --remote --file=migrations/0001_initial.sql
 
 # 4. 触发 workflow
 #    GitHub → Actions → Deploy → Run workflow

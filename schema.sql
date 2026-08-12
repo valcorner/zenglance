@@ -1,4 +1,4 @@
--- ZenGlance Database Schema
+-- Video Database Schema
 -- SQLite schema for Cloudflare D1
 
 -- Users table - stores OAuth user info

@@ -22,13 +22,13 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "zenglance-db",
+      "database_name": "video-db",
       "database_id": "YOUR_D1_DATABASE_ID"
     }
   ],
   "vars": {
     "B2_API_URL": "https://api.backblazeb2.com",
-    "B2_BUCKET_NAME": "zenglance-media",
+    "B2_BUCKET_NAME": "video-media",
     "VALCORNER_SCOPE": "openid email profile",
     "VALCORNER_AUTHORIZE_URL": "https://auth.valcorner.qzz.io/oauth/authorize",
     "VALCORNER_TOKEN_URL": "https://auth.valcorner.qzz.io/oauth2/token",

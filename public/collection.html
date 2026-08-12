@@ -107,7 +107,7 @@
     <div class="header-left">
       <a href="/" class="logo">
         <span class="logo-icon">Z</span>
-        <span class="logo-text" data-i18n="meta.title">ZenGlance</span>
+        <span class="logo-text" data-i18n="meta.title">Video</span>
       </a>
     </div>
     <div class="header-right" id="headerRight"></div>
@@ -143,7 +143,7 @@
     var currentCollectionName = '';
 
     async function apiFetch(url, options) {
-      const token = localStorage.getItem('zenglance_token');
+      const token = localStorage.getItem('video_token');
       const headers = { 'Content-Type': 'application/json', ...(options.headers || {}), ...(token ? { 'Authorization': 'Bearer ' + token } : {}) };
       return fetch(url, { ...options, headers });
     }
@@ -344,7 +344,7 @@
 
     // ── Header user menu ─────────────────────────────────────────────
     async function loadUser() {
-      var token = localStorage.getItem('zenglance_token');
+      var token = localStorage.getItem('video_token');
       var headerRight = document.getElementById('headerRight');
       if (!token) {
         headerRight.innerHTML = '<a href="/login.html" class="login-btn" data-i18n="meta.login">Login</a>';
@@ -352,7 +352,7 @@
       }
       try {
         var res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
-        if (!res.ok) { localStorage.removeItem('zenglance_token'); loadUser(); return; }
+        if (!res.ok) { localStorage.removeItem('video_token'); loadUser(); return; }
         var data = await res.json();
         var user = data.user;
         headerRight.innerHTML =
@@ -378,7 +378,7 @@
     }
 
     function logout() {
-      localStorage.removeItem('zenglance_token');
+      localStorage.removeItem('video_token');
       window.location.href = '/';
     }
 

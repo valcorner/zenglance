@@ -1,5 +1,5 @@
 {
-  "name": "zenglance",
+  "name": "video",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -9,7 +9,7 @@
     "start": "wrangler dev",
     "test": "vitest",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "wrangler d1 migrate zenglance-db --local"
+    "db:migrate": "wrangler d1 migrate video-db --local"
   },
   "dependencies": {
     "drizzle-orm": "^0.40.0",
