@@ -263,6 +263,118 @@
       .watch-title { font-size: 1rem; }
       .watch-sidebar { gap: 0.5rem; }
     }
+
+    /* ── Collection modal ─────────────────────────────────────────── */
+    .watch-collection-modal {
+      display: none;
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      z-index: 2000;
+      align-items: center; justify-content: center;
+    }
+    .watch-collection-modal.open { display: flex; }
+    .watch-collection-modal-box {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg); width: 92%; max-width: 420px;
+      padding: 1.25rem; max-height: 80vh; display: flex; flex-direction: column;
+    }
+    .watch-collection-modal-box h3 { font-size: 1rem; font-weight: 700; margin-bottom: .75rem; }
+    .watch-collection-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: .5rem; }
+    .watch-collection-item {
+      display: flex; align-items: center; gap: .6rem;
+      padding: .55rem .65rem; border-radius: var(--radius-md);
+      border: 1px solid var(--border-color); cursor: pointer;
+      transition: background var(--transition);
+    }
+    .watch-collection-item:hover { background: var(--bg-hover); }
+    .watch-collection-item.in { border-color: var(--accent); background: rgba(0,120,212,.08); }
+    .watch-collection-item input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); }
+    .watch-collection-item-label { flex: 1; font-size: 14px; font-weight: 500; }
+    .watch-collection-item-count { font-size: 12px; color: var(--text-muted); }
+    .watch-collection-new {
+      margin-top: .5rem; display: flex; gap: .5rem;
+    }
+    .watch-collection-new input {
+      flex: 1; background: var(--bg-secondary); border: 1px solid var(--border-color);
+      border-radius: var(--radius-md); color: var(--text-primary);
+      padding: .45rem .65rem; font-size: 13px;
+    }
+    .watch-collection-new input:focus { outline: none; border-color: var(--accent); }
+    .watch-collection-new button {
+      background: var(--accent); color: #fff; border: none;
+      padding: .45rem .9rem; border-radius: var(--radius-md);
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .watch-collection-modal-footer {
+      display: flex; gap: .5rem; justify-content: flex-end; margin-top: .75rem;
+    }
+    .watch-collection-modal-footer button {
+      padding: .45rem 1rem; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .watch-collection-modal-footer .btn-save { background: var(--accent); color: #fff; border: none; }
+    .watch-collection-modal-footer .btn-cancel { background: none; border: 1px solid var(--border-color); color: var(--text-secondary); }
+    .btn-cancel { background: none; border: 1px solid var(--border-color); color: var(--text-secondary); padding: .45rem 1rem; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .btn-save { background: var(--accent); color: #fff; border: none; padding: .45rem 1rem; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; cursor: pointer; }
+
+    /* ── Episode navigation ──────────────────────────────────────── */
+    .watch-episode-nav {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: .75rem; padding: .75rem 0; margin-top: .5rem;
+      border-top: 1px solid var(--border-color); border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+    .watch-episode-nav-left, .watch-episode-nav-right { display: flex; align-items: center; gap: .5rem; }
+    .watch-ep-nav-btn {
+      display: inline-flex; align-items: center; gap: .35rem;
+      padding: .4rem .85rem; border-radius: var(--radius-md);
+      border: 1px solid var(--border-color); background: var(--bg-card);
+      color: var(--text-primary); font-size: 13px; font-weight: 500;
+      cursor: pointer; text-decoration: none; transition: background var(--transition);
+    }
+    .watch-ep-nav-btn:hover:not(:disabled) { background: var(--bg-hover); }
+    .watch-ep-nav-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .watch-ep-nav-btn svg { width: 14px; height: 14px; }
+    .watch-ep-nav-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+    .watch-ep-list-btn {
+      background: none; border: 1px solid var(--border-color);
+      color: var(--text-secondary); padding: .35rem .75rem;
+      border-radius: var(--radius-md); font-size: 12px; cursor: pointer;
+      transition: background var(--transition);
+    }
+    .watch-ep-list-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .watch-ep-list-modal {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55); z-index: 2000;
+      align-items: center; justify-content: center;
+    }
+    .watch-ep-list-modal.open { display: flex; }
+    .watch-ep-list-box {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg); width: 92%; max-width: 520px;
+      max-height: 80vh; display: flex; flex-direction: column;
+    }
+    .watch-ep-list-box h3 { font-size: 1rem; font-weight: 700; padding: 1rem 1.25rem .75rem; border-bottom: 1px solid var(--border-color); }
+    .watch-ep-list { flex: 1; overflow-y: auto; }
+    .watch-ep-item {
+      display: flex; align-items: center; gap: .75rem;
+      padding: .6rem 1.25rem; border-bottom: 1px solid var(--border-color);
+      text-decoration: none; color: var(--text-primary); transition: background var(--transition);
+    }
+    .watch-ep-item:hover { background: var(--bg-hover); }
+    .watch-ep-item.current { background: rgba(0,120,212,.1); border-left: 3px solid var(--accent); }
+    .watch-ep-num {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--bg-secondary); display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 600; color: var(--text-muted); flex-shrink: 0;
+    }
+    .watch-ep-item.current .watch-ep-num { background: var(--accent); color: #fff; }
+    .watch-ep-info { flex: 1; min-width: 0; }
+    .watch-ep-title { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .watch-ep-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+    .watch-ep-list-footer {
+      padding: .75rem 1.25rem; border-top: 1px solid var(--border-color);
+      display: flex; justify-content: flex-end; gap: .5rem;
+    }
   </style>
 </head>
 <body>
@@ -357,6 +469,10 @@
           <svg viewBox="0 0 24 24" fill="none"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8" stroke="currentColor" stroke-width="1.8"/><polyline points="16 6 12 2 8 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="2" x2="12" y2="15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
           <span data-i18n="interactions.share">Share</span>
         </button>
+        <button class="watch-action-btn" id="watchCollectionBtn" onclick="openCollectionModal()">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 6a2 2 0 012-2h4a2 2 0 012 2v0a2 2 0 01-2 2H6a2 2 0 01-2-2z" stroke="currentColor" stroke-width="1.8"/><path d="M4 12a2 2 0 012-2h4a2 2 0 012 2v0a2 2 0 01-2 2H6a2 2 0 01-2-2z" stroke="currentColor" stroke-width="1.8"/><path d="M14 4h4a2 2 0 012 2v0a2 2 0 01-2 2h-4a2 2 0 01-2-2v0a2 2 0 012-2z" stroke="currentColor" stroke-width="1.8"/><path d="M14 10h4a2 2 0 012 2v0a2 2 0 01-2 2h-4a2 2 0 01-2-2v0a2 2 0 012-2z" stroke="currentColor" stroke-width="1.8"/></svg>
+          <span data-i18n="collection.addToCollection">Add to Collection</span>
+        </button>
       </div>
       <div class="watch-creator-bar" id="watchCreatorBar">
         <div class="watch-creator-avatar" id="watchCreatorAvatar">U</div>
@@ -368,6 +484,7 @@
       </div>
       <div class="watch-description" id="watchDescription"></div>
       <div id="watchAdContainer"></div>
+      <div id="watchEpisodeNav" class="watch-episode-nav" style="display:none"></div>
 
       <!-- Comments section -->
       <div class="watch-comments" id="watchComments">
@@ -522,13 +639,64 @@
         }
       };
 
+      video.addEventListener('loadedmetadata', function() {
+        if (durationEl) durationEl.textContent = formatTime(video.duration);
+      });
+
+      // ── Watch history auto-record ───────────────────────────────────
+      var _historyUserKey = null;
+      function _getHistoryKey() {
+        if (_historyUserKey) return Promise.resolve(_historyUserKey);
+        var token = localStorage.getItem('video_token');
+        if (!token) return Promise.reject();
+        return fetch('/api/interaction/history/key', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        }).then(function(r) { return r.json(); }).then(function(d) {
+          if (d.key) { _historyUserKey = d.key; return d.key; }
+          return Promise.reject();
+        });
+      }
+      var _historyRecordingTimer = null;
+      function _recordHistoryProgress() {
+        if (!currentVideoId || !currentContentType) return;
+        var token = localStorage.getItem('video_token');
+        if (!token) return;
+        var deviceId = watchHistoryCrypto.getDeviceId();
+        var progress = { position: video.currentTime, duration: video.duration || 0 };
+        _getHistoryKey()
+          .then(function(key) {
+            return watchHistoryCrypto.encryptProgress(key, progress);
+          })
+          .then(function(enc) {
+            navigator.sendBeacon('/api/interaction/history/record', JSON.stringify({
+              contentId: currentVideoId,
+              deviceId: deviceId,
+              watchedAt: Date.now(),
+              encryptedProgress: enc.data,
+              progressIv: enc.iv,
+              progressAuthTag: enc.tag
+            }));
+          }).catch(function() {});
+      }
+      var _historySendTimer = null;
       video.addEventListener('timeupdate', function() {
         var pct = video.duration ? (video.currentTime / video.duration) * 100 : 0;
         if (seekBar) seekBar.value = pct;
         if (currentTimeEl) currentTimeEl.textContent = formatTime(video.currentTime);
+        clearTimeout(_historySendTimer);
+        _historySendTimer = setTimeout(_recordHistoryProgress, 30000);
       });
-      video.addEventListener('loadedmetadata', function() {
-        if (durationEl) durationEl.textContent = formatTime(video.duration);
+      window.addEventListener('beforeunload', function() {
+        clearTimeout(_historySendTimer);
+        _recordHistoryProgress();
+        var token = localStorage.getItem('video_token');
+        if (token && currentVideoId) {
+          navigator.sendBeacon('/api/interaction/history/record', JSON.stringify({
+            contentId: currentVideoId,
+            deviceId: watchHistoryCrypto.getDeviceId(),
+            watchedAt: Date.now()
+          }));
+        }
       });
 
       // ── Streaming player setup ────────────────────────────────────
@@ -536,6 +704,7 @@
       var dashPlayer = null;
       var currentVideoId = null, currentCreatorId = null;
       var currentCdn = null;
+      var currentContentType = null;
       var likeCount = 0, saveCount = 0, isLiked = false, isSaved = false, isFollowing = false;
       var commentCursor = null, loadingComments = false;
 
@@ -675,6 +844,7 @@
         var seriesStatus = data.seriesStatus, rating = data.rating;
         var platform = data.platform;
         var views = data.views, duration = data.duration, contentType = data.contentType;
+        currentContentType = contentType;
 
         metaEl.innerHTML =
           (contentType ? '<span class="watch-meta-tag">' + escapeHtml(t('category.' + contentType)) + '</span>' : '') +
@@ -711,6 +881,11 @@
         loadInteractions(contentId, creator && creator.id ? creator.id : null);
         loadComments(contentId);
         loadAd(contentType);
+        // Load series episodes for navigation if seriesSlug exists
+        if (seriesSlug) {
+          _currentSeriesSlug = seriesSlug;
+          loadEpisodes(seriesSlug, episodeNumber);
+        }
       }
 
       function loadInteractions(contentId, creatorId) {
@@ -1001,11 +1176,8 @@
       function init() {
         buildLangSelector();
         var id = getQueryParam('id');
-        if (!id) {
-          document.querySelector('.watch-main').innerHTML =
-            '<div class="empty-state"><h3>' + t('status.error') + '</h3><p>' + t('meta.noVideo') + '</p></div>';
-          return;
-        }
+        var type = getQueryParam('type');
+        if (!id || !type) { window.location.replace('/index.html'); return; }
         loadVideo(id);
       }
 
@@ -1014,7 +1186,230 @@
       } else {
         init();
       }
+
+      // ── Episode navigation ─────────────────────────────────────────
+      async function loadEpisodes(slug, currentEpisodeNumber) {
+        try {
+          var res = await fetch('/api/content/series/' + encodeURIComponent(slug));
+          var episodes = await res.json();
+          if (!Array.isArray(episodes) || !episodes.length) { _currentEpisodes = []; return; }
+          _currentEpisodes = episodes;
+          renderEpisodeNav(currentEpisodeNumber, episodes);
+        } catch (e) { console.error('loadEpisodes failed:', e); }
+      }
+
+      function renderEpisodeNav(episodeNumber, episodes) {
+        var nav = document.getElementById('watchEpisodeNav');
+        if (!nav || !episodes || !episodes.length) { if (nav) nav.style.display = 'none'; return; }
+        var idx = episodes.findIndex(function(e) { return e.id === getQueryParam('id'); });
+        if (idx < 0) { nav.style.display = 'none'; return; }
+        var prevEp = episodes[idx - 1] || null;
+        var nextEp = episodes[idx + 1] || null;
+        nav.innerHTML =
+          '<div class="watch-episode-nav-left">' +
+            (prevEp
+              ? '<a class="watch-ep-nav-btn" href="/watch.html?id=' + prevEp.id + '&type=' + currentContentType + '">' +
+                  '<svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+                  '<span data-i18n="player.prevEpisode">Prev</span>' +
+                '</a>'
+              : '<span class="watch-ep-nav-btn" disabled><svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span data-i18n="player.prevEpisode">Prev</span></span>') +
+          '</div>' +
+          '<div class="watch-episode-nav-right">' +
+            '<button class="watch-ep-list-btn" onclick="openEpListModal()">' +
+              '<svg style="width:12px;height:12px;vertical-align:middle;margin-right:3px" viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="3" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/><rect x="14" y="14" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.8"/></svg>' +
+              '<span data-i18n="player.allEpisodes">All Episodes</span>' +
+            '</button>' +
+            (nextEp
+              ? '<a class="watch-ep-nav-btn" href="/watch.html?id=' + nextEp.id + '&type=' + currentContentType + '">' +
+                  '<span data-i18n="player.nextEpisode">Next</span>' +
+                  '<svg viewBox="0 0 24 24" fill="none"><polyline points="9 18 15 12 9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+                '</a>'
+              : '<span class="watch-ep-nav-btn" disabled><span data-i18n="player.nextEpisode">Next</span><svg viewBox="0 0 24 24" fill="none"><polyline points="9 18 15 12 9 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>') +
+          '</div>';
+        nav.style.display = 'flex';
+      }
+
+      async function openEpListModal() {
+        if (!_currentSeriesSlug || !_currentEpisodes.length) return;
+        var modal = document.getElementById('watchEpListModal');
+        var list = document.getElementById('watchEpList');
+        if (!modal || !list) return;
+        var currentId = getQueryParam('id');
+        list.innerHTML = '';
+        _currentEpisodes.forEach(function(ep) {
+          var el = document.createElement('a');
+          el.className = 'watch-ep-item' + (ep.id === currentId ? ' current' : '');
+          el.href = '/watch.html?id=' + ep.id + '&type=' + currentContentType;
+          el.innerHTML =
+            '<div class="watch-ep-num">' + (ep.episodeNumber || '?') + '</div>' +
+            '<div class="watch-ep-info">' +
+              '<div class="watch-ep-title">' + escapeHtml(ep.title) + '</div>' +
+              '<div class="watch-ep-meta">' +
+                (ep.season ? t('player.season') + ' ' + ep.season + ' · ' : '') +
+                (ep.duration ? formatDuration(ep.duration) : '') +
+                (ep.views ? ' · ' + formatViews(ep.views) + ' ' + t('player.views') : '') +
+              '</div>' +
+            '</div>';
+          list.appendChild(el);
+        });
+        modal.classList.add('open');
+      }
+
+      function closeEpListModal() {
+        var modal = document.getElementById('watchEpListModal');
+        if (modal) modal.classList.remove('open');
+      }
+
+      window.openEpListModal = openEpListModal;
+      window.closeEpListModal = closeEpListModal;
+
+      // ── Collection modal ─────────────────────────────────────────────
+      var _collections = [];
+      var _contentInCols = new Set();
+      var _currentContentId = null;
+
+      async function openCollectionModal() {
+        var token = localStorage.getItem('video_token');
+        if (!token) { alert(t('status.loginFirst')); return; }
+        if (!currentVideoId) return;
+        _currentContentId = currentVideoId;
+        _contentInCols = new Set();
+
+        // Load user's collections
+        try {
+          var res = await fetch('/api/interaction/collections', { headers: { 'Authorization': 'Bearer ' + token } });
+          var data = await res.json();
+          _collections = data.collections || [];
+        } catch (e) { _collections = []; }
+
+        // Load which collections already contain this content
+        for (var c of _collections) {
+          try {
+            var r2 = await fetch('/api/interaction/collections/' + c.id, { headers: { 'Authorization': 'Bearer ' + token } });
+            var d2 = await r2.json();
+            var ids = (d2.contents || []).map(function(x){ return x.id; });
+            if (ids.indexOf(currentVideoId) >= 0) _contentInCols.add(c.id);
+          } catch(e) {}
+        }
+
+        renderCollectionModal();
+        document.getElementById('watchCollectionModal').classList.add('open');
+      }
+
+      function renderCollectionModal() {
+        var list = document.getElementById('watchCollectionList');
+        var hint = document.getElementById('watchCollectionHint');
+        if (!list) return;
+        list.innerHTML = '';
+        if (!_collections.length) {
+          hint.style.display = 'none';
+          list.innerHTML = '<p style="color:var(--text-muted);font-size:13px;padding:.5rem 0">' + t('collection.noCollections') + '</p>';
+        } else {
+          hint.style.display = '';
+          _collections.forEach(function(c) {
+            var checked = _contentInCols.has(c.id);
+            var el = document.createElement('label');
+            el.className = 'watch-collection-item' + (checked ? ' in' : '');
+            el.innerHTML =
+              '<input type="checkbox" ' + (checked ? 'checked' : '') + ' data-col-id="' + c.id + '">' +
+              '<span class="watch-collection-item-label">' + escapeHtml(c.name) + '</span>' +
+              '<span class="watch-collection-item-count">' + (c._count || '') + '</span>';
+            el.addEventListener('click', function(e) {
+              if (e.target.tagName === 'INPUT') return;
+              var cb = el.querySelector('input');
+              cb.checked = !cb.checked;
+              el.classList.toggle('in', cb.checked);
+            });
+            list.appendChild(el);
+          });
+        }
+        // New collection row
+        var newWrap = document.getElementById('watchCollectionNewWrap');
+        if (newWrap) newWrap.style.display = 'flex';
+      }
+
+      function closeCollectionModal() {
+        document.getElementById('watchCollectionModal').classList.remove('open');
+      }
+
+      async function saveCollectionSelection() {
+        if (!_currentContentId) return;
+        var token = localStorage.getItem('video_token');
+        var checkboxes = document.querySelectorAll('#watchCollectionList .watch-collection-item input[type=checkbox]');
+        for (var i = 0; i < checkboxes.length; i++) {
+          var cb = checkboxes[i];
+          var colId = cb.dataset.colId;
+          var checked = cb.checked;
+          var inSet = _contentInCols.has(colId);
+          if (checked && !inSet) {
+            await fetch('/api/interaction/collections/' + colId + '/items', {
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+              body: JSON.stringify({ contentId: _currentContentId })
+            }).catch(function(){});
+          } else if (!checked && inSet) {
+            await fetch('/api/interaction/collections/' + colId + '/items/' + _currentContentId, {
+              method: 'DELETE', headers: { 'Authorization': 'Bearer ' + token }
+            }).catch(function(){});
+          }
+        }
+        closeCollectionModal();
+        // Show success or already-added message
+        var added = Array.from(checkboxes).some(function(cb) { return cb.checked && !_contentInCols.has(cb.dataset.colId); });
+        if (added) alert(t('collection.collectionAdded'));
+        else alert(t('collection.collectionAlreadyAdded'));
+      }
+
+      async function createCollectionFromModal() {
+        var input = document.getElementById('watchCollectionNewInput');
+        var name = input ? input.value.trim() : '';
+        if (!name) return;
+        var token = localStorage.getItem('video_token');
+        try {
+          var res = await fetch('/api/interaction/collections', {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+            body: JSON.stringify({ name: name })
+          });
+          var data = await res.json();
+          if (data.id) {
+            _collections.push(data);
+            renderCollectionModal();
+          }
+        } catch(e) {}
+      }
+
+      window.openCollectionModal = openCollectionModal;
+      window.closeCollectionModal = closeCollectionModal;
+      window.saveCollectionSelection = saveCollectionSelection;
+      window.createCollectionFromModal = createCollectionFromModal;
     })();
   </script>
+
+  <!-- Episode list modal -->
+  <div class="watch-ep-list-modal" id="watchEpListModal" onclick="if(event.target===this)closeEpListModal()">
+    <div class="watch-ep-list-box">
+      <h3 data-i18n="player.allEpisodes">All Episodes</h3>
+      <div class="watch-ep-list" id="watchEpList"></div>
+      <div class="watch-ep-list-footer">
+        <button class="btn-cancel" onclick="closeEpListModal()" data-i18n="interactions.cancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Collection modal -->
+  <div class="watch-collection-modal" id="watchCollectionModal" onclick="if(event.target===this)closeCollectionModal()">
+    <div class="watch-collection-modal-box">
+      <h3 data-i18n="collection.collectionModalTitle">Add to Collection</h3>
+      <p id="watchCollectionHint" class="watch-collection-hint" style="font-size:13px;color:var(--text-muted);margin-bottom:.75rem" data-i18n="collection.collectionSelectHint">Select a collection to save this video:</p>
+      <div class="watch-collection-list" id="watchCollectionList"></div>
+      <div class="watch-collection-new" id="watchCollectionNewWrap" style="display:none">
+        <input id="watchCollectionNewInput" type="text" data-i18n-placeholder="collection.enterCollectionName" placeholder="New collection name..." />
+        <button onclick="createCollectionFromModal()" data-i18n="collection.newCollection">+ New Collection</button>
+      </div>
+      <div class="watch-collection-modal-footer">
+        <button class="btn-cancel" onclick="closeCollectionModal()" data-i18n="interactions.cancel">Cancel</button>
+        <button class="btn-save" onclick="saveCollectionSelection()" data-i18n="interactions.post">Save</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>

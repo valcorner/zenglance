@@ -9,7 +9,7 @@ import {
   createContentSchema
 } from '../utils/validators.js';
 import { createAuthMiddleware } from '../middleware/auth.js';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, asc } from 'drizzle-orm';
 import { contents, uploadSessions, shortDramas, tvSeries, movies, ugcLongVideos, shortVideos, viewCounts } from '../db/schema.js';
 
 export function checkUploadPermission() {
@@ -38,12 +38,12 @@ export function checkUploadPermission() {
 
 export function createUploadRoutes() {
   const upload = new Hono();
-  
+
   upload.use('/*', cors());
   upload.use('/*', secureHeaders());
-  
+
   const auth = createAuthMiddleware();
-  
+
   /**
    * POST /upload/request
    * Create content with a video URL (no file upload to B2)
@@ -63,7 +63,7 @@ export function createUploadRoutes() {
         }, 400);
       }
 
-      const { title, description, contentType, slug, videoUrl } = parsed.data;
+      const { title, description, contentType, slug, videoUrl, seriesSlug } = parsed.data;
 
       const db = createDb(c.env, c.req.raw, c.res);
 
@@ -83,6 +83,7 @@ export function createUploadRoutes() {
         b2Bucket: 'url',
         b2Key: videoUrl,
         cdnType,
+        seriesSlug: seriesSlug || null,
         status: 'ready',
         createdAt: now,
         updatedAt: now
@@ -187,7 +188,9 @@ export function createContentRoutes() {
           seriesStatus: typeMeta?.status,
           rating: typeMeta?.rating,
           platform: typeMeta?.platform,
-          hashtags: typeMeta?.hashtags
+          hashtags: typeMeta?.hashtags,
+          seriesSlug: item.seriesSlug,
+          episodeNumber: item.episodeNumber
         };
       });
 
@@ -197,6 +200,82 @@ export function createContentRoutes() {
       return c.json({
         error: 'Failed to list content',
         code: 'LIST_ERROR',
+        details: error.message
+      }, 500);
+    }
+  });
+
+  /**
+   * GET /content/series/:slug
+   * Get all episodes in a series, ordered by season & episode number
+   */
+  content.get('/series/:slug', async (c) => {
+    const { slug } = c.req.param();
+
+    try {
+      const db = createDb(c.env, c.req.raw, c.res);
+
+      const items = await db.query.contents.findMany({
+        where: and(
+          eq(contents.seriesSlug, slug),
+          eq(contents.status, 'ready')
+        ),
+        with: {
+          uploader: true,
+          viewCount: true,
+          shortDrama: true,
+          tvSeries: true,
+          movie: true,
+          ugcLongVideo: true,
+          shortVideo: true
+        },
+        orderBy: [
+          asc(contents.seriesSlug),
+          asc(contents.episodeNumber),
+          asc(contents.season)
+        ],
+        limit: 200
+      });
+
+      const result = items.map((item) => {
+        const typeMeta = item.contentType === 'short_drama' ? item.shortDrama
+          : item.contentType === 'tv_series' ? item.tvSeries
+          : item.contentType === 'movie' ? item.movie
+          : item.contentType === 'ugc_long_video' ? item.ugcLongVideo
+          : item.contentType === 'short_video' ? item.shortVideo
+          : null;
+        return {
+          id: item.id,
+          slug: item.slug,
+          title: item.title,
+          contentType: item.contentType,
+          duration: item.duration,
+          mimeType: item.mimeType,
+          createdAt: item.createdAt,
+          views: item.viewCount?.count || 0,
+          uploader: {
+            id: item.uploader?.id,
+            name: item.uploader?.name,
+            avatar: item.uploader?.avatar
+          },
+          genre: typeMeta?.genre,
+          director: typeMeta?.director,
+          season: typeMeta?.season,
+          episodeNumber: item.episodeNumber,
+          totalEpisodes: typeMeta?.totalEpisodes,
+          seriesStatus: typeMeta?.status,
+          seriesSlug: item.seriesSlug,
+          rating: typeMeta?.rating,
+          platform: typeMeta?.platform
+        };
+      });
+
+      return c.json(result);
+    } catch (error) {
+      console.error('Series fetch failed:', error);
+      return c.json({
+        error: 'Failed to fetch series',
+        code: 'FETCH_ERROR',
         details: error.message
       }, 500);
     }
@@ -293,7 +372,9 @@ export function createContentRoutes() {
         seriesStatus: typeMeta?.status,
         rating: typeMeta?.rating,
         platform: typeMeta?.platform,
-        hashtags: typeMeta?.hashtags
+        hashtags: typeMeta?.hashtags,
+        seriesSlug: contentItem.seriesSlug,
+        episodeNumber: contentItem.episodeNumber
       });
     } catch (error) {
       console.error('Content fetch failed:', error);
@@ -314,7 +395,7 @@ async function incrementViewCount(db, contentId) {
     await db.run(`
       INSERT INTO view_counts (content_id, count, last_synced_at)
       VALUES (?, 1, ?)
-      ON CONFLICT(content_id) DO UPDATE SET 
+      ON CONFLICT(content_id) DO UPDATE SET
         count = count + 1,
         last_synced_at = ?
     `, [contentId, Date.now(), Date.now()]);

@@ -49,7 +49,11 @@ export const createContentSchema = z.object({
   ),
   fileSize: z.number().positive().optional(),
   duration: z.number().positive().optional(),
-  mimeType: z.string().optional()
+  mimeType: z.string().optional(),
+  seriesSlug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+  season: z.number().int().positive().optional(),
+  episodeNumber: z.number().int().positive().optional(),
+  totalEpisodes: z.number().int().nonnegative().optional()
 });
 
 // Upload session response schema
@@ -118,7 +122,9 @@ export const adminUpdateContentSchema = z.object({
   platform: z.string().optional(),
   hashtags: z.string().optional(),
   challenge: z.string().optional(),
-  trendingScore: z.number().int().nonnegative().optional()
+  trendingScore: z.number().int().nonnegative().optional(),
+  seriesSlug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+  episodeNumber: z.number().int().positive().optional()
 });
 
 // Admin content create schema
@@ -156,5 +162,7 @@ export const adminCreateContentSchema = z.object({
   platform: z.string().optional(),
   hashtags: z.string().optional(),
   challenge: z.string().optional(),
-  trendingScore: z.number().int().nonnegative().optional()
+  trendingScore: z.number().int().nonnegative().optional(),
+  seriesSlug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+  episodeNumber: z.number().int().positive().optional()
 });

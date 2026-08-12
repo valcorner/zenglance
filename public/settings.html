@@ -6,6 +6,7 @@
   <title>Settings — Video</title>
   <link rel="stylesheet" href="style.css?v=4" />
   <script src="i18n.js?v=13"></script>
+  <script src="watch-history-crypto.js?v=1"></script>
   <script>
     (function(){
       const warn = console.warn;
@@ -198,6 +199,16 @@
       <a href="/collection/my" class="sidebar-item">
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4h12v9a1 1 0 01-1 1H3a1 1 0 01-1-1V4z" stroke="currentColor" stroke-width="1.3"/><path d="M5 2V4M11 2V4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
         <span data-i18n="collection.myCollection">My Collection</span>
+      </a>
+    </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title" data-i18n="profile.historyTab">History</div>
+      <a href="/history.html" class="sidebar-item">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/><path d="M8 4.5v4l2.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span data-i18n="profile.historyTab">History</span>
       </a>
     </div>
   </nav>

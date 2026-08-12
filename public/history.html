@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title data-i18n="meta.titleHistory">History — Zenglance</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    .history-page { max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .history-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
+    .history-title { font-size: 1.5rem; font-weight: 700; margin: 0; }
+    .history-clear-btn {
+      background: none; border: 1px solid var(--border-color); color: var(--text-secondary);
+      padding: .4rem .9rem; border-radius: var(--radius-md); font-size: 13px;
+      cursor: pointer; transition: background var(--transition);
+    }
+    .history-clear-btn:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .history-empty { text-align: center; padding: 4rem 1rem; color: var(--text-muted); }
+    .history-empty svg { width: 48px; height: 48px; margin-bottom: 1rem; opacity: .4; }
+    .history-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+    .history-item {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: var(--radius-md); overflow: hidden; text-decoration: none;
+      color: var(--text-primary); transition: transform var(--transition), box-shadow var(--transition);
+    }
+    .history-item:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,.3); }
+    .history-item-thumb {
+      position: relative; width: 100%; aspect-ratio: 16/9; background: var(--bg-secondary);
+      overflow: hidden;
+    }
+    .history-item-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .history-item-progress {
+      position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,.2);
+    }
+    .history-item-progress-bar { height: 100%; background: var(--accent); border-radius: 0 1px 0 0; }
+    .history-item-duration {
+      position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,.75);
+      color: #fff; font-size: 11px; padding: 1px 4px; border-radius: 2px;
+    }
+    .history-item-info { padding: .6rem .75rem; }
+    .history-item-title { font-size: 13px; font-weight: 600; line-height: 1.3; margin-bottom: .3rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .history-item-meta { font-size: 11px; color: var(--text-muted); display: flex; gap: .5rem; flex-wrap: wrap; }
+    .history-item-time { font-size: 11px; color: var(--text-muted); margin-top: .3rem; }
+    .history-loading { text-align: center; padding: 3rem; color: var(--text-muted); }
+    .history-sync-banner {
+      background: rgba(0,120,212,.1); border: 1px solid rgba(0,120,212,.3);
+      border-radius: var(--radius-md); padding: .75rem 1rem; margin-bottom: 1rem;
+      font-size: 13px; color: var(--text-secondary); display: none;
+    }
+    .history-sync-banner.show { display: block; }
+    .history-sync-banner svg { width: 14px; height: 14px; vertical-align: middle; margin-right: .4rem; }
+    @media (max-width: 480px) {
+      .history-grid { grid-template-columns: repeat(2, 1fr); gap: .75rem; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <a href="/" class="logo" data-i18n="meta.title">Zenglance</a>
+    <button class="mobile-sidebar-toggle" id="sidebarToggle" aria-label="Menu">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+    <div class="header-actions">
+      <div class="lang-selector">
+        <button class="lang-btn" id="langBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" stroke="currentColor" stroke-width="1.5"/></svg>
+        </button>
+        <div class="lang-dropdown" id="langDropdown"></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="history-page">
+    <div class="history-header">
+      <button class="watch-back-btn" onclick="history.back()">
+        <svg viewBox="0 0 24 24" fill="none"><polyline points="15 18 9 12 15 6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <h1 class="history-title" data-i18n="profile.historyTab">History</h1>
+      <button class="history-clear-btn" id="clearHistoryBtn" data-i18n="settings.privacyClearHistory">Clear History</button>
+    </div>
+    <div class="history-sync-banner" id="syncBanner">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" stroke-width="1.5"/><path d="M2 12h20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      <span data-i18n="history.syncDesc">All history is encrypted end-to-end and synced across your devices</span>
+    </div>
+    <div id="historyContent">
+      <div class="history-loading" data-i18n="status.loading">Loading...</div>
+    </div>
+  </div>
+
+  <script src="i18n.js?v=15"></script>
+  <script src="watch-history-crypto.js?v=2"></script>
+  <script>
+    (function() {
+      'use strict';
+
+      const token = localStorage.getItem('video_token');
+      const deviceId = watchHistoryCrypto.getDeviceId();
+      let userKey = null;
+      let allHistory = [];
+
+      function t(key, params) {
+        if (window.i18n && window.i18n.t) return window.i18n.t(key, params);
+        return key;
+      }
+
+      function escapeHtml(str) {
+        var div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      function formatDuration(seconds) {
+        if (!seconds || seconds < 60) return '';
+        var m = Math.floor(seconds / 60);
+        var s = seconds % 60;
+        return m + ':' + s.toString().padStart(2, '0');
+      }
+
+      function formatTimeAgo(timestamp) {
+        if (!timestamp) return '';
+        var diff = Date.now() - timestamp;
+        var mins = Math.floor(diff / 60000);
+        if (mins < 1) return t('history.justNow', { n: 0 }) || 'Just now';
+        if (mins < 60) return mins + ' ' + t('history.minutesAgo', { n: mins }) || mins + 'm ago';
+        var hours = Math.floor(mins / 60);
+        if (hours < 24) return hours + ' ' + t('history.hoursAgo', { n: hours }) || hours + 'h ago';
+        var days = Math.floor(hours / 24);
+        return days + ' ' + t('history.daysAgo', { n: days }) || days + 'd ago';
+      }
+
+      function formatViews(count) {
+        if (!count) return '0';
+        if (count >= 1000000) return (count / 1000000).toFixed(1) + 'M';
+        if (count >= 1000) return (count / 1000).toFixed(1) + 'K';
+        return count.toString();
+      }
+
+      async function decryptRecords(keyB64, records) {
+        var results = [];
+        for (var i = 0; i < records.length; i++) {
+          try {
+            var historyData = await watchHistoryCrypto.decryptHistory(keyB64, records[i].iv, records[i].authTag, records[i].ctOnly);
+            var progressData = await watchHistoryCrypto.decryptProgress(keyB64, records[i].progressIv, records[i].progressAuthTag, records[i].encryptedProgress);
+            results.push({
+              contentId: records[i].contentId,
+              deviceId: records[i].deviceId,
+              watchedAt: records[i].watchedAt,
+              lastSyncedAt: records[i].lastSyncedAt,
+              history: historyData,
+              progress: progressData
+            });
+          } catch(e) {
+            results.push({
+              contentId: records[i].contentId,
+              deviceId: records[i].deviceId,
+              watchedAt: records[i].watchedAt,
+              lastSyncedAt: records[i].lastSyncedAt,
+              history: null,
+              progress: null
+            });
+          }
+        }
+        return results;
+      }
+
+      function getContentUrl(item) {
+        var type = item.contentType;
+        if (type === 'short_drama' || type === 'short_video') {
+          return '/shorts.html?id=' + encodeURIComponent(item.id) + '&type=' + encodeURIComponent(type);
+        }
+        return '/watch.html?id=' + encodeURIComponent(item.id) + '&type=' + encodeURIComponent(type);
+      }
+
+      function renderHistory(items) {
+        var container = document.getElementById('historyContent');
+        if (!items || !items.length) {
+          container.innerHTML =
+            '<div class="history-empty">' +
+              '<svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.5"/><path d="M12 6v6l4 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>' +
+              '<p>' + t('profile.noHistory') + '</p>' +
+            '</div>';
+          return;
+        }
+        var html = '<div class="history-grid">';
+        items.forEach(function(item) {
+          var progress = item.progress;
+          var progressPct = progress && progress.duration ? Math.min(100, Math.round((progress.position / progress.duration) * 100)) : 0;
+          var lastPos = progress && progress.lastPosition ? formatDuration(progress.lastPosition) : '';
+          html +=
+            '<a class="history-item" href="' + escapeHtml(getContentUrl(item)) + '">' +
+              '<div class="history-item-thumb">' +
+                (item.thumbnail ? '<img src="' + escapeHtml(item.thumbnail) + '" alt=""/>' : '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.2)">></div>') +
+                (progressPct > 0 && progressPct < 100 ? '<div class="history-item-progress"><div class="history-item-progress-bar" style="width:' + progressPct + '%"></div></div>' : '') +
+                (item.duration ? '<span class="history-item-duration">' + formatDuration(item.duration) + '</span>' : '') +
+              '</div>' +
+              '<div class="history-item-info">' +
+                '<div class="history-item-title">' + escapeHtml(item.title) + '</div>' +
+                '<div class="history-item-meta">' +
+                  (item.views ? '<span>' + formatViews(item.views) + ' ' + t('player.views') + '</span>' : '') +
+                  (lastPos ? '<span>\u00B7 ' + lastPos + ' left</span>' : '') +
+                '</div>' +
+                '<div class="history-item-time">' + formatTimeAgo(item.watchedAt) + '</div>' +
+              '</div>' +
+            '</a>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
+      }
+
+      async function loadHistory() {
+        var container = document.getElementById('historyContent');
+        container.innerHTML = '<div class="history-loading">' + t('status.loading') + '</div>';
+
+        // 1. Get user's decryption key from server (server decrypts with master key)
+        if (!userKey) {
+          var keyRes = await fetch('/api/interaction/history/key', {
+            headers: { 'Authorization': 'Bearer ' + token }
+          });
+          if (!keyRes.ok) {
+            container.innerHTML = '<div class="history-empty"><p>' + t('profile.loadFailed') + '</p></div>';
+            return;
+          }
+          var keyData = await keyRes.json();
+          if (keyData.error || !keyData.key) {
+            container.innerHTML = '<div class="history-empty"><p>' + t('profile.loadFailed') + '</p></div>';
+            return;
+          }
+          userKey = keyData.key;
+        }
+
+        // 2. Fetch encrypted history records (all devices)
+        var res = await fetch('/api/interaction/history/encrypted?limit=500', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (!res.ok) {
+          container.innerHTML = '<div class="history-empty"><p>' + t('profile.loadFailed') + '</p></div>';
+          return;
+        }
+        var data = await res.json();
+        var records = data.records || [];
+
+        // 3. Decrypt with user key
+        var decrypted = await decryptRecords(userKey, records);
+        var contentIds = decrypted.map(function(r) { return r.contentId; });
+
+        var contentsRes = await fetch('/api/content', {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        var contentsData = await contentsRes.json();
+        var contentsList = contentsData || [];
+        var contentsMap = {};
+        contentsList.forEach(function(c) { contentsMap[c.id] = c; });
+
+        allHistory = decrypted.map(function(item) {
+          var content = contentsMap[item.contentId] || {};
+          return Object.assign({}, content, {
+            watchedAt: item.watchedAt,
+            lastSyncedAt: item.lastSyncedAt,
+            progress: item.progress
+          });
+        }).sort(function(a, b) { return (b.watchedAt || 0) - (a.watchedAt || 0); });
+
+        renderHistory(allHistory);
+
+        var banner = document.getElementById('syncBanner');
+        if (banner) banner.classList.add('show');
+      }
+
+      async function clearHistory() {
+        if (!confirm(t('settings.privacyClearHistory') + '?')) return;
+        try {
+          await fetch('/api/interaction/history', {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+          });
+          loadHistory();
+        } catch(e) { console.error('Clear failed:', e); }
+      }
+
+      function buildLangSelector() {
+        var btn = document.getElementById('langBtn');
+        var dropdown = document.getElementById('langDropdown');
+        if (!btn || !dropdown) return;
+        dropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+        btn.addEventListener('click', function(e) { e.stopPropagation(); dropdown.classList.toggle('show'); });
+        document.addEventListener('click', function(e) {
+          if (!dropdown.contains(e.target) && !btn.contains(e.target)) dropdown.classList.remove('show');
+        });
+        var langs = ['en', 'fr', 'de', 'it', 'es', 'ar'];
+        var current = (window.i18n && window.i18n.lang) ? window.i18n.lang : 'en';
+        dropdown.innerHTML = langs.map(function(l) {
+          var label = l.toUpperCase();
+          return '<div class="lang-option' + (l === current ? ' active' : '') + '" data-lang="' + l + '">' + label + '</div>';
+        }).join('');
+        dropdown.querySelectorAll('.lang-option').forEach(function(opt) {
+          opt.addEventListener('click', function(e) {
+            e.stopPropagation();
+            window.i18n.setLang(opt.dataset.lang);
+            dropdown.classList.remove('show');
+          });
+        });
+      }
+
+      document.getElementById('clearHistoryBtn')?.addEventListener('click', clearHistory);
+      buildLangSelector();
+      loadHistory();
+    })();
+  </script>
+</body>
+</html>

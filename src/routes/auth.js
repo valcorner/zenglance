@@ -148,6 +148,29 @@ export function createAuthRoutes() {
 
       const session = await createSession(db, saved.id);
 
+      // Generate per-user history encryption key if not exists
+      const masterKeyB64 = c.env.HISTORY_MASTER_KEY;
+      if (masterKeyB64 && !saved.encryptedKey) {
+        const userKey = crypto.getRandomValues(new Uint8Array(32));
+        const wrapKey = await crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt: new TextEncoder().encode('zenglance-history-key-wrap-v1:' + saved.id), iterations: 100000, hash: 'SHA-256' },
+          await crypto.subtle.importKey('raw', Uint8Array.from(atob(masterKeyB64), c => c.charCodeAt(0)).buffer, 'AES-GCM', false, ['deriveKey']),
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt']
+        );
+        const iv = crypto.getRandomValues(new Uint8Array(12));
+        const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, wrapKey, userKey);
+        const ctBytes = new Uint8Array(ct);
+        await db.update(users)
+          .set({
+            encryptedKey: btoa(String.fromCharCode(...ctBytes.slice(0, ctBytes.length - 16))),
+            encryptedKeyIv: btoa(String.fromCharCode(...iv)),
+            encryptedKeyAuthTag: btoa(String.fromCharCode(...ctBytes.slice(-16)))
+          })
+          .where(eq(users.id, saved.id));
+      }
+
       // Check if user has agreed to both terms and privacy
       const userAgreements = await db.select({ type: agreements.type })
         .from(agreements)

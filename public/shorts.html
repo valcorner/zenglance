@@ -291,9 +291,19 @@
   </nav>
 
   <script src="i18n.js?v=12"></script>
+  <script src="watch-history-crypto.js?v=1"></script>
   <script>
     (function() {
       'use strict';
+
+      // Require type parameter; id is optional (if present, scroll to that video)
+      var params = new URLSearchParams(window.location.search);
+      var contentType = params.get('type') || 'short_video';
+      var targetId = params.get('id');
+      if (!contentType) {
+        window.location.replace('/index.html');
+        return;
+      }
 
       const container = document.getElementById('shortsContainer');
       let shorts = [];
@@ -360,7 +370,7 @@
       async function fetchShorts(p) {
         var token = localStorage.getItem('video_token');
         try {
-          var res = await fetch('/api/content?category=short_video&page=' + p + '&limit=10', {
+          var res = await fetch('/api/content?category=' + encodeURIComponent(contentType) + '&page=' + p + '&limit=10', {
             headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token }
           });
           if (!res.ok) return [];
@@ -469,7 +479,7 @@
               '<div class="icon-circle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="currentColor" stroke-width="1.8" fill="none"/></svg></div>' +
               '<span>' + likeCount + '</span>' +
             '</button>' +
-            '<button class="shorts-action-btn" onclick="event.stopPropagation();window.location.href=\'/watch.html?id=' + (video.id || '') + '\'">' +
+            '<button class="shorts-action-btn" onclick="event.stopPropagation();window.location.href=\'/shorts.html?id=' + (video.id || '') + '&type=' + contentType + '\'">' +
               '<div class="icon-circle"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2v10z" stroke="currentColor" stroke-width="1.8"/></svg></div>' +
               '<span>' + (video.comments || 0) + '</span>' +
             '</button>' +
@@ -504,13 +514,26 @@
               videoEl.play();
               if (overlay) overlay.classList.remove('show');
               var token = localStorage.getItem('video_token');
-              if (token && video.id) {
-                fetch('/api/interaction/history', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
-                  body: JSON.stringify({ contentId: video.id })
+              if (!token || !video.id) return;
+              var deviceId = watchHistoryCrypto.getDeviceId();
+              var progress = { position: 0, duration: 0 };
+              fetch('/api/interaction/history/key', { headers: { 'Authorization': 'Bearer ' + token } })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                  if (!d.key) return;
+                  return watchHistoryCrypto.encryptProgress(d.key, progress);
+                })
+                .then(function(enc) {
+                  if (!enc) return;
+                  navigator.sendBeacon('/api/interaction/history/record', JSON.stringify({
+                    contentId: video.id,
+                    deviceId: deviceId,
+                    watchedAt: Date.now(),
+                    encryptedProgress: enc.data,
+                    progressIv: enc.iv,
+                    progressAuthTag: enc.tag
+                  }));
                 }).catch(function() {});
-              }
             } else {
               videoEl.pause();
               if (overlay) overlay.classList.add('show');
@@ -551,6 +574,24 @@
         });
         page++;
         loading = false;
+      }
+
+      // Scroll to target video if id param is provided
+      function scrollToTarget() {
+        if (!targetId) return;
+        var card = container.querySelector('[data-id="' + targetId + '"]');
+        if (card) {
+          card.scrollIntoView({ behavior: 'smooth' });
+          var idx = parseInt(card.dataset.index);
+          var videoEl = card.querySelector('video');
+          if (videoEl) {
+            videoEl.pause();
+            videoEl.currentTime = 0;
+            videoEl.play().catch(function() {});
+          }
+          currentIndex = idx;
+          currentVideo = idx;
+        }
       }
 
       // Intersection observer to auto-play visible video
@@ -594,7 +635,7 @@
       // ── Ad serving ──────────────────────────────────────────────────
       async function loadShortsAd() {
         try {
-          var res = await fetch('/api/ads/serve?type=short_video&device_id=client-' + Date.now());
+          var res = await fetch('/api/ads/serve?type=' + encodeURIComponent(contentType) + '&device_id=client-' + Date.now());
           if (!res.ok) return;
           var data = await res.json();
           var ad = data.ad;
@@ -646,6 +687,7 @@
         loadMore().then(function() {
           setupObserver();
           loadShortsAd();
+          scrollToTarget();
         });
       }
 

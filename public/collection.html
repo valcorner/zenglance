@@ -240,7 +240,7 @@
         items.forEach(function(item) {
           var el = document.createElement('a');
           el.className = 'collection-video-item';
-          el.href = '/watch.html?id=' + item.id;
+          el.href = '/watch.html?id=' + item.id + (item.contentType ? '&type=' + encodeURIComponent(item.contentType) : '');
           el.innerHTML =
             '<div class="collection-video-thumb">' +
               (item.thumbnail ? '<img src="' + escapeHtml(item.thumbnail) + '" alt=""/>' : '\u25B6') +

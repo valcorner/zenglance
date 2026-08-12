@@ -293,6 +293,9 @@
           .then(function (data) {
             if (data.token) {
               pendingToken = data.token;
+              if (data.userId) {
+                try { localStorage.setItem('video_user_id', data.userId); } catch {}
+              }
               if (data.needsAgreement) {
                 // Show Terms + Privacy agreement modal
                 showAgreementModal();

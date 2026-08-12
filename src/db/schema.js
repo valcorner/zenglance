@@ -23,7 +23,11 @@ export const users = sqliteTable('users', {
   role: text('role', { enum: roles }).notNull().default('free'),
   isPublic: integer('is_public', { mode: 'boolean' }).notNull().default(true),
   createdAt: integer('created_at', { mode: 'number' }).notNull(),
-  updatedAt: integer('updated_at', { mode: 'number' }).notNull()
+  updatedAt: integer('updated_at', { mode: 'number' }).notNull(),
+  // Encrypted per-user AES-256 history key (wrapped with master key in Cloudflare Secrets)
+  encryptedKey: text('encrypted_key'),
+  encryptedKeyIv: text('encrypted_key_iv'),
+  encryptedKeyAuthTag: text('encrypted_key_auth_tag')
 }, (table) => [
   index('users_email_idx').on(table.email),
   index('users_role_idx').on(table.role)
@@ -58,13 +62,17 @@ export const contents = sqliteTable('contents', {
   errorCode: text('error_code'),
   errorMessage: text('error_message'),
 
+  // Series/Episode (short_drama, tv_series)
+  seriesSlug: text('series_slug'), // shared series slug for same-show episodes
+
   createdAt: integer('created_at', { mode: 'number' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'number' }).notNull()
 }, (table) => [
   index('contents_slug_idx').on(table.slug),
   index('contents_uploader_idx').on(table.uploaderId),
   index('contents_type_idx').on(table.contentType),
-  index('contents_status_idx').on(table.status)
+  index('contents_status_idx').on(table.status),
+  index('contents_series_idx').on(table.seriesSlug)
 ]);
 
 // Upload sessions table - tracks presigned URL sessions
@@ -253,15 +261,26 @@ export const collectionItems = sqliteTable('collection_items', {
 ]);
 
 // ---------------------------------------------------------------------------
-// Watch history table - tracks which user watched which content and when
+// Watch history table - encrypted per-device, supports multi-device sync
+// Each device encrypts its own history with its derived key; server stores ciphertext
 // ---------------------------------------------------------------------------
 export const watchHistory = sqliteTable('watch_history', {
   userId: text('user_id').notNull().references(() => users.id),
+  deviceId: text('device_id').notNull(), // client-generated device fingerprint
   contentId: text('content_id').notNull().references(() => contents.id),
+  encryptedHistory: text('encrypted_history').notNull(), // AES-GCM ciphertext (base64)
+  iv: text('iv').notNull(), // base64 encoded initialization vector
+  authTag: text('auth_tag').notNull(), // AES-GCM auth tag (base64)
+  encryptedProgress: text('encrypted_progress').notNull(), // {position, duration, lastPosition}
+  progressIv: text('progress_iv').notNull(),
+  progressAuthTag: text('progress_auth_tag').notNull(),
+  historyVersion: integer('history_version', { mode: 'number' }).notNull().default(1),
+  lastSyncedAt: integer('last_synced_at', { mode: 'number' }),
   watchedAt: integer('watched_at', { mode: 'number' }).notNull()
 }, (table) => [
-  { name: 'watch_history_unique', constraints: unique('watch_history_unique').on(table.userId, table.contentId) },
+  { name: 'watch_history_unique', constraints: unique('watch_history_unique').on(table.userId, table.deviceId, table.contentId) },
   index('watch_history_user_idx').on(table.userId),
+  index('watch_history_device_idx').on(table.deviceId),
   index('watch_history_content_idx').on(table.contentId)
 ]);
 

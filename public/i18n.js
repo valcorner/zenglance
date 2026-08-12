@@ -37,6 +37,14 @@
         es: 'Ver \u2014 Video',
         ar: '\u0634\u0627\u062A \u2014 Video',
       },
+      titleHistory: {
+        en: 'History \u2014 Video',
+        fr: 'Historique \u2014 Video',
+        de: 'Verlauf \u2014 Video',
+        it: 'Cronologia \u2014 Video',
+        es: 'Historial \u2014 Video',
+        ar: '\u0627\u0644\u0633\u062C\u0644 \u2014 Video',
+      },
       search: {
         en: 'Search content...',
         fr: 'Rechercher du contenu...',
@@ -309,7 +317,7 @@
         de: 'Valcorner CDN-URL',
         it: 'URL CDN Valcorner',
         es: 'URL CDN Valcorner',
-        ar: '\u0631\u0627\u0628\u0637 CDN Valcorner',
+        ar: 'رابط CDN Valcorner',
       },
       videoUrlPlaceholder: {
         en: 'https://cdn.valcorner.qzz.io/video/{type}/{id}/{file}',
@@ -319,6 +327,10 @@
         es: 'https://cdn.valcorner.qzz.io/video/{type}/{id}/{file}',
         ar: 'https://cdn.valcorner.qzz.io/video/{type}/{id}/{file}',
       },
+      seriesSlug: { en: 'Series Slug', fr: 'Slug de la série', de: 'Serien-Slug', it: 'Slug serie', es: 'Slug de la serie', ar: 'رابط السلسلة' },
+      seriesSlugPlaceholder: { en: 'my-drama-name (shared by all episodes)', fr: 'nom-de-ma-serie (partagé par tous les épisodes)', de: 'meine-serie (für alle Episoden)', it: 'nome-serie (condiviso da tutti gli episodi)', es: 'nome-serie (compartido por todos los episodios)', ar: 'اسم-المسلسل (مشترك بين جميع الحلقات)' },
+      season: { en: 'Season', fr: 'Saison', de: 'Staffel', it: 'Stagione', es: 'Temporada', ar: 'الموسم' },
+      episode: { en: 'Episode No.', fr: 'Épisode N°', de: 'Folge N°', it: 'Episodio N°', es: 'Episodio N°', ar: 'رقم الحلقة' },
       submit: {
         en: 'Start Upload',
         fr: 'D\u00E9marrer le t\u00E9l\u00E9chargement',
@@ -601,6 +613,11 @@
       episodes: { en: 'Episodes', fr: '\u00C9pisodes', de: 'Folgen', it: 'Episodi', es: 'Episodios', ar: '\u0623\u062D\u0648\u0627\u0644' },
       rating: { en: 'Rating', fr: 'Note', de: 'Bewertung', it: 'Valutazione', es: 'Clasificaci\u00F3n', ar: '\u062A\u0635\u0646\u064A\u0641' },
       status: { ongoing: { en: 'Ongoing', fr: 'En cours', de: 'L\u00E4uft', it: 'In corso', es: 'En curso', ar: '\u0645\u0633\u062A\u0645\u0631' }, completed: { en: 'Completed', fr: 'Termin\u00E9', de: 'Beendet', it: 'Completato', es: 'Completado', ar: '\u0645\u062A\u0645' }, hiatus: { en: 'Hiatus', fr: 'Pause', de: 'Pause', it: 'Pausa', es: 'Pausa', ar: '\u0645\u0639\u0644\u0642' } },
+      nextEpisode: { en: 'Next Episode', fr: 'Épisode suivant', de: 'Nächste Folge', it: 'Episodio successivo', es: 'Siguiente episodio', ar: 'الحلقة التالية' },
+      prevEpisode: { en: 'Previous Episode', fr: 'Épisode précédent', de: 'Vorherige Folge', it: 'Episodio precedente', es: 'Episodio anterior', ar: 'الحلقة السابقة' },
+      allEpisodes: { en: 'All Episodes', fr: 'Tous les épisodes', de: 'Alle Folgen', it: 'Tutti gli episodi', es: 'Todos los episodios', ar: 'جميع الحلقات' },
+      episodeLabel: { en: 'E{{n}}', fr: 'Ép {{n}}', de: 'F{{n}}', it: 'Ep{{n}}', es: 'Ep{{n}}', ar: 'ح{{n}}' },
+      noSeries: { en: 'No related episodes', fr: 'Aucun épisode connexe', de: 'Keine verwandten Folgen', it: 'Nessun episodio correlato', es: 'Sin episodios relacionados', ar: 'لا توجد حلقات ذات صلة' },
     },
 
     timeAgo: {
@@ -647,8 +664,13 @@
       enterCollectionName: { en: 'Enter collection name...', fr: 'Entrez le nom...', de: 'Namen eingeben...', it: 'Inserisci nome...', es: 'Nombre...', ar: '\u0623\u062F\u062E\u0644 \u0627\u0633\u0645 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629...' },
       deleteCollection: { en: 'Delete Collection', fr: 'Supprimer', de: 'L\u00F6schen', it: 'Elimina', es: 'Eliminar', ar: '\u062D\u0630\u0641 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629' },
       confirmDelete: { en: 'Delete this collection?', fr: 'Supprimer ?', de: 'L\u00F6schen?', it: 'Eliminare?', es: '\u00BFEliminar?', ar: '\u062D\u0630\u0641 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629\u061F' },
-      addToCollection: { en: 'Add to Collection', fr: 'Ajouter', de: 'Hinzuf\u00FCgen', it: 'Aggiungi', es: 'A\u00F1adir', ar: '\u0625\u0636\u0627\u0641\u0629 \u0625\u0644\u0649 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629' },
+      addToCollection: { en: 'Add to Collection', fr: 'Ajouter à une collection', de: 'Zur Sammlung hinzufügen', it: 'Aggiungi alla raccolta', es: 'Añadir a colección', ar: '\u0623\u0636\u0641 \u0625\u0644\u0649 \u0645\u062C\u0645\u0648\u0639\u0629' },
       removeFromCollection: { en: 'Remove from Collection', fr: 'Retirer', de: 'Entfernen', it: 'Rimuovi', es: 'Eliminar', ar: '\u0625\u0632\u0627\u0644\u0629' },
+      collectionModalTitle: { en: 'Add to Collection', fr: 'Ajouter à une collection', de: 'Zur Sammlung hinzufügen', it: 'Aggiungi alla raccolta', es: 'Añadir a colección', ar: '\u0623\u0636\u0641 \u0625\u0644\u0649 \u0645\u062C\u0645\u0648\u0639\u0629' },
+      collectionSelectHint: { en: 'Select a collection to save this video:', fr: 'Sélectionnez une collection :', de: 'Sammlung auswählen:', it: 'Seleziona una raccolta:', es: 'Selecciona una colección:', ar: '\u0627\u062E\u062A\u0631 \u0645\u062C\u0645\u0648\u0639\u0629 \u0644\u062D\u0641\u0636 \u0647\u0630\u0627 \u0627\u0644\u0641\u064A\u062F\u064A\u0648:' },
+      collectionNewOption: { en: '+ New Collection', fr: '+ Nouvelle Collection', de: '+ Neue Sammlung', it: '+ Nuova Raccolta', es: '+ Nueva Colección', ar: '+ \u0645\u062C\u0645\u0648\u0639\u0629 \u062C\u062F\u064A\u062F\u0629' },
+      collectionAdded: { en: 'Added to collection!', fr: 'Ajouté !', de: 'Hinzugefügt!', it: 'Aggiunto!', es: '¡Añadido!', ar: '\u062A\u0645 \u0627\u0644\u0625\u0636\u0627\u0641\u0629 \u0625\u0644\u0649 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629!' },
+      collectionAlreadyAdded: { en: 'Already in this collection.', fr: 'Déjà dans cette collection.', de: 'Bereits in dieser Sammlung.', it: 'Già nella raccolta.', es: 'Ya está en esta colección.', ar: '\u0645\u0648\u062C\u0648\u062F \u0641\u064A \u0647\u0630\u0647 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0623\u0641\u0644\u064A\u0627.' },
       noCollections: { en: 'No collections yet', fr: 'Aucune collection', de: 'Noch keine Sammlungen', it: 'Nessuna raccolta', es: 'Sin colecciones', ar: '\u0644\u0627 \u062A\u0648\u062C\u062F \u0645\u062C\u0645\u0648\u0639\u0627\u062A' },
       noItems: { en: 'This collection is empty', fr: 'Collection vide', de: 'Leer', it: 'Vuota', es: 'Vac\u00EDa', ar: '\u0647\u0630\u0647 \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0629 \u0641\u0627\u0631\u063A\u0629' },
       editName: { en: 'Edit Name', fr: 'Modifier le nom', de: 'Namen bearbeiten', it: 'Modifica Nome', es: 'Editar Nombre', ar: '\u062A\u062D\u0631\u064A\u0631 \u0627\u0644\u0627\u0633\u0645' },
@@ -670,6 +692,10 @@
       loadFailed:    { en: 'Failed to load', fr: 'Échec du chargement', de: 'Laden fehlgeschlagen', it: 'Caricamento fallito', es: 'Error al cargar', ar: '\u0641\u0634\u0644 \u0627\u0644\u062A\u062D\u0645\u064A\u0644' },
       contentTab:    { en: 'Content', fr: 'Contenu', de: 'Inhalt', it: 'Contenuto', es: 'Contenido', ar: '\u0627\u0644\u0645\u062D\u062A\u0648\u0649' },
       historyTab:    { en: 'History', fr: 'Historique', de: 'Verlauf', it: 'Cronologia', es: 'Historial', ar: '\u0627\u0644\u0633\u062C\u0644' },
+      historySync:   { en: 'Synced', fr: 'Synchronis\u00E9', de: 'Synchronisiert', it: 'Sincronizzato', es: 'Sincronizado', ar: '\u0645\u0645\u062A\u0627\u0632\u0646' },
+      historyMinutes: { en: 'm', fr: 'm', de: 'm', it: 'm', es: 'm', ar: '\u062f' },
+      historyHours:  { en: 'h', fr: 'h', de: 'h', it: 'h', es: 'h', ar: '\u0633' },
+      historyDays:   { en: 'd', fr: 'j', de: 't', it: 'g', es: 'd', ar: '\u064a' },
       followers:     { en: 'Followers', fr: 'Abonnés', de: 'Follower', it: 'Follower', es: 'Seguidores', ar: '\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0648\u0646' },
       following:     { en: 'Following', fr: 'Abonnements', de: 'Folge ich', it: 'Seguiti', es: 'Siguiendo', ar: '\u0627\u0644\u0645\u062A\u0627\u0628\u0639\u0629' },
       joined:        { en: 'Joined', fr: 'Inscrit', de: 'Beigetreten', it: 'Iscritto', es: 'Se unió', ar: '\u0627\u0646\u0636\u0645' },
@@ -679,6 +705,14 @@
       saveBio:       { en: 'Save', fr: 'Enregistrer', de: 'Speichern', it: 'Salva', es: 'Guardar', ar: '\u062D\u0641\u0638' },
       cancelBio:     { en: 'Cancel', fr: 'Annuler', de: 'Abbrechen', it: 'Annulla', es: 'Cancelar', ar: '\u0625\u0644\u063A\u0627\u0621' },
       bioSaved:      { en: 'Bio saved!', fr: 'Bio enregistrée !', de: 'Bio gespeichert!', it: 'Bio salvata!', es: '¡Bio guardada!', ar: '\u062A\u0645 \u062D\u0641\u0638 \u0627\u0644\u0646\u0628\u0630\u0629!' },
+    },
+
+    history: {
+      syncDesc:     { en: 'All history is encrypted end-to-end and synced across your devices.', fr: 'Tout l\'historique est chiffr\u00E9 de bout en bout et synchronis\u00E9 sur tous vos appareils.', de: 'Der gesamte Verlauf wird Ende-zu-Ende verschl\u00FCsselt und auf allen Ger\u00E4ten synchronisiert.', it: 'Tutta la cronologia \u00E8 crittografata end-to-end e sincronizzata tra i dispositivi.', es: 'Todo el historial est\u00E1 cifrado de extremo a extremo y sincronizado entre dispositivos.', ar: '\u0627\u0644\u0633\u062C\u0644 \u0643\u0627\u0645\u0644\u064B\u0627 \u0645\u0634\u0641\u0631 \u0645\u0646 \u0646\u0647\u0627\u064A\u0629 \u0625\u0644\u0649 \u0646\u0647\u0627\u064A\u0629 \u0648\u0645\u0645\u062A\u0627\u0632\u0646 \u0639\u0644\u0649 \u062C\u0645\u064A\u0639 \u0623\u062C\u0647\u0632\u062A\u0643.' },
+      justNow:      { en: 'Just now', fr: '\u00C0 l\'instant', de: 'Gerade eben', it: 'Proprio ora', es: 'Ahora mismo', ar: '\u0641\u064A \u0644\u062D\u0638\u062A\u0647\u0627' },
+      minutesAgo:   { en: '{{n}} min ago', fr: '\u00AB\u00A0il y a {{n}} min\u00BB', de: 'vor {{n}} Min.', it: '{{n}} min fa', es: 'h {{n}} min', ar: '\u0645\u0646\u0630 {{n}} \u062F' },
+      hoursAgo:     { en: '{{n}} h ago', fr: 'il y a {{n}} h', de: 'vor {{n}} Std.', it: '{{n}} h fa', es: 'h {{n}} h', ar: '\u0645\u0646\u0630 {{n}} \u0633' },
+      daysAgo:      { en: '{{n}} d ago', fr: 'il y a {{n}} j', de: 'vor {{n}} t', it: '{{n}} g fa', es: 'h {{n}} d', ar: '\u0645\u0646\u0630 {{n}} \u064A' },
     },
 
     legal: {

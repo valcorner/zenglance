@@ -301,6 +301,19 @@
         <span data-i18n="collection.myCollection">My Collection</span>
       </a>
     </div>
+
+    <div class="sidebar-divider"></div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-title" data-i18n="profile.historyTab">History</div>
+      <a href="/history.html" class="sidebar-item">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="6.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M8 4.5v4l2.5 1.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span data-i18n="profile.historyTab">History</span>
+      </a>
+    </div>
   </nav>
 
   <!-- Upload Modal -->
@@ -333,6 +346,22 @@
         <div class="form-group">
           <label data-i18n="modal.videoUrl">Video URL</label>
           <input type="url" id="uploadUrl" class="form-input" data-i18n-placeholder="modal.videoUrlPlaceholder" placeholder="https://example.com/video.mp4" />
+        </div>
+        <div id="seriesFields" style="display:none">
+          <div class="form-group">
+            <label data-i18n="modal.seriesSlug">Series Slug</label>
+            <input type="text" id="uploadSeriesSlug" class="form-input" data-i18n-placeholder="modal.seriesSlugPlaceholder" placeholder="my-drama-name (shared by all episodes)" />
+          </div>
+          <div style="display:flex;gap:.75rem">
+            <div class="form-group" style="flex:1">
+              <label data-i18n="modal.season">Season</label>
+              <input type="number" id="uploadSeason" class="form-input" min="1" value="1" />
+            </div>
+            <div class="form-group" style="flex:1">
+              <label data-i18n="modal.episode">Episode No.</label>
+              <input type="number" id="uploadEpisode" class="form-input" min="1" value="1" />
+            </div>
+          </div>
         </div>
         <button class="modal-submit" id="uploadSubmit">
           <span data-i18n="modal.submit">Start Upload</span>

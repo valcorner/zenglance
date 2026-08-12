@@ -105,7 +105,7 @@ export function createActivityPubRoutes() {
       name: content.title,
       content: content.description || '',
       duration: content.duration ? `PT${content.duration}S` : undefined,
-      url: `${base}/watch.html?id=${content.id}`,
+      url: `${base}/watch.html?id=${content.id}&type=${encodeURIComponent(content.contentType)}`,
       attributedTo: `${base}/ap/users/${content.uploaderId}`,
       published: new Date(content.createdAt).toISOString(),
       updated: new Date(content.updatedAt || content.createdAt).toISOString()

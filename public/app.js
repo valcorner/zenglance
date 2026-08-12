@@ -252,6 +252,7 @@
       return;
     }
     document.getElementById('uploadModal').classList.add('show');
+    updateSeriesFields();
   }
 
   function closeUploadModal() {
@@ -262,10 +263,17 @@
     return title
       .toLowerCase()
       .trim()
-      .replace(/[^\w\s-]/g, '')
+      .replace(/[^a-z0-9\s-]/gi, '')
       .replace(/[\s_]+/g, '-')
       .replace(/-+/g, '-')
       .replace(/^-+|-+$/g, '');
+  }
+
+  function updateSeriesFields() {
+    const type = document.getElementById('uploadType')?.value;
+    const fields = document.getElementById('seriesFields');
+    if (!fields) return;
+    fields.style.display = (type === 'short_drama' || type === 'tv_series') ? '' : 'none';
   }
 
   function startUpload() {
@@ -273,6 +281,9 @@
     const title = document.getElementById('uploadTitle').value;
     const desc = document.getElementById('uploadDesc').value;
     const videoUrl = document.getElementById('uploadUrl').value.trim();
+    const seriesSlug = document.getElementById('uploadSeriesSlug')?.value.trim();
+    const season = parseInt(document.getElementById('uploadSeason')?.value || '1', 10);
+    const episodeNumber = parseInt(document.getElementById('uploadEpisode')?.value || '1', 10);
 
     if (!type) { alert(t('status.selectType')); return; }
     if (!title) { alert(t('status.titleRequired')); return; }
@@ -303,16 +314,23 @@
 
     const slug = generateSlug(title);
 
+    const body = {
+      title,
+      description: desc || undefined,
+      contentType: type,
+      slug,
+      videoUrl
+    };
+    if (type === 'short_drama' || type === 'tv_series') {
+      body.seriesSlug = seriesSlug || undefined;
+      body.season = season;
+      body.episodeNumber = episodeNumber;
+    }
+
     // Single API call: submit metadata + video URL, no file upload
     apiFetch('/api/upload/request', {
       method: 'POST',
-      body: JSON.stringify({
-        title,
-        description: desc || undefined,
-        contentType: type,
-        slug,
-        videoUrl
-      })
+      body: JSON.stringify(body)
     })
       .then(res => {
         if (!res) throw new Error('Submit failed');
@@ -335,9 +353,12 @@
 
   // ── Player ─────────────────────────────────────────────────────────────────
   function openPlayer(id, type) {
-    const base = '/watch.html?id=' + encodeURIComponent(id);
-    const url = type ? base + '&type=' + encodeURIComponent(type) : base;
-    window.location.href = url;
+    // Route short_drama and short_video to shorts.html; everything else to watch.html
+    if (type === 'short_drama' || type === 'short_video') {
+      window.location.href = '/shorts.html?id=' + encodeURIComponent(id) + '&type=' + encodeURIComponent(type);
+    } else {
+      window.location.href = '/watch.html?id=' + encodeURIComponent(id) + '&type=' + encodeURIComponent(type);
+    }
   }
 
   // ── Helper functions ───────────────────────────────────────────────────────
@@ -444,6 +465,7 @@
     // Upload button
     document.getElementById('uploadBtn')?.addEventListener('click', openUploadModal);
     document.getElementById('uploadModalClose')?.addEventListener('click', closeUploadModal);
+    document.getElementById('uploadType')?.addEventListener('change', updateSeriesFields);
     document.getElementById('uploadModal')?.addEventListener('click', (e) => {
       if (e.target === e.currentTarget) closeUploadModal();
     });
