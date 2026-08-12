@@ -2,13 +2,11 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { secureHeaders } from 'hono/secure-headers';
 import { createDb } from '../db/index.js';
-import { B2Service } from '../services/b2.js';
 import { ValcornerCDNService } from '../services/valcorner.js';
 import {
   uploadPermissions,
   getCdnType,
-  createContentSchema,
-  uploadSessionResponseSchema
+  createContentSchema
 } from '../utils/validators.js';
 import { createAuthMiddleware } from '../middleware/auth.js';
 import { eq, and, desc } from 'drizzle-orm';
@@ -48,7 +46,7 @@ export function createUploadRoutes() {
   
   /**
    * POST /upload/request
-   * Request a presigned URL for direct B2 upload
+   * Create content with a video URL (no file upload to B2)
    */
   upload.post('/request', auth, checkUploadPermission(), async (c) => {
     const user = c.get('user');
@@ -56,34 +54,25 @@ export function createUploadRoutes() {
     try {
       const body = await c.req.json();
       const parsed = createContentSchema.safeParse(body);
-      
+
       if (!parsed.success) {
-        return c.json({ 
-          error: 'Validation failed', 
+        return c.json({
+          error: 'Validation failed',
           code: 'VALIDATION_ERROR',
           details: parsed.error.flatten()
         }, 400);
       }
-      
-      const { title, description, contentType, slug, fileSize, duration, mimeType } = parsed.data;
+
+      const { title, description, contentType, slug, videoUrl } = parsed.data;
 
       const db = createDb(c.env, c.req.raw, c.res);
-      const b2 = new B2Service(
-        c.env.B2_APPLICATION_KEY_ID,
-        c.env.B2_APPLICATION_KEY,
-        c.env.B2_API_URL,
-        c.env.B2_BUCKET_NAME
-      );
 
       // Generate content ID (UUID)
       const contentId = crypto.randomUUID();
-      const filename = mimeType?.split('/')[1] || 'file';
-      const b2Key = B2Service.generateObjectKey(contentType, contentId, filename);
-
-      // Create content record
       const cdnType = getCdnType(contentType);
       const now = Date.now();
 
+      // Create content record with video URL stored in b2Key, status immediately 'ready'
       await db.insert(contents).values({
         id: contentId,
         slug,
@@ -91,13 +80,10 @@ export function createUploadRoutes() {
         description,
         contentType,
         uploaderId: user.id,
-        b2Bucket: c.env.B2_BUCKET_NAME,
-        b2Key,
+        b2Bucket: 'url',
+        b2Key: videoUrl,
         cdnType,
-        fileSize,
-        duration,
-        mimeType,
-        status: 'pending',
+        status: 'ready',
         createdAt: now,
         updatedAt: now
       });
@@ -111,43 +97,18 @@ export function createUploadRoutes() {
         short_video:    () => db.insert(shortVideos).values({ contentsId: contentId }),
       }[contentType];
       if (typeData) await typeData();
-      
-      // Get native B2 upload URL and auth token
-      const { uploadUrl, uploadAuth } = await b2.getUploadUrl(mimeType || 'application/octet-stream');
 
-      // Create upload session
-      const sessionId = crypto.randomUUID();
-      const expiresAt = now + 3600 * 1000;
+      // Initialize view count
+      await db.insert(viewCounts).values({ contentId, count: 0, lastSyncedAt: now })
+        .catch(() => { /* ignore if already exists */ });
 
-      await db.insert(uploadSessions).values({
-        id: sessionId,
-        userId: user.id,
-        contentType,
-        b2UploadUrl: uploadUrl,
-        b2UploadAuth: uploadAuth,
-        b2Key,
-        expiresAt,
-        contentId,
-        status: 'pending',
-        createdAt: now
-      });
-
-      const response = uploadSessionResponseSchema.parse({
-        sessionId,
-        uploadUrl,
-        uploadAuth,
-        b2Key,
-        expiresAt,
-        contentId
-      });
-      
-      return c.json(response);
+      return c.json({ success: true, contentId });
     } catch (error) {
       console.error('Upload request failed:', error);
-      return c.json({ 
-        error: 'Failed to create upload session', 
-        code: 'UPLOAD_SESSION_ERROR',
-        details: error.message 
+      return c.json({
+        error: 'Failed to create content',
+        code: 'UPLOAD_REQUEST_ERROR',
+        details: error.message
       }, 500);
     }
   });
@@ -334,12 +295,21 @@ export function createContentRoutes() {
       }
 
       // Generate CDN access info
-      const cdnAccess = valcorner.generateCdnAccessInfo(
-        contentItem.contentType,
-        contentItem.id,
-        contentItem.manifestIndex,
-        contentItem.manifestIndex ? null : 'file'
-      );
+      // For URL-based content (b2Bucket === 'url'), return the video URL directly
+      let cdnAccess;
+      if (contentItem.b2Bucket === 'url') {
+        cdnAccess = {
+          directUrl: contentItem.b2Key,
+          requiresTicket: false
+        };
+      } else {
+        cdnAccess = valcorner.generateCdnAccessInfo(
+          contentItem.contentType,
+          contentItem.id,
+          contentItem.manifestIndex,
+          contentItem.manifestIndex ? null : 'file'
+        );
+      }
 
       // Increment view count (async, don't wait)
       c.executionCtx.waitUntil(

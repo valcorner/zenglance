@@ -536,6 +536,7 @@
 
         var manifestUrl = cdn && cdn.manifestUrl;
         var directUrl   = cdn && cdn.directUrl;
+        var needsTicket = cdn && cdn.requiresTicket !== false;
 
         if (!manifestUrl && !directUrl) {
           placeholder.style.display = 'flex';
@@ -544,10 +545,11 @@
           return;
         }
 
-        _getTicket().then(function(ticket) {
+        // For URL-based content (no ticket needed), play directly
+        function _playUrls(ticket) {
           // ── HLS (.m3u8) ──────────────────────────────────────────────
           if (manifestUrl && _isHls(manifestUrl)) {
-            var hlsUrl = _injectTicket(manifestUrl, ticket);
+            var hlsUrl = ticket ? _injectTicket(manifestUrl, ticket) : manifestUrl;
             if (Hls.isSupported()) {
               hlsPlayer = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
               hlsPlayer.loadSource(hlsUrl);
@@ -557,7 +559,7 @@
                 if (info.fatal) {
                   console.warn('HLS fatal error, falling back to native:', info.type, info.details);
                   if (directUrl) {
-                    video.src = _injectTicket(directUrl, ticket);
+                    video.src = ticket ? _injectTicket(directUrl, ticket) : directUrl;
                     video.play();
                   }
                 }
@@ -573,7 +575,7 @@
 
           // ── DASH (.mpd) ──────────────────────────────────────────────
           if (manifestUrl && _isDash(manifestUrl)) {
-            var dashUrl = _injectTicket(manifestUrl, ticket);
+            var dashUrl = ticket ? _injectTicket(manifestUrl, ticket) : manifestUrl;
             if (dashjs) {
               dashPlayer = dashjs.MediaPlayer().create();
               dashPlayer.initialize(video, dashUrl, true);
@@ -587,14 +589,19 @@
 
           // ── Direct MP4 / WebM ────────────────────────────────────────
           var srcUrl = directUrl || manifestUrl;
-          video.src = _injectTicket(srcUrl, ticket);
+          video.src = ticket ? _injectTicket(srcUrl, ticket) : srcUrl;
           video.play();
+        }
 
-        }).catch(function(err) {
-          console.error('Failed to get CDN ticket:', err);
-          placeholder.style.display = 'flex';
-          placeholder.innerHTML = '<p style="color:rgba(255,255,255,0.5)">' + t('status.loadFailed') + '</p>';
-        });
+        if (needsTicket) {
+          _getTicket().then(_playUrls).catch(function(err) {
+            console.error('Failed to get CDN ticket:', err);
+            placeholder.style.display = 'flex';
+            placeholder.innerHTML = '<p style="color:rgba(255,255,255,0.5)">' + t('status.loadFailed') + '</p>';
+          });
+        } else {
+          _playUrls(null);
+        }
       }
 
       function getQueryParam(name) {

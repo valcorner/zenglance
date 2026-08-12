@@ -258,15 +258,25 @@
     document.getElementById('uploadModal').classList.remove('show');
   }
 
+  function generateSlug(title) {
+    return title
+      .toLowerCase()
+      .trim()
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s_]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
   function startUpload() {
     const type = document.getElementById('uploadType').value;
     const title = document.getElementById('uploadTitle').value;
     const desc = document.getElementById('uploadDesc').value;
-    const fileInput = document.getElementById('uploadFile');
+    const videoUrl = document.getElementById('uploadUrl').value.trim();
 
     if (!type) { alert(t('status.selectType')); return; }
     if (!title) { alert(t('status.titleRequired')); return; }
-    if (!fileInput.files[0]) { alert(t('status.selectFile')); return; }
+    if (!videoUrl) { alert('Please enter a video URL'); return; }
 
     // Role check
     const roleAllowed = {
@@ -287,20 +297,22 @@
     if (submitBtn) { submitBtn.disabled = true; submitBtn.querySelector('span:first-child').style.display = 'none'; }
     if (spinner) spinner.style.display = 'inline';
 
-    const file = fileInput.files[0];
-    const formData = new FormData();
-    formData.append('type', type);
-    formData.append('title', title);
-    formData.append('description', desc || '');
-    formData.append('file', file);
+    const slug = generateSlug(title);
 
-    apiFetch('/api/upload', { method: 'POST', body: formData, headers: {} })
-      .then(async res => {
-        if (!res) return;
-        const data = await res.json();
-        if (data.data?.presignedUrl) {
-          return uploadToB2(data.data.presignedUrl, file);
-        }
+    // Single API call: submit metadata + video URL, no file upload
+    apiFetch('/api/upload/request', {
+      method: 'POST',
+      body: JSON.stringify({
+        title,
+        description: desc || undefined,
+        contentType: type,
+        slug,
+        videoUrl
+      })
+    })
+      .then(res => {
+        if (!res) throw new Error('Submit failed');
+        return res.json();
       })
       .then(() => {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.querySelector('span:first-child').style.display = 'inline'; }
@@ -315,13 +327,6 @@
         alert(t('status.uploadFailed'));
         console.error(err);
       });
-  }
-
-  async function uploadToB2(presignedUrl, file) {
-    const res = await fetch(presignedUrl, { method: 'PUT', body: file });
-    if (!res.ok) throw new Error(t('status.fileUploadFailed'));
-    // Complete upload
-    await apiFetch(`/api/upload/complete?upload_id=${presignedUrl.split('?')[1].match(/upload_id=([^&]+)/)?.[1]}`, { method: 'POST' });
   }
 
   // ── Player ─────────────────────────────────────────────────────────────────
@@ -439,34 +444,6 @@
       if (e.target === e.currentTarget) closeUploadModal();
     });
     document.getElementById('uploadSubmit')?.addEventListener('click', startUpload);
-
-    // File input
-    document.getElementById('uploadFile')?.addEventListener('change', (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const fileInfo = document.getElementById('fileInfo');
-        if (fileInfo) {
-          fileInfo.innerHTML = `<span>${escapeHtml(file.name)}</span><span>${(file.size / 1024 / 1024).toFixed(2)} MB</span>`;
-          fileInfo.style.display = 'flex';
-        }
-      }
-    });
-
-    // File drag & drop
-    const fileArea = document.getElementById('fileUploadArea');
-    if (fileArea) {
-      fileArea.addEventListener('dragover', (e) => { e.preventDefault(); fileArea.classList.add('dragover'); });
-      fileArea.addEventListener('dragleave', () => { fileArea.classList.remove('dragover'); });
-      fileArea.addEventListener('drop', (e) => {
-        e.preventDefault();
-        fileArea.classList.remove('dragover');
-        const file = e.dataTransfer.files[0];
-        if (file) {
-          document.getElementById('uploadFile').files = e.dataTransfer.files;
-          document.getElementById('uploadFile').dispatchEvent(new Event('change'));
-        }
-      });
-    }
 
     // Search
     document.getElementById('searchInput')?.addEventListener('keyup', handleSearch);

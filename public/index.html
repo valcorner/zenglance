@@ -279,18 +279,8 @@
           <textarea id="uploadDesc" class="form-input" rows="3" data-i18n-placeholder="modal.descriptionPlaceholder" placeholder="Enter description..."></textarea>
         </div>
         <div class="form-group">
-          <label data-i18n="modal.selectFile">Select File</label>
-          <div class="file-upload-area" id="fileUploadArea">
-            <div class="file-upload-content">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <path d="M16 4v16M10 10l6-6 6 6M6 26h20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-              <p data-i18n="modal.dropHint">Drag & drop a file here, or click to select</p>
-              <p class="file-hint" data-i18n="modal.fileFormatHint">Supports video / audio / document formats</p>
-            </div>
-            <input type="file" id="uploadFile" class="file-input" accept="video/*,audio/*,.pdf,.doc,.docx,.txt" />
-          </div>
-          <div id="fileInfo" class="file-info" style="display:none"></div>
+          <label data-i18n="modal.videoUrl">Video URL</label>
+          <input type="url" id="uploadUrl" class="form-input" data-i18n-placeholder="modal.videoUrlPlaceholder" placeholder="https://example.com/video.mp4" />
         </div>
         <button class="modal-submit" id="uploadSubmit">
           <span data-i18n="modal.submit">Start Upload</span>
