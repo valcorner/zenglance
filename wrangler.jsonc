@@ -27,8 +27,6 @@
     }
   ],
   "vars": {
-    "B2_API_URL": "https://api.backblazeb2.com",
-    "B2_BUCKET_NAME": "video-media",
     "VALCORNER_SCOPE": "openid email profile",
     "VALCORNER_AUTHORIZE_URL": "https://auth.valcorner.qzz.io/oauth/authorize",
     "VALCORNER_TOKEN_URL": "https://auth.valcorner.qzz.io/oauth2/token",
@@ -39,8 +37,6 @@
   "secrets": [
     { "name": "VALCORNER_CLIENT_ID",    "value": "REPLACE_WITH_REAL_VALUE" },
     { "name": "VALCORNER_CLIENT_SECRET", "value": "REPLACE_WITH_REAL_VALUE" },
-    { "name": "B2_APPLICATION_KEY_ID",  "value": "REPLACE_WITH_REAL_VALUE" },
-    { "name": "B2_APPLICATION_KEY",     "value": "REPLACE_WITH_REAL_VALUE" },
     { "name": "ADS_API_KEY",            "value": "REPLACE_WITH_REAL_VALUE" }
   ]
 }

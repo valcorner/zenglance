@@ -362,7 +362,7 @@ app.post('/api/admin/content', auth, requireRole('admin'), async (c) => {
     const contentId = crypto.randomUUID();
     const now = Date.now();
     const cdnType = getCdnType(body.contentType);
-    const bucket = body.b2Bucket || c.env.B2_BUCKET_NAME || 'video-media';
+    const bucket = body.b2Bucket || 'video-media';
     const b2Key = body.b2Key || `${body.contentType}/${contentId}/source`;
 
     await db.insert(contents).values({
