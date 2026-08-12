@@ -303,6 +303,22 @@
         es: 'Soporta formatos de video / audio / documento',
         ar: '\u064A\u062F\u0639\u0645 \u0645\u0644\u0641\u0627\u062A \u0627\u0644\u0641\u064A\u062F\u064A\u0648 / \u0627\u0644\u0635\u0648\u062A / \u0627\u0644\u0645\u062D\u062A\u0648\u0649',
       },
+      videoUrl: {
+        en: 'Video URL',
+        fr: 'URL de la vidéo',
+        de: 'Video-URL',
+        it: 'URL del video',
+        es: 'URL del video',
+        ar: '\u0631\u0627\u0628\u0637 \u0627\u0644\u0641\u064A\u062F\u064A\u0648',
+      },
+      videoUrlPlaceholder: {
+        en: 'https://example.com/video.mp4',
+        fr: 'https://exemple.com/video.mp4',
+        de: 'https://beispiel.de/video.mp4',
+        it: 'https://esempio.it/video.mp4',
+        es: 'https://ejemplo.es/video.mp4',
+        ar: 'https://example.com/video.mp4',
+      },
       submit: {
         en: 'Start Upload',
         fr: 'D\u00E9marrer le t\u00E9l\u00E9chargement',
