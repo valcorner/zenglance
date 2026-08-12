@@ -43,7 +43,10 @@ export const createContentSchema = z.object({
   description: z.string().max(2000).optional(),
   contentType: contentTypeSchema,
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), // kebab-case
-  videoUrl: z.string().url(),
+  videoUrl: z.string().url().refine(
+    (url) => url.startsWith('https://cdn.valcorner.qzz.io/'),
+    { message: 'Video URL must be a Valcorner CDN URL (https://cdn.valcorner.qzz.io/...)' }
+  ),
   fileSize: z.number().positive().optional(),
   duration: z.number().positive().optional(),
   mimeType: z.string().optional()

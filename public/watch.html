@@ -545,7 +545,7 @@
           return;
         }
 
-        // For URL-based content (no ticket needed), play directly
+        // For URL-based content, ticket is obtained first, then injected into URL
         function _playUrls(ticket) {
           // ── HLS (.m3u8) ──────────────────────────────────────────────
           if (manifestUrl && _isHls(manifestUrl)) {

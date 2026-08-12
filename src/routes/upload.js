@@ -295,13 +295,20 @@ export function createContentRoutes() {
       }
 
       // Generate CDN access info
-      // For URL-based content (b2Bucket === 'url'), return the video URL directly
+      // For URL-based content (b2Bucket === 'url'), the URL is a Valcorner CDN URL
+      // that requires a ticket. Append {ticket} placeholder if not present.
       let cdnAccess;
       if (contentItem.b2Bucket === 'url') {
-        cdnAccess = {
-          directUrl: contentItem.b2Key,
-          requiresTicket: false
-        };
+        let url = contentItem.b2Key;
+        // Ensure ticket placeholder exists for _injectTicket at playback
+        if (!url.includes('ticket=')) {
+          url += (url.includes('?') ? '&' : '?') + 'ticket={ticket}';
+        }
+        // Classify as manifest or direct based on file extension
+        const isManifest = /\.(m3u8|mpd)(\?.*)?$/i.test(url);
+        cdnAccess = isManifest
+          ? { manifestUrl: url, requiresTicket: true }
+          : { directUrl: url, requiresTicket: true };
       } else {
         cdnAccess = valcorner.generateCdnAccessInfo(
           contentItem.contentType,
