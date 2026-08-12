@@ -35,6 +35,17 @@
     .lang-option:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
     .lang-option.active { color: var(--accent); font-weight: 600; }
     html[dir="rtl"] .lang-dropdown { right: auto; left: 0; }
+    .legal-cookie-registry {
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.7;
+      background: var(--surface-2);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 14px;
+      overflow-x: auto;
+    }
   </style>
 </head>
 <body>
@@ -96,6 +107,10 @@
       <div class="legal-section">
         <h2 data-i18n="legal.cookieS5Title"></h2>
         <p data-i18n="legal.cookieS5Body"></p>
+      </div>
+      <div class="legal-section">
+        <h2 data-i18n="legal.cookieS6Title"></h2>
+        <div class="legal-cookie-registry" data-i18n="legal.cookieS6Body"></div>
       </div>
     </div>
   </main>

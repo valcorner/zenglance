@@ -336,6 +336,18 @@ export const apActorKeys = sqliteTable('ap_actor_keys', {
   createdAt: integer('created_at', { mode: 'number' }).notNull()
 });
 
+// ---------------------------------------------------------------------------
+export const agreements = sqliteTable('agreements', {
+  id: text('id').primaryKey(),
+  userId: text('user_id').notNull().references(() => users.id),
+  type: text('type', { enum: ['terms', 'privacy', 'cookie'] }).notNull(),
+  agreedAt: integer('agreed_at', { mode: 'number' }).notNull(),
+  expiresAt: integer('expires_at', { mode: 'number' })
+}, (table) => [
+  index('idx_agreements_user').on(table.userId),
+  { name: 'idx_agreements_user_type_unique', constraints: unique('idx_agreements_user_type_unique').on(table.userId, table.type) }
+]);
+
 export const usersRelations = relations(users, ({ many, one }) => ({
   uploadedContents: many(contents),
   uploadSessions: many(uploadSessions),

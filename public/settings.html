@@ -627,7 +627,7 @@
       document.getElementById('settingsRoot').innerHTML = html;
 
       // Re-apply i18n to newly injected nodes
-      if (window.i18n && window.i18n.apply) window.i18n.apply();
+      if (window.i18n && window.i18n.init) window.i18n.init();
 
       bindSettingsEvents();
     }
@@ -698,7 +698,16 @@
       if (clearBtn) {
         clearBtn.addEventListener('click', async function() {
           if (!confirm(t('settings.privacyClearHistory') + '?')) return;
-          try { await apiFetch('/api/interaction/history', { method: 'DELETE' }); } catch (e) {}
+          try {
+            var res = await apiFetch('/api/interaction/history', { method: 'DELETE' });
+            if (res && res.ok) {
+              alert(t('settings.saved'));
+            } else {
+              alert(t('settings.saveError'));
+            }
+          } catch (e) {
+            alert(t('settings.saveError'));
+          }
         });
       }
 
@@ -722,9 +731,12 @@
           if (!confirm('Really delete your account? There is no going back.')) return;
           try {
             var res = await apiFetch('/auth/me', { method: 'DELETE' });
-            if (res.ok || res.status === 401) {
+            if (res.ok) {
               localStorage.removeItem('video_token');
               location.href = '/';
+            } else if (res.status === 401) {
+              alert('Session expired. Please login again.');
+              location.href = '/login.html';
             }
           } catch (e) {}
         });

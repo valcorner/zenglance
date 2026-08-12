@@ -40,7 +40,8 @@ export function createActivityPubRoutes() {
   // ── Helper: get base URL from request ──────────────────────────────────
   function baseUrl(c) {
     const url = new URL(c.req.url);
-    return `${url.protocol}//${url.host}`;
+    const proto = c.req.header('x-forwarded-proto') || url.protocol.replace(':', '');
+    return `${proto}://${url.host}`;
   }
 
   // ── Helper: ensure user has an AP key pair ─────────────────────────────
@@ -55,8 +56,10 @@ export function createActivityPubRoutes() {
     await db.insert(apActorKeys).values({
       userId, publicKeyPem, privateKeyPem, keyId,
       createdAt: Date.now()
-    });
-    return { userId, publicKeyPem, privateKeyPem, keyId };
+    }).onConflictDoNothing();
+    // Re-query to get the actual key (in case of conflict)
+    keyRow = await db.query.apActorKeys.findFirst({ where: eq(apActorKeys.userId, userId) });
+    return keyRow;
   }
 
   // ── Helper: build Actor document ───────────────────────────────────────
@@ -150,11 +153,8 @@ export function createActivityPubRoutes() {
     };
 
     // Upsert into cache
-    if (cached) {
-      await db.update(remoteActors).set(data).where(eq(remoteActors.id, actorUri));
-    } else {
-      await db.insert(remoteActors).values(data);
-    }
+    await db.insert(remoteActors).values(data)
+      .onConflictDoUpdate({ target: remoteActors.id, set: data });
 
     return { ...data, rawJson: data.rawJson };
   }
@@ -202,26 +202,38 @@ export function createActivityPubRoutes() {
       }
     });
 
-    c.executionCtx.waitUntil(Promise.all(deliveries));
+    return Promise.all(deliveries);
   }
 
   // ── Helper: get followers' inbox URLs ──────────────────────────────────
-  async function getFollowerInboxes(db, userId) {
-    const followerRows = await db.query.follows.findMany({
+  async function getFollowerInboxes(db, userId, base) {
+    const inboxes = [];
+
+    // Local followers: construct inbox URLs directly
+    const localFollowers = await db.query.follows.findMany({
       where: eq(follows.followingId, userId)
     });
-    // For local follows, we have the follower's userId but need their AP key
-    // For remote follows, we need to look up remote actors
-    const inboxes = [];
-    for (const f of followerRows) {
-      // Check if follower is a remote actor
+    for (const f of localFollowers) {
+      inboxes.push(`${base}/ap/users/${f.followerId}/inbox`);
+    }
+
+    // Remote followers: look up via ap_activities (incoming Follows targeting this actor)
+    const remoteFollows = await db.query.apActivities.findMany({
+      where: and(
+        eq(apActivities.type, 'Follow'),
+        eq(apActivities.objectId, `${base}/ap/users/${userId}`),
+        eq(apActivities.direction, 'incoming')
+      )
+    });
+    for (const a of remoteFollows) {
       const remoteActor = await db.query.remoteActors.findFirst({
-        where: eq(remoteActors.id, f.followerId)
+        where: eq(remoteActors.id, a.actorId)
       }).catch(() => null);
       if (remoteActor) {
         inboxes.push(remoteActor.sharedInboxUrl || remoteActor.inboxUrl);
       }
     }
+
     return inboxes;
   }
 
@@ -329,7 +341,12 @@ export function createActivityPubRoutes() {
     if (!targetUser) return c.json({ error: 'User not found' }, 404);
 
     const body = await c.req.text();
-    const activity = JSON.parse(body);
+    let activity;
+    try {
+      activity = JSON.parse(body);
+    } catch {
+      return c.json({ error: 'Invalid JSON' }, 400);
+    }
 
     // ── Verify HTTP Signature ──────────────────────────────────────────
     const keyId = extractKeyId(c.req.raw.headers);
@@ -404,31 +421,53 @@ export function createActivityPubRoutes() {
 
       case 'Undo': {
         // Undo previous activity (Undo Follow, Undo Like, etc.)
-        const undoneActivity = activity.object;
-        if (typeof undoneActivity === 'object' && undoneActivity?.id) {
-          // Mark the original activity as undone
-          await db.delete(apActivities)
-            .where(eq(apActivities.id, undoneActivity.id))
-            .catch(() => {});
+        // Handle both string (id) and object forms
+        const undoneId = typeof activity.object === 'string'
+          ? activity.object
+          : activity.object?.id;
+        if (!undoneId) break;
+
+        // Look up the original activity to know its type
+        const original = await db.query.apActivities.findFirst({
+          where: eq(apActivities.id, undoneId)
+        }).catch(() => null);
+
+        if (original) {
+          // Undo Follow: also remove from follows table if local
+          if (original.type === 'Follow') {
+            const followerId = original.actorId.split('/ap/users/')[1];
+            const followingId = original.objectId?.split('/ap/users/')[1];
+            if (followerId && followingId) {
+              await db.delete(follows).where(and(
+                eq(follows.followerId, followerId),
+                eq(follows.followingId, followingId)
+              )).catch(() => {});
+            }
+          }
+          // Undo Like: also remove from likes table if local
+          if (original.type === 'Like') {
+            const contentId = original.objectId?.split('/ap/objects/')[1];
+            if (contentId) {
+              await db.delete(likes).where(and(
+                eq(likes.userId, original.actorId),
+                eq(likes.contentId, contentId)
+              )).catch(() => {});
+            }
+          }
         }
+
+        // Delete the original activity
+        await db.delete(apActivities)
+          .where(eq(apActivities.id, undoneId))
+          .catch(() => {});
         break;
       }
 
       case 'Like': {
         // Remote user likes a local object
-        const objectId = typeof activity.object === 'string' ? activity.object : null;
-        if (objectId) {
-          // Extract content ID from object URI
-          const contentId = objectId.split('/ap/objects/')[1];
-          if (contentId) {
-            // Record like (best-effort, skip if already exists)
-            await db.insert(likes).values({
-              userId: signerActorUri, // Use remote actor URI as user ID for remote likes
-              contentId,
-              createdAt: now
-            }).catch(() => {});
-          }
-        }
+        // Remote Like is already recorded in ap_activities above.
+        // The likes table is skipped because likes.userId has an FK to
+        // users.id and cannot hold remote actor URIs.
         break;
       }
 
@@ -462,7 +501,12 @@ export function createActivityPubRoutes() {
   ap.post('/inbox', async (c) => {
     // Same processing as user inbox but without target user
     const body = await c.req.text();
-    const activity = JSON.parse(body);
+    let activity;
+    try {
+      activity = JSON.parse(body);
+    } catch {
+      return c.json({ error: 'Invalid JSON' }, 400);
+    }
 
     const keyId = extractKeyId(c.req.raw.headers);
     if (!keyId) return c.json({ error: 'Missing signature' }, 401);
@@ -514,31 +558,46 @@ export function createActivityPubRoutes() {
     const user = await db.query.users.findFirst({ where: eq(users.id, id) });
     if (!user) return c.json({ error: 'User not found' }, 404);
 
-    // Get outgoing activities
-    const activities = await db.query.apActivities.findMany({
-      where: and(
+    // Get total count of outgoing activities
+    const countResult = await db.select({ count: sql`count(*)` }).from(apActivities)
+      .where(and(
         eq(apActivities.actorId, `${base}/ap/users/${id}`),
         eq(apActivities.direction, 'outgoing')
-      ),
-      orderBy: desc(apActivities.createdAt),
-      limit: 20
-    });
+      ));
+    const totalItems = countResult[0]?.count || 0;
 
     if (page) {
+      const pageNum = parseInt(page, 10) || 1;
+      const offset = (pageNum - 1) * 20;
       // Return OrderedCollectionPage with items
-      return c.json({
+      const activities = await db.query.apActivities.findMany({
+        where: and(
+          eq(apActivities.actorId, `${base}/ap/users/${id}`),
+          eq(apActivities.direction, 'outgoing')
+        ),
+        orderBy: desc(apActivities.createdAt),
+        limit: 20,
+        offset
+      });
+
+      const response = {
         '@context': 'https://www.w3.org/ns/activitystreams',
         type: 'OrderedCollectionPage',
         partOf: `${base}/ap/users/${id}/outbox`,
         orderedItems: activities.map(a => JSON.parse(a.rawJson))
-      }, 200, { 'Content-Type': ACTIVITY_JSON });
+      };
+      // Add next link if there are more items
+      if (offset + 20 < totalItems) {
+        response.next = `${base}/ap/users/${id}/outbox?page=${pageNum + 1}`;
+      }
+      return c.json(response, 200, { 'Content-Type': ACTIVITY_JSON });
     }
 
     // Return collection root
     return c.json({
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'OrderedCollection',
-      totalItems: activities.length,
+      totalItems,
       first: `${base}/ap/users/${id}/outbox?page=1`
     }, 200, { 'Content-Type': ACTIVITY_JSON });
   });
@@ -552,7 +611,17 @@ export function createActivityPubRoutes() {
     const db = createDb(c.env, c.req.raw, c.res);
     const base = baseUrl(c);
     const body = await c.req.text();
-    const activity = JSON.parse(body);
+    let activity;
+    try {
+      activity = JSON.parse(body);
+    } catch {
+      return c.json({ error: 'Invalid JSON' }, 400);
+    }
+
+    // Basic validation: activity must have a type
+    if (!activity || !activity.type) {
+      return c.json({ error: 'Activity must have a type' }, 400);
+    }
 
     const activityId = activity.id || `${base}/ap/activities/${crypto.randomUUID()}`;
     activity.id = activityId;
@@ -573,7 +642,7 @@ export function createActivityPubRoutes() {
 
     // Deliver to followers if public
     if ((activity.to || []).includes(PUBLIC) || (activity.cc || []).includes(PUBLIC)) {
-      const inboxes = await getFollowerInboxes(db, id);
+      const inboxes = await getFollowerInboxes(db, id, base);
       if (inboxes.length > 0) {
         c.executionCtx.waitUntil(
           deliverActivity(c, db, activity, user, inboxes)
@@ -591,6 +660,7 @@ export function createActivityPubRoutes() {
     const { id } = c.req.param();
     const db = createDb(c.env, c.req.raw, c.res);
     const base = baseUrl(c);
+    const page = c.req.query('page');
 
     // Count local follows + remote follows (from ap_activities where type=Follow and object=this actor)
     const localFollowers = await db.query.follows.findMany({
@@ -612,12 +682,22 @@ export function createActivityPubRoutes() {
       ...remoteFollows.map(a => a.actorId)
     ];
 
+    if (page) {
+      // Return OrderedCollectionPage with items
+      return c.json({
+        '@context': 'https://www.w3.org/ns/activitystreams',
+        type: 'OrderedCollectionPage',
+        partOf: `${base}/ap/users/${id}/followers`,
+        orderedItems: items
+      }, 200, { 'Content-Type': ACTIVITY_JSON });
+    }
+
+    // Return collection root (no items, just metadata)
     return c.json({
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'OrderedCollection',
       totalItems: total,
-      first: `${base}/ap/users/${id}/followers?page=1`,
-      orderedItems: c.req.query('page') ? items : undefined
+      first: `${base}/ap/users/${id}/followers?page=1`
     }, 200, { 'Content-Type': ACTIVITY_JSON });
   });
 
@@ -625,6 +705,7 @@ export function createActivityPubRoutes() {
     const { id } = c.req.param();
     const db = createDb(c.env, c.req.raw, c.res);
     const base = baseUrl(c);
+    const page = c.req.query('page');
 
     const localFollowing = await db.query.follows.findMany({
       where: eq(follows.followerId, id)
@@ -645,12 +726,22 @@ export function createActivityPubRoutes() {
       ...remoteFollowing.map(a => a.objectId)
     ];
 
+    if (page) {
+      // Return OrderedCollectionPage with items
+      return c.json({
+        '@context': 'https://www.w3.org/ns/activitystreams',
+        type: 'OrderedCollectionPage',
+        partOf: `${base}/ap/users/${id}/following`,
+        orderedItems: items
+      }, 200, { 'Content-Type': ACTIVITY_JSON });
+    }
+
+    // Return collection root (no items, just metadata)
     return c.json({
       '@context': 'https://www.w3.org/ns/activitystreams',
       type: 'OrderedCollection',
       totalItems: total,
-      first: `${base}/ap/users/${id}/following?page=1`,
-      orderedItems: c.req.query('page') ? items : undefined
+      first: `${base}/ap/users/${id}/following?page=1`
     }, 200, { 'Content-Type': ACTIVITY_JSON });
   });
 

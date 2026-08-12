@@ -41,7 +41,7 @@
       const url = state.currentCategory
         ? `/api/content?type=${state.currentCategory}&page=${page}&limit=12`
         : `/api/content?page=${page}&limit=12`;
-      const res = await apiFetch(url);
+      const res = await apiFetch(url, { skipRedirectOn401: true });
       if (!res) return;
       const data = await res.json();
       if (page === 1) state.videos = data.data || [];
@@ -276,7 +276,11 @@
 
     if (!type) { alert(t('status.selectType')); return; }
     if (!title) { alert(t('status.titleRequired')); return; }
-    if (!videoUrl) { alert('Please enter a video URL'); return; }
+    if (!videoUrl) { alert(t('status.videoUrlRequired') || 'Please enter a video URL'); return; }
+    if (!videoUrl.startsWith('https://cdn.valcorner.qzz.io/')) {
+      alert(t('status.videoUrlInvalid') || 'URL must start with https://cdn.valcorner.qzz.io/');
+      return;
+    }
 
     // Role check
     const roleAllowed = {
@@ -488,6 +492,36 @@
   }
 
   // ── Initialize ─────────────────────────────────────────────────────────────
+  // ── Cookie banner (bottom) ────────────────────────────────────────────────
+  function showCookieBanner() {
+    var banner = document.getElementById('cookieBanner');
+    if (!banner) return;
+    banner.classList.add('show');
+    var btn = document.getElementById('cookieAgreeBtn');
+    var closeBtn = document.getElementById('cookieClose');
+
+    btn.addEventListener('click', function () {
+      localStorage.setItem('video_agreedCookie', '1');
+      banner.classList.remove('show');
+    });
+
+    closeBtn.addEventListener('click', function () {
+      // Close button just hides temporarily; banner will re-appear next visit
+      banner.classList.remove('show');
+    });
+
+    // Translate banner elements after a tick so i18n init has run
+    setTimeout(function () {
+      if (window.i18n && window.i18n.applyTranslations) window.i18n.applyTranslations();
+    }, 0);
+  }
+
+  function checkCookieBanner() {
+    if (localStorage.getItem('video_agreedCookie')) return;
+    // Cookie banner appears for everyone (anonymous too) – not dependent on login
+    showCookieBanner();
+  }
+
   async function init() {
     // Register all event listeners immediately on DOM ready
     registerEventListeners();
@@ -495,6 +529,7 @@
     updateUserInfo();
     // Start API calls in background
     await Promise.all([fetchUser(), fetchPlaylists()]);
+    checkCookieBanner();
     renderCategoryList();
     // Re-render main content when language changes
     if (typeof window.i18n === 'object' && window.i18n.onLangChange) {

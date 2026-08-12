@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { createDb } from '../db/index.js';
-import { users, oauthStates, sessions } from '../db/schema.js';
-import { eq, and, gt } from 'drizzle-orm';
+import { users, oauthStates, sessions, agreements } from '../db/schema.js';
+import { eq, and, gt, or } from 'drizzle-orm';
 import { createSession, deleteSession } from '../middleware/auth.js';
 
 /**
@@ -148,7 +148,19 @@ export function createAuthRoutes() {
 
       const session = await createSession(db, saved.id);
 
-      return c.json({ token: session.id, userId: saved.id });
+      // Check if user has agreed to both terms and privacy
+      const userAgreements = await db.select({ type: agreements.type })
+        .from(agreements)
+        .where(eq(agreements.userId, saved.id));
+      const agreedTypes = new Set(userAgreements.map(a => a.type));
+      const needsAgreement = !agreedTypes.has('terms') || !agreedTypes.has('privacy');
+
+      return c.json({
+        token: session.id,
+        userId: saved.id,
+        needsAgreement,
+        agreedTypes: Array.from(agreedTypes)
+      });
     } catch (error) {
       console.error('OAuth callback failed:', error);
       return c.json({ error: 'Authentication failed', details: error.message }, 500);
@@ -187,6 +199,14 @@ export function createAuthRoutes() {
       }
 
       const user = session.user;
+
+      // Fetch agreements
+      const userAgreements = await db.select({ type: agreements.type })
+        .from(agreements)
+        .where(eq(agreements.userId, user.id));
+      const agreedTypes = userAgreements.map(a => a.type);
+      const agreedSet = new Set(agreedTypes);
+
       return c.json({ data: {
         id: user.id,
         email: user.email,
@@ -194,7 +214,9 @@ export function createAuthRoutes() {
         username: user.name,
         avatar: user.avatar,
         role: user.role,
-        createdAt: user.createdAt
+        createdAt: user.createdAt,
+        agreedTypes,
+        needsAgreement: !agreedSet.has('terms') || !agreedSet.has('privacy')
       }});
     } catch (error) {
       console.error('Auth /me failed:', error);
@@ -280,6 +302,69 @@ export function createAuthRoutes() {
     } catch (error) {
       console.error('Logout failed:', error);
       return c.json({ error: 'Logout failed', code: 'LOGOUT_ERROR' }, 500);
+    }
+  });
+
+  /**
+   * POST /auth/agree
+   * Record user's agreement to Terms, Privacy Policy, and/or Cookie Policy.
+   * Body: { types: ('terms'|'privacy'|'cookie')[] }
+   * Requires Authorization: Bearer <session_id>
+   */
+  auth.post('/agree', async (c) => {
+    const authHeader = c.req.header('Authorization');
+
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return c.json({ error: 'Unauthorized', code: 'MISSING_AUTH' }, 401);
+    }
+
+    const sessionId = authHeader.substring(7).trim();
+    try {
+      const db = createDb(c.env, c.req.raw, c.res);
+      const now = Date.now();
+
+      const session = await db.query.sessions.findFirst({
+        where: and(
+          eq(sessions.id, sessionId),
+          gt(sessions.expiresAt, now)
+        )
+      });
+
+      if (!session) {
+        return c.json({ error: 'Invalid or expired session', code: 'INVALID_SESSION' }, 401);
+      }
+
+      const body = await c.req.json().catch(() => ({}));
+      const typesRaw = body.types || body.type ? [].concat(body.types || body.type) : ['terms', 'privacy', 'cookie'];
+      const validTypes = new Set(['terms', 'privacy', 'cookie']);
+      const types = [...new Set(typesRaw.filter(t => validTypes.has(t)))];
+
+      if (types.length === 0) {
+        return c.json({ error: 'No valid agreement types provided', code: 'INVALID_TYPES' }, 400);
+      }
+
+      const values = types.map(t => ({
+        id: crypto.randomUUID(),
+        userId: session.userId,
+        type: t,
+        agreedAt: now,
+        expiresAt: null
+      }));
+
+      // Use onConflictDoUpdate to refresh agreedAt if row exists
+      for (const v of values) {
+        await db.insert(agreements)
+          .values(v)
+          .onConflictDoUpdate({
+            target: [agreements.userId, agreements.type],
+            set: { agreedAt: now, expiresAt: null }
+          });
+      }
+
+      return c.json({ success: true, types, agreedAt: now });
+    } catch (error) {
+      console.error('Auth /agree failed:', error);
+      return c.json({ error: 'Failed to record agreement', code: 'AGREE_ERROR' }, 500);
     }
   });
 

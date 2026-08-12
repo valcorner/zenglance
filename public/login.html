@@ -4,72 +4,324 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Logging in...</title>
+  <script src="i18n.js?v=14"></script>
   <style>
-    body { display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0d0d0d; color: #eee; font-family: system-ui, sans-serif; }
-    .spinner { width: 40px; height: 40px; border: 3px solid #333; border-top-color: #888; border-radius: 50%; animation: spin .8s linear infinite; }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      background: #0d0d0d;
+      color: #eee;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #333;
+      border-top-color: #888;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+      margin: 0 auto;
+    }
     @keyframes spin { to { transform: rotate(360deg); } }
     p { margin-top: 16px; color: #888; }
+
+    /* ── Agreement modal ─────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+    }
+    .modal-overlay.show { display: flex; }
+    .agreement-modal {
+      width: 100%;
+      max-width: 480px;
+      background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px;
+      padding: 28px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    }
+    .agreement-modal h2 {
+      margin: 0 0 8px 0;
+      font-size: 22px;
+      font-weight: 600;
+      color: #f0f0f0;
+    }
+    .agreement-modal .modal-subtitle {
+      margin: 0 0 24px 0;
+      font-size: 14px;
+      color: #999;
+      line-height: 1.5;
+    }
+    .agreement-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      margin-bottom: 24px;
+    }
+    .agreement-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 12px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .agreement-item:hover {
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.12);
+    }
+    .agreement-item input[type="checkbox"] {
+      margin-top: 2px;
+      width: 16px;
+      height: 16px;
+      accent-color: #0078D4;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .agreement-item label {
+      cursor: pointer;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #ddd;
+    }
+    .agreement-item a {
+      color: #0078D4;
+      text-decoration: none;
+    }
+    .agreement-item a:hover {
+      text-decoration: underline;
+    }
+    .modal-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: flex-end;
+    }
+    .btn-cancel {
+      padding: 10px 20px;
+      background: rgba(255,255,255,0.06);
+      color: #ccc;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-cancel:hover { background: rgba(255,255,255,0.1); }
+    .btn-agree {
+      padding: 10px 24px;
+      background: #0078D4;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-agree:hover { opacity: 0.88; }
+    .btn-agree:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-agree.loading { opacity: 0.7; }
+
+    html[dir="rtl"] .agreement-modal { direction: rtl; }
+    html[dir="rtl"] .agreement-item input[type="checkbox"] { margin-right: 0; margin-left: 10px; }
+    html[dir="rtl"] .modal-actions { justify-content: flex-start; }
   </style>
 </head>
 <body>
-  <div style="text-align:center">
+  <div id="loadingView" style="text-align:center">
     <div class="spinner"></div>
-    <p id="status">Signing in…</p>
+    <p id="status" data-i18n="login.signingIn">Signing in…</p>
   </div>
+
+  <!-- Agreement Modal (Terms + Privacy) -->
+  <div class="modal-overlay" id="agreementModal">
+    <div class="agreement-modal">
+      <h2 data-i18n="loginAgreement.title">Please review and accept</h2>
+      <p class="modal-subtitle" data-i18n="loginAgreement.subtitle">
+        To continue using our service, you must agree to the following:
+      </p>
+      <div class="agreement-list">
+        <div class="agreement-item" onclick="document.getElementById('agreeTerms').click()">
+          <input type="checkbox" id="agreeTerms">
+          <label for="agreeTerms" data-i18n="loginAgreement.termsLabel">
+            I have read and agree to the <a href="/terms.html" target="_blank">Terms of Service</a>
+          </label>
+        </div>
+        <div class="agreement-item" onclick="document.getElementById('agreePrivacy').click()">
+          <input type="checkbox" id="agreePrivacy">
+          <label for="agreePrivacy" data-i18n="loginAgreement.privacyLabel">
+            I have read and agree to the <a href="/privacy.html" target="_blank">Privacy Policy</a>
+          </label>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" id="cancelAgreeBtn" data-i18n="loginAgreement.cancel">Cancel</button>
+        <button class="btn-agree" id="submitAgreeBtn" disabled data-i18n="loginAgreement.agree">Agree & Continue</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     (function () {
-      const params = new URLSearchParams(location.search);
-      const token = params.get('token');
+      var params = new URLSearchParams(location.search);
+      var token = params.get('token');
+      var pendingToken = null;
 
-      // Case 1: token already present → store and go home
+      // ── Helpers ────────────────────────────────────────────────────
+      function t(key) {
+        return (window.i18n && window.i18n.t && window.i18n.t(key)) || key;
+      }
+
+      function apiFetch(url, options) {
+        options = options || {};
+        var headers = Object.assign({ 'Content-Type': 'application/json' }, options.headers || {});
+        if (pendingToken) headers['Authorization'] = 'Bearer ' + pendingToken;
+        return fetch(url, Object.assign({}, options, { headers: headers }));
+      }
+
+      function setStatus(msg) {
+        var el = document.getElementById('status');
+        if (el) el.textContent = msg;
+      }
+
+      function showLoading(show) {
+        document.getElementById('loadingView').style.display = show ? '' : 'none';
+      }
+
+      function goHome() {
+        location.href = '/';
+      }
+
+      function goLogout() {
+        // Remove token and return to login flow start
+        pendingToken = null;
+        localStorage.removeItem('video_token');
+        location.href = '/login.html';
+      }
+
+      // ── Agreement modal logic ──────────────────────────────────────
+      function showAgreementModal() {
+        var modal = document.getElementById('agreementModal');
+        var termsCb = document.getElementById('agreeTerms');
+        var privacyCb = document.getElementById('agreePrivacy');
+        var submitBtn = document.getElementById('submitAgreeBtn');
+        var cancelBtn = document.getElementById('cancelAgreeBtn');
+
+        function updateBtn() {
+          submitBtn.disabled = !(termsCb.checked && privacyCb.checked);
+        }
+        termsCb.addEventListener('change', updateBtn);
+        privacyCb.addEventListener('change', updateBtn);
+
+        cancelBtn.addEventListener('click', function () {
+          goLogout();
+        });
+
+        submitBtn.addEventListener('click', function () {
+          if (submitBtn.disabled) return;
+          submitBtn.classList.add('loading');
+          submitBtn.disabled = true;
+          submitBtn.textContent = t('loginAgreement.submitting') || 'Submitting…';
+
+          apiFetch('/auth/agree', {
+            method: 'POST',
+            body: JSON.stringify({ types: ['terms', 'privacy'] })
+          })
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+              if (data.success) {
+                localStorage.setItem('video_token', pendingToken);
+                goHome();
+              } else {
+                submitBtn.classList.remove('loading');
+                updateBtn();
+                alert(t('loginAgreement.submitError') || 'Failed to record agreement. Please try again.');
+              }
+            })
+            .catch(function () {
+              submitBtn.classList.remove('loading');
+              updateBtn();
+              alert(t('loginAgreement.networkError') || 'Network error. Please try again.');
+            });
+        });
+
+        showLoading(false);
+        modal.classList.add('show');
+        // Apply i18n after a tick
+        setTimeout(function () {
+          if (window.i18n && window.i18n.applyTranslations) window.i18n.applyTranslations();
+        }, 0);
+      }
+
+      // ── Case 1: token already present → store and go home ─────────
       if (token) {
         localStorage.setItem('video_token', token);
         history.replaceState(null, '', '/');
-        location.href = '/';
+        goHome();
         return;
       }
 
-      // Case 2: OAuth error from provider
+      // ── Case 2: OAuth error from provider ──────────────────────────
       if (params.get('error')) {
-        document.getElementById('status').textContent = 'Login failed. Please try again.';
+        setStatus(t('login.failed') || 'Login failed. Please try again.');
         return;
       }
 
-      // Case 3: Valcorner redirected back with code+state → exchange for session token
-      const code = params.get('code');
-      const state = params.get('state');
-      if (code || state) {
-        const callbackUrl = new URL('/auth/callback', location.origin);
+      // ── Case 3: Valcorner redirected back with code+state ─────────
+      var code = params.get('code');
+      var state = params.get('state');
+      if (code) {
+        var callbackUrl = new URL('/auth/callback', location.origin);
         if (code) callbackUrl.searchParams.set('code', code);
         if (state) callbackUrl.searchParams.set('state', state);
         fetch(callbackUrl.toString())
           .then(function (res) { return res.json(); })
           .then(function (data) {
             if (data.token) {
-              localStorage.setItem('video_token', data.token);
-              location.href = '/';
+              pendingToken = data.token;
+              if (data.needsAgreement) {
+                // Show Terms + Privacy agreement modal
+                showAgreementModal();
+              } else {
+                localStorage.setItem('video_token', data.token);
+                goHome();
+              }
             } else if (data.error) {
-              document.getElementById('status').textContent = 'Login failed: ' + (data.details || data.error);
+              setStatus((t('login.failed') || 'Login failed') + ': ' + (data.details || data.error));
             }
           })
           .catch(function () {
-            document.getElementById('status').textContent = 'Network error. Please try again.';
+            setStatus(t('login.networkError') || 'Network error. Please try again.');
           });
         return;
       }
 
-      // Case 4: first visit → start OAuth flow
+      // ── Case 4: first visit → start OAuth flow ─────────────────────
       fetch('/auth/authorize')
         .then(function (res) { return res.json(); })
         .then(function (data) {
           if (data.url) {
             location.href = data.url;
           } else {
-            document.getElementById('status').textContent = 'Login failed: ' + (data.details || data.error || 'OAuth not configured');
+            setStatus((t('login.failed') || 'Login failed') + ': ' + (data.details || data.error || 'OAuth not configured'));
           }
         })
         .catch(function () {
-          document.getElementById('status').textContent = 'Network error. Please try again.';
+          setStatus(t('login.networkError') || 'Network error. Please try again.');
         });
     })();
   </script>

@@ -376,7 +376,7 @@
       <!-- Users Tab -->
       <div id="panelUsers">
         <div class="admin-filters">
-          <input type="text" id="adminSearch" data-i18n-placeholder="meta.search" placeholder="Search users…" oninput="filterUsers()" />
+          <input type="text" id="adminSearch" data-i18n-placeholder="meta.searchUsers" placeholder="Search users…" oninput="filterUsers()" />
         </div>
         <div id="adminUserContent">
           <div class="admin-loading" data-i18n="admin.loading">Loading…</div>
@@ -730,7 +730,7 @@
       rawContent = items;
       document.getElementById('adminContentList').innerHTML =
         '<table class="admin-table"><thead><tr>' +
-          '<th>Title</th><th>Type</th><th>Status</th><th>Uploader</th><th>Duration</th><th>Size</th><th>Created</th><th>Actions</th>' +
+          '<th>' + t('admin.colTitle') + '</th><th>' + t('admin.colType') + '</th><th>' + t('admin.colStatus') + '</th><th>' + t('admin.colUploader') + '</th><th>' + t('admin.colDuration') + '</th><th>' + t('admin.colSize') + '</th><th>' + t('admin.colCreated') + '</th><th>' + t('admin.colActions') + '</th>' +
         '</tr></thead><tbody id="contentTableBody">' + rows + '</tbody></table>' + pagination;
     }
 
@@ -1140,6 +1140,7 @@
     if (window.i18n && window.i18n.onLangChange) {
       window.i18n.onLangChange(function() {
         if (rawUsers.length) renderUserTable(rawUsers, currentUserPage, 20, totalUsers);
+        if (rawContent.length) renderContentTable(rawContent, currentContentPage, 20, totalContent);
       });
     }
   </script>

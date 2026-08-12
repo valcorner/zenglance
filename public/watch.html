@@ -450,9 +450,11 @@
         if (!iso) return '';
         var diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
         if (diff < 60) return t('timeAgo.justNow');
-        if (diff < 3600) return t('timeAgo.hoursAgo', { n: Math.floor(diff / 3600) });
-        if (diff < 86400) return t('timeAgo.daysAgo', { n: Math.floor(diff / 86400) });
-        return t('timeAgo.monthsAgo', { n: Math.floor(diff / 2592000) });
+        if (diff < 3600) return t('timeAgo.minutesAgo', { n: Math.floor(diff / 60) });
+        if (diff < 86400) return t('timeAgo.hoursAgo', { n: Math.floor(diff / 3600) });
+        if (diff < 2592000) return t('timeAgo.daysAgo', { n: Math.floor(diff / 86400) });
+        if (diff < 31536000) return t('timeAgo.monthsAgo', { n: Math.floor(diff / 2592000) });
+        return t('timeAgo.yearsAgo', { n: Math.floor(diff / 31536000) });
       }
 
       // ── Language selector ─────────────────────────────────────────
@@ -480,8 +482,18 @@
       }
 
       // ── Player controls ───────────────────────────────────────────
+      var PLAY_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+      var PAUSE_ICON = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>';
+
       window.toggleWatchPlay = function() {
-        if (video.paused) { video.play(); } else { video.pause(); }
+        var btn = document.getElementById('watchPlayBtn');
+        if (video.paused) {
+          video.play();
+          if (btn) btn.innerHTML = PAUSE_ICON;
+        } else {
+          video.pause();
+          if (btn) btn.innerHTML = PLAY_ICON;
+        }
       };
 
       window.watchSeek = function(val) {
@@ -498,18 +510,38 @@
 
       window.watchToggleFullscreen = function() {
         var wrapper = document.getElementById('playerWrapper');
-        if (wrapper.requestFullscreen) wrapper.requestFullscreen();
+        if (!wrapper) return;
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        } else if (document.webkitFullscreenElement) {
+          document.webkitExitFullscreen();
+        } else if (wrapper.requestFullscreen) {
+          wrapper.requestFullscreen();
+        } else if (wrapper.webkitRequestFullscreen) {
+          wrapper.webkitRequestFullscreen();
+        }
       };
+
+      video.addEventListener('timeupdate', function() {
+        var pct = video.duration ? (video.currentTime / video.duration) * 100 : 0;
+        if (seekBar) seekBar.value = pct;
+        if (currentTimeEl) currentTimeEl.textContent = formatTime(video.currentTime);
+      });
+      video.addEventListener('loadedmetadata', function() {
+        if (durationEl) durationEl.textContent = formatTime(video.duration);
+      });
 
       // ── Streaming player setup ────────────────────────────────────
       var hlsPlayer = null;
       var dashPlayer = null;
       var currentVideoId = null, currentCreatorId = null;
+      var currentCdn = null;
       var likeCount = 0, saveCount = 0, isLiked = false, isSaved = false, isFollowing = false;
       var commentCursor = null, loadingComments = false;
 
       function _getTicket() {
-        return fetch('https://cdn.valcorner.qzz.io/api/token', { signal: AbortSignal.timeout(5000) })
+        var tokenUrl = (currentCdn && currentCdn.tokenUrl) || 'https://cdn.valcorner.qzz.io/api/token';
+        return fetch(tokenUrl, { signal: AbortSignal.timeout(5000) })
           .then(function(r) { return r.json(); })
           .then(function(d) { return d.ticket; });
       }
@@ -531,6 +563,7 @@
 
       function _setupPlayer(cdn) {
         _cleanupPlayer();
+        currentCdn = cdn;
         placeholder.style.display = 'none';
         video.style.display = 'block';
 
@@ -550,7 +583,7 @@
           // ── HLS (.m3u8) ──────────────────────────────────────────────
           if (manifestUrl && _isHls(manifestUrl)) {
             var hlsUrl = ticket ? _injectTicket(manifestUrl, ticket) : manifestUrl;
-            if (Hls.isSupported()) {
+            if (typeof Hls !== 'undefined' && Hls.isSupported()) {
               hlsPlayer = new Hls({ maxBufferLength: 30, maxMaxBufferLength: 60 });
               hlsPlayer.loadSource(hlsUrl);
               hlsPlayer.attachMedia(video);
@@ -576,7 +609,7 @@
           // ── DASH (.mpd) ──────────────────────────────────────────────
           if (manifestUrl && _isDash(manifestUrl)) {
             var dashUrl = ticket ? _injectTicket(manifestUrl, ticket) : manifestUrl;
-            if (dashjs) {
+            if (typeof dashjs !== 'undefined' && dashjs) {
               dashPlayer = dashjs.MediaPlayer().create();
               dashPlayer.initialize(video, dashUrl, true);
               dashPlayer.getDebug().setLogToBrowserConsole(false);
@@ -697,13 +730,15 @@
             updateSaveUI();
           }).catch(function(e) { console.error(e); });
           if (creatorId) {
-            fetch('/api/interaction/users/' + creatorId + '/following', { headers: { 'Authorization': 'Bearer ' + token } })
+            fetch('/api/interaction/users/' + creatorId + '/followers', {
+              headers: token ? { 'Authorization': 'Bearer ' + token } : {}
+            })
               .then(function(r) { return r.json(); })
               .then(function(d) {
                 isFollowing = d.following || false;
-                updateFollowUI();
+                updateFollowUI(d.followerCount || 0);
               })
-              .catch(function(e) { console.error(e); });
+              .catch(function(e) { console.error(e); updateFollowUI(0); });
           }
         }
       }
@@ -789,8 +824,10 @@
         try {
           var params = 'limit=20';
           if (commentCursor) params += '&cursor=' + commentCursor;
+          var headers = {};
+          if (token) headers['Authorization'] = 'Bearer ' + token;
           var res = await fetch('/api/interaction/content/' + contentId + '/comments?' + params, {
-            headers: { 'Authorization': 'Bearer ' + token }
+            headers: headers
           });
           var data = await res.json();
           var comments = data.comments || [];
@@ -831,15 +868,35 @@
         if (!input || !input.value.trim()) return;
         if (!currentVideoId) return;
         var body = input.value.trim();
-        input.value = '';
+        var postBtn = document.getElementById('watchCommentPostBtn');
+        if (postBtn) { postBtn.disabled = true; postBtn.textContent = t('interactions.auditing') || 'Auditing…'; }
         fetch('/api/interaction/content/' + currentVideoId + '/comments', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
           body: JSON.stringify({ body: body })
-        }).then(function(r) { return r.json(); }).then(function(c) {
+        }).then(function(r) {
+          if (r.status === 422) {
+            // Content rejected by safety audit
+            return r.json().then(function(data) {
+              if (data.code === 'UNSAFE_CONTENT') {
+                alert(t('interactions.commentRejected') || 'Your comment was rejected by content safety audit.');
+              } else {
+                alert(t('interactions.commentFailed') || 'Failed to post comment.');
+              }
+              throw new Error('REJECTED');
+            });
+          }
+          if (!r.ok) throw new Error('Failed to post comment');
+          return r.json();
+        }).then(function(c) {
+          input.value = '';
           var listEl = document.getElementById('watchCommentsList');
           if (listEl) listEl.insertBefore(renderComment(c), listEl.firstChild);
-        }).catch(function(e) { console.error(e); });
+        }).catch(function(e) {
+          if (e.message !== 'REJECTED') console.error(e);
+        }).finally(function() {
+          if (postBtn) { postBtn.disabled = false; postBtn.textContent = t('interactions.post') || 'Post'; }
+        });
       }
       window.postComment = postComment;
 
@@ -890,7 +947,9 @@
         var token = localStorage.getItem('video_token');
         try {
           var url = category ? '/api/content?type=' + category + '&limit=8' : '/api/content?limit=8';
-          var res = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+          var headers = {};
+          if (token) headers['Authorization'] = 'Bearer ' + token;
+          var res = await fetch(url, { headers: headers });
           var data = await res.json();
           var list = (data.data || []).filter(function(v) { return v.id !== getQueryParam('id'); });
           renderRelated(list);
@@ -932,9 +991,9 @@
       window.watchShare = function() {
         var url = window.location.href;
         if (navigator.clipboard) {
-          navigator.clipboard.writeText(url).then(function() { alert(t('meta.share') + ' - ' + t('status.copied')); });
+          navigator.clipboard.writeText(url).then(function() { alert(t('interactions.share') + ' - ' + t('status.copied')); });
         } else {
-          prompt(t('meta.share') + ':', url);
+          prompt(t('interactions.share') + ':', url);
         }
       };
 

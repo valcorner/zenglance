@@ -15,6 +15,7 @@ import { createAuthRoutes } from './routes/auth.js';
 import { createUploadRoutes, createContentRoutes } from './routes/upload.js';
 import { createAdsRoutes } from './routes/ads.js';
 import { createActivityPubRoutes } from './routes/activitypub.js';
+import { createAuditRoutes } from './routes/audit.js';
 import interactions from './routes/interactions.js';
 import { createAuthMiddleware, requireRole } from './middleware/auth.js';
 import { users, roles, collections, collectionItems, contents, shortDramas, tvSeries, movies, ugcLongVideos, shortVideos } from './db/schema.js';
@@ -53,6 +54,9 @@ app.route('/api/interaction', interactions);
 
 // Ads routes
 app.route('/api/ads', createAdsRoutes());
+
+// Content audit routes (Llama Guard 3 8B safety classification)
+app.route('/api/audit', createAuditRoutes());
 
 // ActivityPub routes (federation: WebFinger, NodeInfo, Actor, Inbox, Outbox, etc.)
 app.route('/', createActivityPubRoutes());

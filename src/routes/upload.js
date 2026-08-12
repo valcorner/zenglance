@@ -112,67 +112,7 @@ export function createUploadRoutes() {
       }, 500);
     }
   });
-  
-  /**
-   * POST /upload/complete/:sessionId
-   * Mark upload as complete after client finishes direct upload
-   */
-  upload.post('/complete/:sessionId', auth, async (c) => {
-    const { sessionId } = c.req.param();
-    const user = c.get('user');
-    
-    try {
-      const db = createDb(c.env, c.req.raw, c.res);
 
-      // Find upload session
-      const session = await db.query.uploadSessions.findFirst({
-        where: and(
-          eq(uploadSessions.id, sessionId),
-          eq(uploadSessions.userId, user.id)
-        )
-      });
-      
-      if (!session) {
-        return c.json({ error: 'Session not found', code: 'SESSION_NOT_FOUND' }, 404);
-      }
-      
-      if (session.status !== 'pending') {
-        return c.json({ error: 'Invalid session status', code: 'INVALID_STATUS' }, 400);
-      }
-      
-      if (Date.now() > session.expiresAt) {
-        await db.update(uploadSessions)
-          .set({ status: 'expired' })
-          .where(eq(uploadSessions.id, sessionId));
-        return c.json({ error: 'Session expired', code: 'SESSION_EXPIRED' }, 400);
-      }
-      
-      // Update content status to ready
-      if (session.contentId) {
-        await db.update(contents)
-          .set({ 
-            status: 'ready',
-            updatedAt: Date.now()
-          })
-          .where(eq(contents.id, session.contentId));
-      }
-      
-      // Mark session as completed
-      await db.update(uploadSessions)
-        .set({ status: 'completed' })
-        .where(eq(uploadSessions.id, sessionId));
-      
-      return c.json({ success: true, contentId: session.contentId });
-    } catch (error) {
-      console.error('Upload completion failed:', error);
-      return c.json({ 
-        error: 'Failed to complete upload', 
-        code: 'UPLOAD_COMPLETE_ERROR',
-        details: error.message 
-      }, 500);
-    }
-  });
-  
   return upload;
 }
 

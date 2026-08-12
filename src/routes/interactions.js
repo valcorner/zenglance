@@ -3,6 +3,7 @@ import { eq, desc, count, inArray } from 'drizzle-orm';
 import { users, contents, likes, favorites, comments, follows, collections, collectionItems, watchHistory } from '../db/schema.js';
 import { createDb } from '../db/index.js';
 import { createAuthMiddleware } from '../middleware/auth.js';
+import { auditContent } from '../services/audit.js';
 
 const interaction = new Hono();
 const auth = createAuthMiddleware();
@@ -117,9 +118,11 @@ interaction.get('/content/:id/comments', async (c) => {
         body: comments.body,
         parentId: comments.parentId,
         createdAt: comments.createdAt,
-        updatedAt: comments.updatedAt
+        updatedAt: comments.updatedAt,
+        userName: users.name
       })
       .from(comments)
+      .leftJoin(users, eq(comments.userId, users.id))
       .where(eq(comments.contentId, contentId))
       .orderBy(desc(comments.createdAt))
       .limit(limit + 1);
@@ -130,9 +133,14 @@ interaction.get('/content/:id/comments', async (c) => {
       rows.pop();
     }
 
-    const withUsernames = await Promise.all(rows.map(async (row) => {
-      const u = await d.select({ name: users.name }).from(users).where(eq(users.id, row.userId));
-      return { ...row, user: u[0]?.name || 'Unknown' };
+    const withUsernames = rows.map((row) => ({
+      id: row.id,
+      userId: row.userId,
+      body: row.body,
+      parentId: row.parentId,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      user: row.userName || 'Unknown'
     }));
 
     return c.json({ comments: withUsernames, nextCursor });
@@ -152,6 +160,17 @@ interaction.post('/content/:id/comments', auth, async (c) => {
 
   if (!body || typeof body !== 'string' || body.trim().length === 0) {
     return c.json({ error: 'body is required' }, 400);
+  }
+
+  // Content audit: reject unsafe content before publishing
+  try {
+    const auditResult = await auditContent(body.trim(), `comment-${contentId}-${now}`, c.env);
+    if (!auditResult.isSafe) {
+      return c.json({ error: 'Content rejected by safety audit', code: 'UNSAFE_CONTENT' }, 422);
+    }
+  } catch (e) {
+    // Fail-open on audit service errors (don't block comments if AI is down)
+    console.error('Comment audit failed (fail-open):', e);
   }
 
   if (parentId) {
@@ -205,8 +224,6 @@ interaction.get('/users/:id/followers', auth, async (c) => {
   const targetId = c.req.param('id');
   const d = db(c);
 
-  if (user.id === targetId) return c.json({ following: false, followerCount: 0 });
-
   const countResult = await d.select({ count: count() }).from(follows).where(eq(follows.followingId, targetId));
   const followerCount = countResult[0]?.count ?? 0;
 
@@ -221,8 +238,6 @@ interaction.get('/users/:id/following', auth, async (c) => {
   const user = c.get('user');
   const targetId = c.req.param('id');
   const d = db(c);
-
-  if (user.id === targetId) return c.json({ following: false, followingCount: 0 });
 
   const countResult = await d.select({ count: count() }).from(follows).where(eq(follows.followerId, targetId));
   const followingCount = countResult[0]?.count ?? 0;
@@ -277,12 +292,10 @@ interaction.get('/users/:id', async (c) => {
 
   return c.json({
     id: u.id,
-    email: u.email,
     name: u.name,
     avatar: u.avatar,
     bio: u.bio,
     role: u.role,
-    isPublic: u.isPublic,
     followerCount,
     followingCount,
     createdAt: u.createdAt
@@ -423,11 +436,22 @@ interaction.get('/collections/:id', auth, async (c) => {
     .from(collectionItems)
     .where(eq(collectionItems.collectionId, id));
 
+  const contentIds = items.map((i) => i.contentId);
+  const contentRows = contentIds.length
+    ? await d.select().from(contents).where(inArray(contents.id, contentIds))
+    : [];
+
   const contentMap = {};
-  for (const item of items) {
-    const rows = await d.select().from(contents).where(eq(contents.id, item.contentId)).limit(1);
-    if (rows.length) contentMap[item.contentId] = { ...rows[0], addedAt: item.addedAt };
+  for (const row of contentRows) {
+    contentMap[row.id] = row;
   }
+
+  const contentsList = items
+    .map((item) => {
+      const row = contentMap[item.contentId];
+      return row ? { ...row, addedAt: item.addedAt } : null;
+    })
+    .filter(Boolean);
 
   return c.json({
     id: col[0].id,
@@ -435,7 +459,7 @@ interaction.get('/collections/:id', auth, async (c) => {
     name: col[0].name,
     createdAt: col[0].createdAt,
     updatedAt: col[0].updatedAt,
-    contents: Object.values(contentMap)
+    contents: contentsList
   });
 });
 

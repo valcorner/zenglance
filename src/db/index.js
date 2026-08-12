@@ -23,11 +23,12 @@ export function createDb(env, request, response) {
   const session = env.DB.withSession(bookmark);
   const db = drizzle(session, { schema });
 
-  // Propagate the session bookmark back to the response
-  if (response) {
-    const bm = session.getBookmark();
-    if (bm) response.headers.set('x-d1-bookmark', bm);
-  }
-
+  // NOTE: Do not call session.getBookmark() here — at this point no queries
+  // have run yet, so the bookmark would be the initial value, not the one
+  // reflecting this request's writes. To propagate the bookmark back to the
+  // client, a route handler must call session.getBookmark() *after* all
+  // queries are done and set the x-d1-bookmark response header explicitly.
+  // The `response` argument is accepted for backwards compatibility but is
+  // not used here.
   return db;
 }

@@ -26,6 +26,15 @@
       "database_id": "YOUR_D1_DATABASE_ID"
     }
   ],
+  "kv_namespaces": [
+    {
+      "binding": "AUDIT_KV",
+      "id": "YOUR_KV_NAMESPACE_ID"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
   "vars": {
     "VALCORNER_SCOPE": "openid email profile",
     "VALCORNER_AUTHORIZE_URL": "https://auth.valcorner.qzz.io/oauth/authorize",
@@ -37,6 +46,7 @@
   "secrets": [
     { "name": "VALCORNER_CLIENT_ID",    "value": "REPLACE_WITH_REAL_VALUE" },
     { "name": "VALCORNER_CLIENT_SECRET", "value": "REPLACE_WITH_REAL_VALUE" },
-    { "name": "ADS_API_KEY",            "value": "REPLACE_WITH_REAL_VALUE" }
+    { "name": "ADS_API_KEY",            "value": "REPLACE_WITH_REAL_VALUE" },
+    { "name": "AUDIT_API_TOKEN",        "value": "REPLACE_WITH_REAL_VALUE" }
   ]
 }
