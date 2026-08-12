@@ -7,17 +7,49 @@
   <link rel="stylesheet" href="style.css?v=4" />
   <script src="i18n.js?v=12"></script>
   <style>
-    .admin-page { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .admin-page { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
     .admin-page h1 { font-size: 1.5rem; font-weight: 700; margin-bottom: 1.25rem; }
 
-    .admin-search { margin-bottom: 1rem; }
-    .admin-search input {
-      width: 100%; max-width: 400px; padding: 8px 12px;
-      border-radius: 8px; border: 1px solid var(--border-color);
-      background: var(--bg-input); color: var(--text-primary); font-size: 14px;
+    /* ── Tabs ──────────────────────────────────────────────────────────────── */
+    .admin-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border-color); margin-bottom: 1.5rem; }
+    .admin-tab {
+      padding: 0.75rem 1.25rem; background: transparent; border: none;
+      color: var(--text-muted); font-size: 14px; font-weight: 600;
+      cursor: pointer; border-bottom: 2px solid transparent;
+      transition: color 0.15s, border-color 0.15s;
     }
-    .admin-search input:focus { outline: none; border-color: var(--accent); }
+    .admin-tab:hover { color: var(--text-primary); }
+    .admin-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+    /* ── Filters bar ──────────────────────────────────────────────────────── */
+    .admin-filters {
+      display: flex; flex-wrap: wrap; gap: 0.75rem; margin-bottom: 1rem;
+      align-items: center;
+    }
+    .admin-filters input, .admin-filters select {
+      padding: 8px 12px; border-radius: 8px;
+      border: 1px solid var(--border-color); background: var(--bg-input);
+      color: var(--text-primary); font-size: 14px;
+    }
+    .admin-filters input:focus, .admin-filters select:focus {
+      outline: none; border-color: var(--accent);
+    }
+    .admin-filters input { flex: 1; min-width: 220px; }
+    .admin-filters .btn-primary {
+      padding: 8px 16px; background: var(--accent); color: #fff;
+      border: none; border-radius: 8px; cursor: pointer; font-size: 14px;
+      font-weight: 600; transition: opacity 0.2s;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .admin-filters .btn-primary:hover { opacity: 0.9; }
+    .admin-filters .btn-secondary {
+      padding: 8px 16px; background: var(--bg-card); color: var(--text-primary);
+      border: 1px solid var(--border-color); border-radius: 8px; cursor: pointer;
+      font-size: 14px; transition: background 0.2s;
+    }
+    .admin-filters .btn-secondary:hover { background: var(--bg-hover); }
+
+    /* ── Table & general ──────────────────────────────────────────────────── */
     .admin-table { width: 100%; border-collapse: collapse; background: var(--bg-card); border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border-color); }
     .admin-table th { background: var(--bg-nav); color: var(--text-muted); font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; padding: 0.75rem 1rem; text-align: left; white-space: nowrap; }
     .admin-table td { padding: 0.75rem 1rem; border-top: 1px solid var(--border-color); vertical-align: middle; font-size: 14px; }
@@ -34,11 +66,30 @@
     .admin-role-badge.senior { background: rgba(123,47,255,0.2); color: #b388ff; }
     .admin-role-badge.free { background: rgba(100,200,100,0.2); color: #6fcf6f; }
 
-    .admin-role-select { padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-primary); font-size: 12px; cursor: pointer; }
-    .admin-role-select:focus { outline: none; border-color: var(--accent); }
+    .admin-status-badge { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .admin-status-badge.ready { background: rgba(100,200,100,0.2); color: #6fcf6f; }
+    .admin-status-badge.pending { background: rgba(255,193,7,0.2); color: #ffc107; }
+    .admin-status-badge.error { background: rgba(255,107,107,0.2); color: #ff6b6b; }
+
+    .admin-type-chip { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; background: rgba(0,120,212,0.15); color: #60a5fa; }
+
+    .admin-role-select, .admin-status-select { padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-primary); font-size: 12px; cursor: pointer; }
+    .admin-role-select:focus, .admin-status-select:focus { outline: none; border-color: var(--accent); }
 
     .admin-save-btn { background: none; border: 1px solid var(--border-color); color: var(--text-secondary); padding: 4px 10px; border-radius: 8px; font-size: 12px; cursor: pointer; margin-left: 6px; transition: background 0.2s, color 0.2s; }
     .admin-save-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+    .admin-action-btn {
+      background: none; border: 1px solid var(--border-color);
+      color: var(--text-secondary); padding: 4px 8px;
+      border-radius: 6px; font-size: 12px; cursor: pointer;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      display: inline-flex; align-items: center; gap: 4px;
+    }
+    .admin-action-btn + .admin-action-btn { margin-left: 4px; }
+    .admin-action-btn.edit:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+    .admin-action-btn.delete:hover { background: #ff6b6b; color: #fff; border-color: #ff6b6b; }
+    .admin-action-btn.view:hover { background: var(--bg-hover); color: var(--text-primary); }
 
     .admin-pagination { display: flex; align-items: center; justify-content: center; gap: 0.5rem; margin-top: 1.5rem; }
     .admin-page-btn { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; transition: background 0.2s; }
@@ -62,6 +113,86 @@
       transition: opacity 0.2s;
     }
     .admin-error-card .admin-error-btn:hover { opacity: 0.85; }
+
+    .admin-title-cell { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .admin-title-cell .content-title { font-weight: 600; color: var(--text-primary); }
+    .admin-title-cell .content-slug { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+
+    /* ── Modal ─────────────────────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; z-index: 3000;
+      background: rgba(0,0,0,0.6); align-items: center; justify-content: center;
+      padding: 1rem;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal {
+      background: var(--bg-card); border: 1px solid var(--border-color);
+      border-radius: 12px; width: 100%; max-width: 680px;
+      max-height: 90vh; overflow-y: auto;
+    }
+    .modal-header {
+      padding: 1rem 1.25rem; border-bottom: 1px solid var(--border-color);
+      display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; background: var(--bg-card); z-index: 1;
+    }
+    .modal-header h2 { font-size: 1.15rem; font-weight: 700; margin: 0; }
+    .modal-close {
+      background: none; border: none; color: var(--text-muted);
+      font-size: 1.5rem; cursor: pointer; padding: 0 4px; line-height: 1;
+    }
+    .modal-close:hover { color: var(--text-primary); }
+    .modal-body { padding: 1.25rem; }
+
+    .form-group { margin-bottom: 1rem; }
+    .form-group label {
+      display: block; font-size: 13px; font-weight: 600;
+      color: var(--text-secondary); margin-bottom: 0.35rem;
+    }
+    .form-group label .req { color: #ff6b6b; margin-left: 2px; }
+    .form-input {
+      width: 100%; padding: 8px 12px; border-radius: 8px;
+      border: 1px solid var(--border-color); background: var(--bg-input);
+      color: var(--text-primary); font-size: 14px; box-sizing: border-box;
+    }
+    textarea.form-input { resize: vertical; min-height: 80px; }
+    .form-input:focus { outline: none; border-color: var(--accent); }
+    .form-help { font-size: 11px; color: var(--text-muted); margin-top: 0.25rem; }
+    .form-error {
+      font-size: 12px; color: #ff6b6b; margin-top: 0.25rem;
+      min-height: 16px;
+    }
+
+    .form-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 1rem;
+    }
+    .form-grid .full { grid-column: 1 / -1; }
+
+    .type-section {
+      border: 1px dashed var(--border-color); border-radius: 10px;
+      padding: 1rem; margin-top: 0.5rem;
+    }
+    .type-section-title {
+      font-size: 12px; font-weight: 700; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+
+    .modal-footer {
+      padding: 1rem 1.25rem; border-top: 1px solid var(--border-color);
+      display: flex; justify-content: flex-end; gap: 0.5rem;
+    }
+    .btn-modal {
+      padding: 8px 18px; border-radius: 8px; font-size: 14px;
+      font-weight: 600; cursor: pointer; border: none; transition: opacity 0.2s;
+    }
+    .btn-modal.primary { background: var(--accent); color: #fff; }
+    .btn-modal.primary:hover { opacity: 0.9; }
+    .btn-modal.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-modal.secondary {
+      background: var(--bg-input); color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+    .btn-modal.secondary:hover { background: var(--bg-hover); }
 
     /* ── Language selector (same as index.html) ──────────────────────────── */
     .lang-wrapper { position: relative; display: inline-block; }
@@ -92,16 +223,6 @@
     .lang-option:hover { background: rgba(255,255,255,0.08); color: var(--text-primary); }
     .lang-option.active { color: var(--accent); font-weight: 600; }
     html[dir="rtl"] .lang-dropdown { right: auto; left: 0; }
-    html[dir="rtl"] .sidebar { transform: none; }
-    html[dir="rtl"] .sidebar-open .sidebar { transform: translateX(8rem); }
-    html[dir="rtl"] .sidebar-open .main { margin-left: 0; margin-right: 16rem; }
-    html[dir="rtl"] .mobile-sidebar-toggle { left: 0.75rem; right: auto; }
-    html[dir="rtl"] .dropdown-arrow { transform: rotate(180deg); }
-    html[dir="rtl"] .dropdown-arrow.show { transform: rotate(0deg); }
-    @media (max-width: 768px) {
-      html[dir="rtl"] .sidebar-open .sidebar { transform: translateX(-8rem); }
-      html[dir="rtl"] .sidebar-open .main { margin-left: 0; margin-right: 0; }
-    }
   </style>
 </head>
 <body>
@@ -245,31 +366,216 @@
 
   <main class="main">
     <div class="admin-page">
-      <h1 data-i18n="admin.title">Admin — User Management</h1>
-      <div class="admin-search">
-        <input type="text" id="adminSearch" data-i18n-placeholder="meta.search" placeholder="Search users…" oninput="filterUsers()" />
+      <h1 id="adminPageTitle">Admin — User Management</h1>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="users" id="tabUsers">👥 Users</button>
+        <button class="admin-tab" data-tab="content" id="tabContent">🎬 Content</button>
       </div>
-      <div id="adminContent">
-        <div class="admin-loading" data-i18n="admin.loading">Loading…</div>
+
+      <!-- Users Tab -->
+      <div id="panelUsers">
+        <div class="admin-filters">
+          <input type="text" id="adminSearch" data-i18n-placeholder="meta.search" placeholder="Search users…" oninput="filterUsers()" />
+        </div>
+        <div id="adminUserContent">
+          <div class="admin-loading" data-i18n="admin.loading">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Content Tab -->
+      <div id="panelContent" style="display:none">
+        <div class="admin-filters">
+          <input type="text" id="contentSearch" placeholder="Search by title, slug, description…" />
+          <select id="filterType">
+            <option value="">All Types</option>
+            <option value="short_drama">Short Drama</option>
+            <option value="tv_series">TV Series</option>
+            <option value="movie">Movie</option>
+            <option value="ugc_long_video">UGC Long Video</option>
+            <option value="short_video">Short Video</option>
+          </select>
+          <select id="filterStatus">
+            <option value="">All Statuses</option>
+            <option value="ready">Ready</option>
+            <option value="pending">Pending</option>
+            <option value="error">Error</option>
+          </select>
+          <button class="btn-secondary" id="btnResetFilters">Reset</button>
+          <button class="btn-primary" id="btnNewContent">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            New Content
+          </button>
+        </div>
+        <div id="adminContentList">
+          <div class="admin-loading">Loading content…</div>
+        </div>
       </div>
     </div>
   </main>
 
+  <!-- Content Modal (Create / Edit) -->
+  <div class="modal-overlay" id="contentModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="contentModalTitle">Create Content</h2>
+        <button class="modal-close" onclick="closeContentModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="contentForm" onsubmit="return submitContentForm(event)">
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Title<span class="req">*</span></label>
+              <input class="form-input" id="f-title" type="text" maxlength="200" required />
+              <div class="form-error" id="err-title"></div>
+            </div>
+            <div class="form-group">
+              <label>Slug (kebab-case)<span class="req">*</span></label>
+              <input class="form-input" id="f-slug" type="text" pattern="^[a-z0-9]+(?:-[a-z0-9]+)*$" placeholder="e.g. my-awesome-video" required />
+              <div class="form-error" id="err-slug"></div>
+            </div>
+
+            <div class="form-group">
+              <label>Content Type<span class="req">*</span></label>
+              <select class="form-input" id="f-contentType" onchange="renderTypeFields()" required>
+                <option value="">Select type…</option>
+                <option value="short_drama">Short Drama</option>
+                <option value="tv_series">TV Series</option>
+                <option value="movie">Movie</option>
+                <option value="ugc_long_video">UGC Long Video</option>
+                <option value="short_video">Short Video</option>
+              </select>
+              <div class="form-error" id="err-contentType"></div>
+            </div>
+            <div class="form-group">
+              <label>Status</label>
+              <select class="form-input" id="f-status">
+                <option value="ready">Ready</option>
+                <option value="pending">Pending</option>
+                <option value="error">Error</option>
+              </select>
+            </div>
+
+            <div class="form-group full">
+              <label>Description</label>
+              <textarea class="form-input" id="f-description" maxlength="2000"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label>Duration (seconds)</label>
+              <input class="form-input" id="f-duration" type="number" min="1" step="1" />
+            </div>
+            <div class="form-group">
+              <label>File size (bytes)</label>
+              <input class="form-input" id="f-fileSize" type="number" min="1" step="1" />
+            </div>
+
+            <div class="form-group">
+              <label>MIME Type</label>
+              <input class="form-input" id="f-mimeType" type="text" placeholder="e.g. video/mp4" />
+            </div>
+            <div class="form-group">
+              <label>Manifest Index (HLS/DASH)</label>
+              <input class="form-input" id="f-manifestIndex" type="text" placeholder="e.g. 1.m3u8" />
+            </div>
+
+            <div class="form-group full">
+              <label>B2 Object Key (optional)</label>
+              <input class="form-input" id="f-b2Key" type="text" placeholder="Leave empty to auto-generate" />
+            </div>
+          </div>
+
+          <div class="type-section" id="type-section" style="display:none">
+            <div class="type-section-title" id="type-section-title">Type-Specific Fields</div>
+            <div class="form-grid" id="type-fields"></div>
+          </div>
+
+          <div class="form-error" id="form-general-error"></div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-modal secondary" onclick="closeContentModal()">Cancel</button>
+        <button class="btn-modal primary" id="btnSubmitContent" onclick="submitContentForm(event)">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     var ADMIN_TOKEN = localStorage.getItem('zenglance_token');
-    var rawUsers = [];
-    var currentPage = 1;
-    var totalUsers = 0;
+    var CURRENT_USER = null;
 
+    // ── Shared helpers ───────────────────────────────────────────────────────
     function escapeHtml(s) {
       if (!s) return '';
       var d = document.createElement('div'); d.textContent = s;
       return d.innerHTML;
     }
-
     function t(key, params) {
       return (window.i18n && window.i18n.t) ? window.i18n.t(key, params) : (params ? key.replace(/\{(\w+)\}/g, function(_, k) { return params[k] || ''; }) : key);
     }
+    function formatDatetime(ts) { return new Date(ts).toLocaleString(); }
+    function formatDuration(sec) {
+      if (!sec) return '—';
+      var h = Math.floor(sec / 3600);
+      var m = Math.floor((sec % 3600) / 60);
+      var s = sec % 60;
+      if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+      return m + ':' + String(s).padStart(2, '0');
+    }
+    function formatBytes(b) {
+      if (!b) return '—';
+      if (b < 1024) return b + ' B';
+      if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+      if (b < 1073741824) return (b / 1048576).toFixed(1) + ' MB';
+      return (b / 1073741824).toFixed(2) + ' GB';
+    }
+    function contentTypeLabel(t) {
+      return {
+        short_drama: 'Short Drama',
+        tv_series: 'TV Series',
+        movie: 'Movie',
+        ugc_long_video: 'UGC Long Video',
+        short_video: 'Short Video'
+      }[t] || t;
+    }
+    function api(method, path, body) {
+      var opts = {
+        method: method,
+        headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN }
+      };
+      if (body !== undefined) {
+        opts.headers['Content-Type'] = 'application/json';
+        opts.body = JSON.stringify(body);
+      }
+      return fetch(path, opts);
+    }
+
+    // ── Tabs ─────────────────────────────────────────────────────────────────
+    var ACTIVE_TAB = 'users';
+    function switchTab(tab) {
+      ACTIVE_TAB = tab;
+      document.querySelectorAll('.admin-tab').forEach(function(btn) {
+        btn.classList.toggle('active', btn.dataset.tab === tab);
+      });
+      document.getElementById('panelUsers').style.display = tab === 'users' ? '' : 'none';
+      document.getElementById('panelContent').style.display = tab === 'content' ? '' : 'none';
+      var titleEl = document.getElementById('adminPageTitle');
+      titleEl.textContent = tab === 'users' ? 'Admin — User Management' : 'Admin — Content Management';
+      if (tab === 'content' && !window.__contentLoaded) {
+        window.__contentLoaded = true;
+        loadContent(1);
+      }
+    }
+    document.querySelectorAll('.admin-tab').forEach(function(btn) {
+      btn.addEventListener('click', function() { switchTab(btn.dataset.tab); });
+    });
+
+    // =========================================================================
+    // USER MANAGEMENT
+    // =========================================================================
+    var rawUsers = [];
+    var currentUserPage = 1;
+    var totalUsers = 0;
 
     function renderAvatar(user, size) {
       var initial = (user.name || user.email || '?').charAt(0).toUpperCase();
@@ -278,19 +584,14 @@
       }
       return '<div class="admin-avatar" style="width:' + size + 'px;height:' + size + 'px">' + initial + '</div>';
     }
-
     function roleBadge(role) {
       return '<span class="admin-role-badge ' + role + '">' + role + '</span>';
     }
 
-    function formatDatetime(ts) {
-      return new Date(ts).toLocaleString();
-    }
-
-    function renderAdminTable(users, page, limit, total) {
+    function renderUserTable(users, page, limit, total) {
       totalUsers = total;
       var totalPages = Math.max(1, Math.ceil(total / limit));
-      currentPage = page;
+      currentUserPage = page;
 
       var rows = users.map(function(u) {
         return '<tr data-id="' + escapeHtml(u.id) + '">' +
@@ -312,16 +613,16 @@
       }).join('');
 
       var pagination = '<div class="admin-pagination">' +
-        '<button class="admin-page-btn" onclick="goPage(' + (page - 1) + ')"' + (page <= 1 ? ' disabled' : '') + '>' + t('meta.prev') + '</button>' +
+        '<button class="admin-page-btn" onclick="goUserPage(' + (page - 1) + ')"' + (page <= 1 ? ' disabled' : '') + '>' + t('meta.prev') + '</button>' +
         '<span class="admin-page-info">' + t('admin.paginationInfo', { page: page, total: totalPages, count: total }) + '</span>' +
-        '<button class="admin-page-btn" onclick="goPage(' + (page + 1) + ')"' + (page >= totalPages ? ' disabled' : '') + '>' + t('meta.next') + '</button>' +
+        '<button class="admin-page-btn" onclick="goUserPage(' + (page + 1) + ')"' + (page >= totalPages ? ' disabled' : '') + '>' + t('meta.next') + '</button>' +
       '</div>';
 
       rawUsers = users;
-      document.getElementById('adminContent').innerHTML =
+      document.getElementById('adminUserContent').innerHTML =
         '<table class="admin-table"><thead><tr>' +
           '<th></th><th>' + t('admin.colUser') + '</th><th>' + t('admin.colRole') + '</th><th>' + t('admin.colJoined') + '</th><th>' + t('admin.colUpdated') + '</th><th>' + t('admin.colChangeRole') + '</th>' +
-        '</tr></thead><tbody id="adminTableBody">' + rows + '</tbody></table>' + pagination;
+        '</tr></thead><tbody id="userTableBody">' + rows + '</tbody></table>' + pagination;
 
       document.querySelectorAll('.admin-role-select').forEach(function(sel) {
         sel.addEventListener('change', function() {
@@ -333,35 +634,34 @@
 
     function filterUsers() {
       var q = document.getElementById('adminSearch').value.toLowerCase();
-      var rows = document.querySelectorAll('#adminTableBody tr');
+      var rows = document.querySelectorAll('#userTableBody tr');
       rows.forEach(function(row) {
         var text = row.textContent.toLowerCase();
         row.classList.toggle('hidden', q && !text.includes(q));
       });
     }
+    window.filterUsers = filterUsers;
 
     async function loadUsers(page) {
       page = page || 1;
-      document.getElementById('adminContent').innerHTML = '<div class="admin-loading">' + t('admin.loading') + '</div>';
+      document.getElementById('adminUserContent').innerHTML = '<div class="admin-loading">' + t('admin.loading') + '</div>';
       try {
-        var r = await fetch('/api/admin/users?page=' + page + '&limit=20', {
-          headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN }
-        });
+        var r = await api('GET', '/api/admin/users?page=' + page + '&limit=20');
         if (!r.ok) {
           var errText = await r.text().catch(function() { return ''; });
-          document.getElementById('adminContent').innerHTML =
+          document.getElementById('adminUserContent').innerHTML =
             '<div class="admin-error-card"><p>' + escapeHtml(r.status + ' ' + (errText || t('admin.error'))) + '</p>' +
             '<a href="/" class="admin-error-btn">' + t('meta.back') + '</a></div>';
           return;
         }
         var data = await r.json();
-        renderAdminTable(data.data, data.page, data.limit, data.total);
+        renderUserTable(data.data, data.page, data.limit, data.total);
       } catch (e) {
-        document.getElementById('adminContent').innerHTML = '<div class="admin-error">' + escapeHtml(e.message) + '</div>';
+        document.getElementById('adminUserContent').innerHTML = '<div class="admin-error">' + escapeHtml(e.message) + '</div>';
       }
     }
 
-    window.goPage = function(page) { loadUsers(page); };
+    window.goUserPage = function(page) { loadUsers(page); };
 
     window.saveRole = async function(userId) {
       var sel = document.querySelector('.admin-role-select[data-user-id="' + userId + '"]');
@@ -370,11 +670,7 @@
       var btn = sel.closest('td').querySelector('.admin-save-btn');
       btn.textContent = t('admin.saving'); btn.disabled = true;
       try {
-        var r = await fetch('/api/admin/users/' + userId + '/role', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + ADMIN_TOKEN, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ role: role })
-        });
+        var r = await api('POST', '/api/admin/users/' + userId + '/role', { role: role });
         var json = await r.json().catch(function() { return null; });
         if (!r.ok || !json || !json.success) throw new Error(json && json.error ? json.error : 'Failed');
         btn.textContent = t('admin.saved');
@@ -385,51 +681,348 @@
       }
     };
 
-    async function loadUser() {
-      var token = localStorage.getItem('zenglance_token');
-      ADMIN_TOKEN = token;
-      var userMenu = document.getElementById('userMenu');
-      var loginBtn = document.getElementById('loginBtn');
-      var uploadBtn = document.getElementById('uploadBtn');
+    // =========================================================================
+    // CONTENT MANAGEMENT
+    // =========================================================================
+    var rawContent = [];
+    var currentContentPage = 1;
+    var totalContent = 0;
+    var editingId = null; // null = create mode
 
-      if (!token) {
-        if (userMenu) userMenu.style.display = 'none';
-        if (loginBtn) loginBtn.style.display = 'inline-flex';
-        if (uploadBtn) uploadBtn.style.display = 'none';
-        return null;
-      }
-      try {
-        var res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
-        if (!res.ok) {
-          if (res.status === 401) localStorage.removeItem('zenglance_token');
-          if (userMenu) userMenu.style.display = 'none';
-          if (loginBtn) loginBtn.style.display = 'inline-flex';
-          if (uploadBtn) uploadBtn.style.display = 'none';
-          return null;
-        }
-        var data = await res.json();
-        var user = data.data;
-        if (!user) return null;
-
-        var avatarEl = document.getElementById('userAvatar');
-        var nameEl = document.getElementById('userName');
-        var profileLink = document.getElementById('profileLink');
-        var adminLink = document.getElementById('adminLink');
-
-        if (avatarEl) avatarEl.textContent = (user.name || 'U').slice(0, 2).toUpperCase();
-        if (nameEl) nameEl.textContent = user.name;
-        if (profileLink) profileLink.href = '/profile.html?id=' + user.id;
-        if (adminLink) adminLink.style.display = user.role === 'admin' ? 'flex' : 'none';
-
-        if (userMenu) userMenu.style.display = 'flex';
-        if (loginBtn) loginBtn.style.display = 'none';
-        if (uploadBtn) uploadBtn.style.display = user.role !== 'free' ? 'inline-flex' : 'none';
-
-        return user;
-      } catch (e) { return null; }
+    function statusBadge(status) {
+      return '<span class="admin-status-badge ' + status + '">' + status + '</span>';
     }
 
-    // ── Navbar interactions (same as index.html) ────────────────────────────
+    function renderContentTable(items, page, limit, total) {
+      totalContent = total;
+      var totalPages = Math.max(1, Math.ceil(total / limit));
+      currentContentPage = page;
+
+      var rows = items.map(function(c) {
+        return '<tr data-id="' + escapeHtml(c.id) + '">' +
+          '<td class="admin-title-cell">' +
+            '<div class="content-title">' + escapeHtml(c.title) + '</div>' +
+            '<div class="content-slug">' + escapeHtml(c.slug) + '</div>' +
+          '</td>' +
+          '<td><span class="admin-type-chip">' + contentTypeLabel(c.contentType) + '</span></td>' +
+          '<td>' + statusBadge(c.status) + '</td>' +
+          '<td>' + escapeHtml(c.uploaderName || c.uploaderId) + '</td>' +
+          '<td>' + formatDuration(c.duration) + '</td>' +
+          '<td>' + formatBytes(c.fileSize) + '</td>' +
+          '<td>' + formatDatetime(c.createdAt) + '</td>' +
+          '<td>' +
+            '<button class="admin-action-btn edit" title="Edit" onclick="editContent(\'' + escapeHtml(c.id) + '\')">✏️ Edit</button>' +
+            '<button class="admin-action-btn delete" title="Delete" onclick="deleteContent(\'' + escapeHtml(c.id) + '\', \'' + escapeHtml(c.title).replace(/'/g, "\\'") + '\')">🗑️</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+
+      if (!items.length) {
+        rows = '<tr><td colspan="8" class="admin-empty">No content found.</td></tr>';
+      }
+
+      var pagination = '<div class="admin-pagination">' +
+        '<button class="admin-page-btn" onclick="goContentPage(' + (page - 1) + ')"' + (page <= 1 ? ' disabled' : '') + '>Prev</button>' +
+        '<span class="admin-page-info">Page ' + page + ' / ' + totalPages + ' · ' + total + ' items</span>' +
+        '<button class="admin-page-btn" onclick="goContentPage(' + (page + 1) + ')"' + (page >= totalPages ? ' disabled' : '') + '>Next</button>' +
+      '</div>';
+
+      rawContent = items;
+      document.getElementById('adminContentList').innerHTML =
+        '<table class="admin-table"><thead><tr>' +
+          '<th>Title</th><th>Type</th><th>Status</th><th>Uploader</th><th>Duration</th><th>Size</th><th>Created</th><th>Actions</th>' +
+        '</tr></thead><tbody id="contentTableBody">' + rows + '</tbody></table>' + pagination;
+    }
+
+    function buildContentQuery(page) {
+      var params = ['page=' + (page || 1), 'limit=20'];
+      var s = document.getElementById('contentSearch').value.trim();
+      if (s) params.push('search=' + encodeURIComponent(s));
+      var ty = document.getElementById('filterType').value;
+      if (ty) params.push('type=' + ty);
+      var st = document.getElementById('filterStatus').value;
+      if (st) params.push('status=' + st);
+      return '/api/admin/content?' + params.join('&');
+    }
+
+    async function loadContent(page) {
+      page = page || 1;
+      document.getElementById('adminContentList').innerHTML = '<div class="admin-loading">Loading content…</div>';
+      try {
+        var r = await api('GET', buildContentQuery(page));
+        if (!r.ok) {
+          var e = await r.text().catch(function() { return 'Failed to load'; });
+          document.getElementById('adminContentList').innerHTML =
+            '<div class="admin-error">' + escapeHtml(r.status + ': ' + e) + '</div>';
+          return;
+        }
+        var data = await r.json();
+        renderContentTable(data.data, data.page, data.limit, data.total);
+      } catch (err) {
+        document.getElementById('adminContentList').innerHTML =
+          '<div class="admin-error">' + escapeHtml(err.message) + '</div>';
+      }
+    }
+    window.goContentPage = function(p) { loadContent(p); };
+
+    document.getElementById('contentSearch').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') loadContent(1);
+    });
+    document.getElementById('filterType').addEventListener('change', function() { loadContent(1); });
+    document.getElementById('filterStatus').addEventListener('change', function() { loadContent(1); });
+    document.getElementById('btnResetFilters').addEventListener('click', function() {
+      document.getElementById('contentSearch').value = '';
+      document.getElementById('filterType').value = '';
+      document.getElementById('filterStatus').value = '';
+      loadContent(1);
+    });
+    document.getElementById('btnNewContent').addEventListener('click', function() {
+      openContentModal(null);
+    });
+
+    // ── Type-specific fields ────────────────────────────────────────────────
+    var TYPE_FIELDS = {
+      short_drama: [
+        { key: 'season', label: 'Season', type: 'number', min: 1, help: '' },
+        { key: 'totalEpisodes', label: 'Total Episodes', type: 'number', min: 0, help: '' },
+        { key: 'episodeLength', label: 'Episode Length (s)', type: 'number', min: 1, help: '' },
+        { key: 'studio', label: 'Studio', type: 'text' },
+        { key: 'genre', label: 'Genre', type: 'text' }
+      ],
+      tv_series: [
+        { key: 'totalSeasons', label: 'Total Seasons', type: 'number', min: 1, help: '' },
+        { key: 'totalEpisodes', label: 'Total Episodes', type: 'number', min: 0, help: '' },
+        { key: 'seriesStatus', label: 'Series Status', type: 'text', placeholder: 'ongoing / completed / hiatus' },
+        { key: 'genre', label: 'Genre', type: 'text' },
+        { key: 'network', label: 'Network', type: 'text' },
+        { key: 'firstAired', label: 'First Aired (ms timestamp)', type: 'number', min: 1, help: '' }
+      ],
+      movie: [
+        { key: 'director', label: 'Director', type: 'text' },
+        { key: 'genre', label: 'Genre', type: 'text' },
+        { key: 'rating', label: 'Rating', type: 'text', placeholder: 'e.g. PG-13' },
+        { key: 'releaseYear', label: 'Release Year', type: 'number', min: 1, help: '' },
+        { key: 'budget', label: 'Budget', type: 'number', min: 0, help: 'USD' },
+        { key: 'boxOffice', label: 'Box Office', type: 'number', min: 0, help: 'USD' }
+      ],
+      ugc_long_video: [
+        { key: 'category', label: 'Category', type: 'text', placeholder: 'gaming / education / vlog' },
+        { key: 'tags', label: 'Tags', type: 'text', placeholder: 'comma separated' },
+        { key: 'viewsTarget', label: 'Views Target', type: 'number', min: 0, help: '' },
+        { key: 'license', label: 'License', type: 'text', placeholder: 'e.g. cc_by' }
+      ],
+      short_video: [
+        { key: 'platform', label: 'Platform', type: 'text', placeholder: 'tiktok / youtube_shorts / instagram_reels' },
+        { key: 'hashtags', label: 'Hashtags', type: 'text', placeholder: 'comma separated' },
+        { key: 'challenge', label: 'Challenge', type: 'text' },
+        { key: 'trendingScore', label: 'Trending Score', type: 'number', min: 0, help: '' }
+      ]
+    };
+
+    function renderTypeFields() {
+      var ct = document.getElementById('f-contentType').value;
+      var sec = document.getElementById('type-section');
+      var fieldsDiv = document.getElementById('type-fields');
+      var title = document.getElementById('type-section-title');
+      fieldsDiv.innerHTML = '';
+      if (!ct || !TYPE_FIELDS[ct]) {
+        sec.style.display = 'none';
+        return;
+      }
+      sec.style.display = '';
+      title.textContent = contentTypeLabel(ct) + ' Fields';
+      TYPE_FIELDS[ct].forEach(function(f) {
+        var group = document.createElement('div');
+        group.className = 'form-group';
+        var label = document.createElement('label');
+        label.textContent = f.label;
+        group.appendChild(label);
+        var inp = document.createElement('input');
+        inp.className = 'form-input';
+        inp.id = 'f-' + f.key;
+        inp.type = f.type || 'text';
+        if (f.min !== undefined) inp.min = f.min;
+        if (f.placeholder) inp.placeholder = f.placeholder;
+        group.appendChild(inp);
+        if (f.help !== '') {
+          var help = document.createElement('div');
+          help.className = 'form-help';
+          help.textContent = f.help || '';
+          group.appendChild(help);
+        }
+        fieldsDiv.appendChild(group);
+      });
+    }
+    window.renderTypeFields = renderTypeFields;
+
+    function collectFormData() {
+      var data = {
+        title: document.getElementById('f-title').value.trim(),
+        slug: document.getElementById('f-slug').value.trim(),
+        contentType: document.getElementById('f-contentType').value,
+        status: document.getElementById('f-status').value,
+        description: document.getElementById('f-description').value || null,
+        duration: document.getElementById('f-duration').value ? Number(document.getElementById('f-duration').value) : undefined,
+        fileSize: document.getElementById('f-fileSize').value ? Number(document.getElementById('f-fileSize').value) : undefined,
+        mimeType: document.getElementById('f-mimeType').value || null,
+        manifestIndex: document.getElementById('f-manifestIndex').value || null,
+        b2Key: document.getElementById('f-b2Key').value || undefined
+      };
+      var ct = data.contentType;
+      if (TYPE_FIELDS[ct]) {
+        TYPE_FIELDS[ct].forEach(function(f) {
+          var el = document.getElementById('f-' + f.key);
+          if (el && el.value !== '') {
+            data[f.key] = f.type === 'number' ? Number(el.value) : el.value;
+          }
+        });
+      }
+      return data;
+    }
+
+    function fillFormData(item) {
+      document.getElementById('f-title').value = item.title || '';
+      document.getElementById('f-slug').value = item.slug || '';
+      document.getElementById('f-contentType').value = item.contentType || '';
+      document.getElementById('f-status').value = item.status || 'ready';
+      document.getElementById('f-description').value = item.description || '';
+      document.getElementById('f-duration').value = item.duration || '';
+      document.getElementById('f-fileSize').value = item.fileSize || '';
+      document.getElementById('f-mimeType').value = item.mimeType || '';
+      document.getElementById('f-manifestIndex').value = item.manifestIndex || '';
+      document.getElementById('f-b2Key').value = item.b2Key || '';
+      renderTypeFields();
+      // type-specific data
+      var ct = item.contentType;
+      var src = null;
+      if (ct === 'short_drama') src = item.shortDrama;
+      else if (ct === 'tv_series') src = item.tvSeries;
+      else if (ct === 'movie') src = item.movie;
+      else if (ct === 'ugc_long_video') src = item.ugcLongVideo;
+      else if (ct === 'short_video') src = item.shortVideo;
+      if (src && TYPE_FIELDS[ct]) {
+        TYPE_FIELDS[ct].forEach(function(f) {
+          var el = document.getElementById('f-' + f.key);
+          if (el) {
+            var v = src[f.key];
+            if (v !== undefined && v !== null) el.value = v;
+          }
+        });
+      }
+    }
+
+    function resetFormErrors() {
+      document.querySelectorAll('.form-error').forEach(function(e) { e.textContent = ''; });
+      document.getElementById('form-general-error').textContent = '';
+    }
+
+    function openContentModal(id) {
+      editingId = id;
+      resetFormErrors();
+      document.getElementById('contentForm').reset();
+      document.getElementById('type-section').style.display = 'none';
+      document.getElementById('type-fields').innerHTML = '';
+
+      if (id) {
+        document.getElementById('contentModalTitle').textContent = 'Edit Content';
+        document.getElementById('btnSubmitContent').textContent = 'Save Changes';
+        // lock content type change on edit to avoid complexity
+        document.getElementById('f-contentType').disabled = true;
+        // load detail
+        api('GET', '/api/admin/content/' + id).then(function(r) {
+          if (!r.ok) throw new Error('Failed to load content detail');
+          return r.json();
+        }).then(function(json) {
+          fillFormData(json.data);
+        }).catch(function(e) {
+          document.getElementById('form-general-error').textContent = e.message;
+        });
+      } else {
+        document.getElementById('contentModalTitle').textContent = 'Create New Content';
+        document.getElementById('btnSubmitContent').textContent = 'Create';
+        document.getElementById('f-contentType').disabled = false;
+      }
+      document.getElementById('contentModal').classList.add('show');
+    }
+    window.editContent = openContentModal;
+
+    function closeContentModal() {
+      document.getElementById('contentModal').classList.remove('show');
+      editingId = null;
+    }
+    window.closeContentModal = closeContentModal;
+
+    async function submitContentForm(e) {
+      if (e) e.preventDefault();
+      resetFormErrors();
+      var data = collectFormData();
+      var errors = [];
+      if (!data.title) errors.push('title');
+      if (!data.slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(data.slug)) errors.push('slug');
+      if (!data.contentType) errors.push('contentType');
+      if (errors.length) {
+        errors.forEach(function(f) {
+          var el = document.getElementById('err-' + f);
+          if (el) el.textContent = 'This field is required / invalid';
+        });
+        return false;
+      }
+      var btn = document.getElementById('btnSubmitContent');
+      btn.disabled = true;
+      var origText = btn.textContent;
+      btn.textContent = 'Saving…';
+      try {
+        var r;
+        if (editingId) {
+          // remove contentType from update to honor the lock
+          var updateData = Object.assign({}, data);
+          delete updateData.contentType;
+          r = await api('PUT', '/api/admin/content/' + editingId, updateData);
+        } else {
+          r = await api('POST', '/api/admin/content', data);
+        }
+        var json = await r.json().catch(function() { return null; });
+        if (!r.ok || !json || !json.success) {
+          var msg = (json && json.error) ? json.error : ('Request failed (' + r.status + ')');
+          if (json && json.details && typeof json.details === 'object') {
+            var fieldErrors = json.details.fieldErrors || {};
+            Object.keys(fieldErrors).forEach(function(k) {
+              var el = document.getElementById('err-' + k);
+              if (el) el.textContent = fieldErrors[k].join(', ');
+            });
+          }
+          throw new Error(msg);
+        }
+        closeContentModal();
+        loadContent(currentContentPage);
+      } catch (err) {
+        document.getElementById('form-general-error').textContent = err.message;
+        btn.disabled = false;
+        btn.textContent = origText;
+        return false;
+      }
+      btn.disabled = false;
+      btn.textContent = origText;
+      return false;
+    }
+    window.submitContentForm = submitContentForm;
+
+    // ── Delete content ───────────────────────────────────────────────────────
+    window.deleteContent = function(id, title) {
+      var confirmed = confirm('Delete content "' + (title || id) + '"?\nThis cannot be undone.');
+      if (!confirmed) return;
+      api('DELETE', '/api/admin/content/' + id).then(function(r) {
+        if (r.ok) {
+          loadContent(currentContentPage);
+        } else {
+          return r.text().then(function(t) { alert('Delete failed: ' + (t || r.status)); });
+        }
+      }).catch(function(e) { alert('Delete error: ' + e.message); });
+    };
+
+    // =========================================================================
+    // NAVBAR / AUTH (Common)
+    // =========================================================================
     document.getElementById('sidebarToggle')?.addEventListener('click', function() {
       document.body.classList.toggle('sidebar-open');
     });
@@ -464,25 +1057,89 @@
     }
     window.logout = logout;
 
+    async function loadUser() {
+      var token = localStorage.getItem('zenglance_token');
+      ADMIN_TOKEN = token;
+      var userMenu = document.getElementById('userMenu');
+      var loginBtn = document.getElementById('loginBtn');
+      var uploadBtn = document.getElementById('uploadBtn');
+
+      if (!token) {
+        if (userMenu) userMenu.style.display = 'none';
+        if (loginBtn) loginBtn.style.display = 'inline-flex';
+        if (uploadBtn) uploadBtn.style.display = 'none';
+        return null;
+      }
+      try {
+        var res = await fetch('/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+        if (!res.ok) {
+          if (res.status === 401) localStorage.removeItem('zenglance_token');
+          if (userMenu) userMenu.style.display = 'none';
+          if (loginBtn) loginBtn.style.display = 'inline-flex';
+          if (uploadBtn) uploadBtn.style.display = 'none';
+          return null;
+        }
+        var data = await res.json();
+        var user = data.data;
+        if (!user) return null;
+        CURRENT_USER = user;
+
+        var avatarEl = document.getElementById('userAvatar');
+        var nameEl = document.getElementById('userName');
+        var profileLink = document.getElementById('profileLink');
+        var adminLink = document.getElementById('adminLink');
+
+        if (avatarEl) avatarEl.textContent = (user.name || 'U').slice(0, 2).toUpperCase();
+        if (nameEl) nameEl.textContent = user.name;
+        if (profileLink) profileLink.href = '/profile.html?id=' + user.id;
+        if (adminLink) adminLink.style.display = user.role === 'admin' ? 'flex' : 'none';
+
+        if (userMenu) userMenu.style.display = 'flex';
+        if (loginBtn) loginBtn.style.display = 'none';
+        if (uploadBtn) uploadBtn.style.display = user.role !== 'free' ? 'inline-flex' : 'none';
+
+        return user;
+      } catch (e) { return null; }
+    }
+
+    function showAccessDenied(msg, btnText, btnHref) {
+      var targetEl = ACTIVE_TAB === 'users' ? 'adminUserContent' : 'adminContentList';
+      document.getElementById(targetEl).innerHTML =
+        '<div class="admin-error-card"><p>' + msg + '</p>' +
+        '<a href="' + btnHref + '" class="admin-error-btn">' + btnText + '</a></div>';
+    }
+
     loadUser().then(function(user) {
       if (!user) {
-        document.getElementById('adminContent').innerHTML =
+        document.getElementById('adminUserContent').innerHTML =
+          '<div class="admin-error-card"><p>' + t('profile.loginRequired') + '</p>' +
+          '<a href="/login.html" class="admin-error-btn">' + t('meta.login') + '</a></div>';
+        document.getElementById('adminContentList').innerHTML =
           '<div class="admin-error-card"><p>' + t('profile.loginRequired') + '</p>' +
           '<a href="/login.html" class="admin-error-btn">' + t('meta.login') + '</a></div>';
         return;
       }
       if (user.role !== 'admin') {
-        document.getElementById('adminContent').innerHTML =
+        document.getElementById('adminUserContent').innerHTML =
+          '<div class="admin-error-card"><p>' + t('admin.accessDenied') + '</p>' +
+          '<a href="/" class="admin-error-btn">' + t('meta.back') + '</a></div>';
+        document.getElementById('adminContentList').innerHTML =
           '<div class="admin-error-card"><p>' + t('admin.accessDenied') + '</p>' +
           '<a href="/" class="admin-error-btn">' + t('meta.back') + '</a></div>';
         return;
       }
+      // Authed admin – load the initial (users) tab
       loadUsers(1);
+    });
+
+    // Close modal on backdrop click
+    document.getElementById('contentModal').addEventListener('click', function(e) {
+      if (e.target === this) closeContentModal();
     });
 
     if (window.i18n && window.i18n.onLangChange) {
       window.i18n.onLangChange(function() {
-        if (rawUsers.length) renderAdminTable(rawUsers, currentPage, 20, totalUsers);
+        if (rawUsers.length) renderUserTable(rawUsers, currentUserPage, 20, totalUsers);
       });
     }
   </script>

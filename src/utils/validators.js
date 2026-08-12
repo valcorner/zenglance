@@ -77,3 +77,80 @@ export const errorResponseSchema = z.object({
   code: z.string().optional(),
   details: z.record(z.any()).optional()
 });
+
+// Status validation
+export const contentStatusSchema = z.enum(['pending', 'ready', 'error']);
+
+// Admin content update schema (partial)
+export const adminUpdateContentSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).optional(),
+  contentType: contentTypeSchema.optional(),
+  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional(),
+  status: contentStatusSchema.optional(),
+  fileSize: z.number().positive().optional(),
+  duration: z.number().positive().optional(),
+  mimeType: z.string().optional(),
+  manifestIndex: z.string().optional(),
+  // Type-specific fields (all optional)
+  season: z.number().int().positive().optional(),
+  totalEpisodes: z.number().int().nonnegative().optional(),
+  episodeLength: z.number().int().positive().optional(),
+  studio: z.string().optional(),
+  genre: z.string().optional(),
+  totalSeasons: z.number().int().positive().optional(),
+  seriesStatus: z.string().optional(),
+  network: z.string().optional(),
+  firstAired: z.number().positive().optional(),
+  director: z.string().optional(),
+  rating: z.string().optional(),
+  releaseYear: z.number().int().positive().optional(),
+  budget: z.number().int().nonnegative().optional(),
+  boxOffice: z.number().int().nonnegative().optional(),
+  category: z.string().optional(),
+  tags: z.string().optional(),
+  viewsTarget: z.number().int().nonnegative().optional(),
+  license: z.string().optional(),
+  platform: z.string().optional(),
+  hashtags: z.string().optional(),
+  challenge: z.string().optional(),
+  trendingScore: z.number().int().nonnegative().optional()
+});
+
+// Admin content create schema
+export const adminCreateContentSchema = z.object({
+  title: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+  contentType: contentTypeSchema,
+  slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
+  status: contentStatusSchema.default('ready'),
+  fileSize: z.number().positive().optional(),
+  duration: z.number().positive().optional(),
+  mimeType: z.string().optional(),
+  manifestIndex: z.string().optional(),
+  b2Key: z.string().optional(),
+  b2Bucket: z.string().optional(),
+  // Type-specific fields
+  season: z.number().int().positive().optional(),
+  totalEpisodes: z.number().int().nonnegative().optional(),
+  episodeLength: z.number().int().positive().optional(),
+  studio: z.string().optional(),
+  genre: z.string().optional(),
+  totalSeasons: z.number().int().positive().optional(),
+  seriesStatus: z.string().optional(),
+  network: z.string().optional(),
+  firstAired: z.number().positive().optional(),
+  director: z.string().optional(),
+  rating: z.string().optional(),
+  releaseYear: z.number().int().positive().optional(),
+  budget: z.number().int().nonnegative().optional(),
+  boxOffice: z.number().int().nonnegative().optional(),
+  category: z.string().optional(),
+  tags: z.string().optional(),
+  viewsTarget: z.number().int().nonnegative().optional(),
+  license: z.string().optional(),
+  platform: z.string().optional(),
+  hashtags: z.string().optional(),
+  challenge: z.string().optional(),
+  trendingScore: z.number().int().nonnegative().optional()
+});

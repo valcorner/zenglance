@@ -26,7 +26,11 @@
     if (token) headers['Authorization'] = `Bearer ${token}`;
     const res = await fetch(url, { ...options, headers });
     if (!res.ok) {
-      if (res.status === 401) window.location.href = '/login.html';
+      // /auth/me is a "check status" endpoint – 401 = "not logged in" (normal), don't redirect.
+      // Only auto-redirect for other authenticated pages/actions that actually require login.
+      if (res.status === 401 && !options.skipRedirectOn401) {
+        window.location.href = '/login.html';
+      }
       return null;
     }
     return res;
@@ -50,8 +54,15 @@
   }
 
   async function fetchPlaylists() {
+    // Playlists are per-user. No token means anonymous user → no playlists, skip API
+    // to avoid triggering 401 auto-redirect to login on a public page.
+    const token = localStorage.getItem('zenglance_token');
+    if (!token) {
+      state.playlists = [];
+      return;
+    }
     try {
-      const res = await apiFetch('/api/playlists');
+      const res = await apiFetch('/api/playlists', { skipRedirectOn401: true });
       if (!res) return;
       const data = await res.json();
       state.playlists = data.data || [];
@@ -73,7 +84,7 @@
 
   // ── User helpers ───────────────────────────────────────────────────────────
   async function fetchUser() {
-    const res = await apiFetch('/auth/me');
+    const res = await apiFetch('/auth/me', { skipRedirectOn401: true });
     if (!res) return;
     const data = await res.json();
     if (data.data) {
